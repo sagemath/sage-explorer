@@ -15,7 +15,7 @@ AUTHORS:
 """
 from ipywidgets import Layout, VBox, HBox, Text, Label, HTML, Select, Textarea, Accordion, Tab, Button
 import traitlets
-from inspect import getdoc, getmembers, ismethod, isbuiltin, getargspec
+from inspect import getdoc, getsource, getmembers, ismethod, isbuiltin, getargspec
 from sage.combinat.rooted_tree import LabelledRootedTree
 
 cell_layout = Layout(width='3em',height='2em', margin='0',padding='0')
@@ -40,7 +40,13 @@ def class_hierarchy(c):
     sage: hierarchy(P.__class__)
     <class 'sage.combinat.partition.Partitions_n_with_category.element_class'>[<class 'sage.combinat.partition.Partition'>[<class 'sage.combinat.combinat.CombinatorialElement'>[<class 'sage.combinat.combinat.CombinatorialObject'>[<type 'sage.structure.sage_object.SageObject'>[<type 'object'>[]]], <type 'sage.structure.element.Element'>[<type 'sage.structure.sage_object.SageObject'>[<type 'object'>[]]]]], <class 'sage.categories.finite_enumerated_sets.FiniteEnumeratedSets.element_class'>[<class 'sage.categories.enumerated_sets.EnumeratedSets.element_class'>[<class 'sage.categories.sets_cat.Sets.element_class'>[<class 'sage.categories.sets_with_partial_maps.SetsWithPartialMaps.element_class'>[<class 'sage.categories.objects.Objects.element_class'>[<type 'object'>[]]]]], <class 'sage.categories.finite_sets.FiniteSets.element_class'>[<class 'sage.categories.sets_cat.Sets.element_class'>[<class 'sage.categories.sets_with_partial_maps.SetsWithPartialMaps.element_class'>[<class 'sage.categories.objects.Objects.element_class'>[<type 'object'>[]]]]]]]
     """
-    return LabelledRootedTree([ class_hierarchy(b) for b in c.__bases__], label=c)
+    return LabelledRootedTree([class_hierarchy(b) for b in c.__bases__], label=c)
+
+def method_origin(obj, name):
+    """Return class where method 'name' is actually defined"""
+    c0 = obj.__class__
+    ct = class_hierarchy(c0)
+    traversal = ct.pre_order_traversal_iter()
 
 
 class SageExplorer(VBox):
@@ -58,22 +64,38 @@ class SageExplorer(VBox):
         super(SageExplorer, self).__init__()
         self.obj = obj
         self.members = [x for x in getmembers(obj) if not x[0].startswith('_') and not 'deprecated' in str(type(x[1])).lower()]
-        ct = class_hierarchy(obj.__class__)
+        c0 = obj.__class__
+        ct = class_hierarchy(c0)
+        traversal = ct.pre_order_traversal_iter()
         #print ct
         basemembers = {}
         globbasemembers = []
-        traversal = ct.pre_order_traversal_iter()
         while 1:
             next = traversal.next()
             if not next:
                 break
             c = next.label()
+            if c == c0:
+                continue
             basemembers[c] = []
-            for m in self.members:
-                if m[0] in [x[0] for x in getmembers(c)]:
-                    basemembers[c].append(m)
-                    if c != obj.__class__ and not m in globbasemembers:
-                        globbasemembers.append(m)
+            for m in getmembers(c0):
+                if m[0].startswith('_') or 'deprecated' in str(type(m[1])).lower() or 'builtin' in str(m[1]).lower(): #isbuiltin(m[1]):
+                    continue
+                for x in getmembers(c):
+                    if x[0] == m[0]:
+                        if x in basemembers[c]:
+                            continue
+                        try:
+                            if getsource(x[1]) == getsource(m[1]):
+                                basemembers[c].append(x)
+                                if not m in globbasemembers:
+                                    globbasemembers.append(m)
+                        except:
+                            pass
+                            #print m, x
+        for c in basemembers.keys():
+            print c
+            print basemembers[c]
         self.attributes = [x for x in self.members if not ismethod(x[1]) and not isbuiltin(x[1])]
         self.methods = [x for x in self.members if ismethod(x[1])]
         self.builtins = [x for x in self.members if isbuiltin(x[1])]
@@ -94,8 +116,8 @@ class SageExplorer(VBox):
         self.worktab = VBox((self.inputs, self.gobutton, self.output))
         self.doctab = HTML()
         self.main = Tab((self.worktab, self.doctab))
-        self.main.set_title(0, 'Run')
-        self.main.set_title(1, 'Doc')
+        self.main.set_title(0, 'Main')
+        self.main.set_title(1, 'Help')
         self.bottom = HBox((self.menus, self.main))
         self.children = (self.top, self.bottom)
         self.compute()
