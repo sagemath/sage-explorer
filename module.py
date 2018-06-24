@@ -25,6 +25,7 @@ def method_origin(obj, name):
     c0 = obj.__class__
     ct = class_hierarchy(c0)
     traversal = ct.pre_order_traversal_iter()
+    ret = c0
     while 1:
         next = traversal.next()
         if not next:
@@ -32,14 +33,43 @@ def method_origin(obj, name):
         c = next.label()
         if c == c0:
             continue
-        print
-        print c
+        if not name in [x[0] for x in getmembers(c)]:
+            continue
+        #print
+        #print c
         for x in getmembers(c):
             if x[0] == name:
-                print "ok"
-                print x[1]
-                print getattr(c0, name)
-                print x[1] == getattr(c0, name)
+                #print "ok"
+                #print x[1]
+                #print getattr(c0, name)
+                if x[1] == getattr(c0, name):
+                    ret = c
+    return ret
+
+def method_origins(obj, names):
+    """Return class where methods in list 'names' are actually defined"""
+    c0 = obj.__class__
+    ct = class_hierarchy(c0)
+    traversal = ct.pre_order_traversal_iter()
+    ret = {}
+    for name in names:
+        ret[name] = c0
+    while 1:
+        next = traversal.next()
+        if not next:
+            break
+        c = next.label()
+        if c == c0:
+            continue
+        for name in names:
+            if not name in [x[0] for x in getmembers(c)]:
+                continue
+            for x in getmembers(c):
+                if x[0] == name:
+                    if x[1] == getattr(c0, name):
+                        ret[name] = c
+    return ret
+
 
 
 
@@ -47,4 +77,6 @@ S = StandardTableaux(15)
 t = S.random_element()
 
 ct = class_hierarchy(t.__class__)
-mo = method_origin(t, 'add_entry')
+print method_origin(t, 'add_entry')
+print method_origins(t, ['add_entry', 'pp', 'append'])
+print method_origins(t, [m[0] for m in getmembers(t)])

@@ -47,6 +47,22 @@ def method_origin(obj, name):
     c0 = obj.__class__
     ct = class_hierarchy(c0)
     traversal = ct.pre_order_traversal_iter()
+    ret = c0
+    while 1:
+        next = traversal.next()
+        if not next:
+            break
+        c = next.label()
+        if c == c0:
+            continue
+        if not name in [x[0] for x in getmembers(c)]:
+            continue
+        for x in getmembers(c):
+            if x[0] == name:
+                if x[1] == getattr(c0, name):
+                    ret = c
+    return ret
+
 
 
 class SageExplorer(VBox):
