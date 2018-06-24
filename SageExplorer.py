@@ -78,22 +78,31 @@ class SageExplorer(VBox):
         self.methods = [x for x in self.members if ismethod(x[1])]
         self.builtins = [x for x in self.members if isbuiltin(x[1])]
         menus = []
-        menus.append(Select(options = [('Object methods:', None)] + [x for x in self.methods if not x in globbasemembers]))
-        menus.append(Select(options = [('Parent methods:', None)] + [x for x in self.methods if x in globbasemembers]))
-        menus.append(Select(options = [('Builtins:', None)] + self.builtins))
-        self.title = Label(str(type(obj)))
+        menus.append(Select(rows=12, options = [('Object methods:', None)] + [x for x in self.methods if not x in globbasemembers]))
+        menus.append(Select(rows=12, options = [('Parent methods:', None)] + [x for x in self.methods if x in globbasemembers]))
+        menus.append(Select(rows=12, options = [('Builtins:', None)] + self.builtins))
+        self.title = Label(str(obj.parent()))
         self.visual = Textarea(obj._repr_diagram())
         self.top = HBox([self.title, self.visual])
-        self.left = Accordion(menus)
+        self.menus = Accordion(menus)
+        self.menus.set_title(0, 'Object methods')
+        self.menus.set_title(1, 'Parent methods')
+        self.menus.set_title(2, 'Builtins')
         self.outtab = VBox([Text(), HTML()])
         self.doctab = HTML()
-        self.right = Tab((self.outtab, self.doctab))
-        self.bottom = HBox([self.left, self.right])
+        self.main = Tab((self.outtab, self.doctab))
+        self.bottom = HBox([self.menus, self.main])
         self.children = [self.top, self.bottom]
+        self.compute()
 
     def compute(self):
-        """Get some attributes, depending on the object"""
-        pass
+        """Get some attributes, depending on the object
+        Create links between menus and output tabs"""
+        # FIXME attributes
+        def menu_on_change(change):
+            self.doctab.value = change.new.__doc__
+        for menu in self.menus.children:
+            menu.observe(menu_on_change, names='value')
 
     def get_object(self):
         return self.obj
