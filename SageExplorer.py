@@ -13,9 +13,9 @@ AUTHORS:
 - Odile Bénassy, Nicolas Thiéry
 
 """
-from ipywidgets import Layout, VBox, HBox, Text, Label, HTML, Select, Textarea, Accordion, Tab
+from ipywidgets import Layout, VBox, HBox, Text, Label, HTML, Select, Textarea, Accordion, Tab, Button
 import traitlets
-from inspect import getdoc, getmembers, ismethod, isbuiltin
+from inspect import getdoc, getmembers, ismethod, isbuiltin, getargspec
 from sage.combinat.rooted_tree import LabelledRootedTree
 
 cell_layout = Layout(width='3em',height='2em', margin='0',padding='0')
@@ -88,11 +88,16 @@ class SageExplorer(VBox):
         self.menus.set_title(0, 'Object methods')
         self.menus.set_title(1, 'Parent methods')
         self.menus.set_title(2, 'Builtins')
-        self.outtab = VBox([Text(), HTML()])
+        self.inputs = HBox()
+        self.gobutton = Button(description='Run!', tooltip='Run the function or method, with specified arguments')
+        self.output = HTML()
+        self.worktab = VBox((self.inputs, self.gobutton, self.output))
         self.doctab = HTML()
-        self.main = Tab((self.outtab, self.doctab))
-        self.bottom = HBox([self.menus, self.main])
-        self.children = [self.top, self.bottom]
+        self.main = Tab((self.worktab, self.doctab))
+        self.main.set_title(0, 'Run')
+        self.main.set_title(1, 'Doc')
+        self.bottom = HBox((self.menus, self.main))
+        self.children = (self.top, self.bottom)
         self.compute()
 
     def compute(self):
@@ -100,7 +105,14 @@ class SageExplorer(VBox):
         Create links between menus and output tabs"""
         # FIXME attributes
         def menu_on_change(change):
-            self.doctab.value = change.new.__doc__
+            selected_func = change.new
+            self.doctab.value = selected_func.__doc__
+            inputs = []
+            for argname in getargspec(selected_func).args:
+                if argname in ['self']:
+                    continue
+                inputs.append(Text(placeholder=argname))
+            self.inputs.children = inputs
         for menu in self.menus.children:
             menu.observe(menu_on_change, names='value')
 
