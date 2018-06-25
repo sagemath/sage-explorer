@@ -27,6 +27,14 @@ except:
     pass # We are not in a notebook
 
 
+def to_html(s):
+    r"""Display nicely formatted HTML string
+    INPUT: string s
+    OUPUT: string
+    FIXME use sphinx.writers.html or sth similar
+    """
+    return s.replace('\n', '<br/>')
+
 def class_hierarchy(c):
     r"""Compute parental hierarchy tree for class c
     INPUT: class
@@ -144,7 +152,7 @@ class SageExplorer(VBox):
         # FIXME attributes
         def menu_on_change(change):
             selected_func = change.new
-            self.doctab.value = selected_func.__doc__
+            self.doctab.value = to_html(selected_func.__doc__)
             inputs = []
             for argname in getargspec(selected_func).args:
                 if argname in ['self']:
