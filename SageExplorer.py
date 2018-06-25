@@ -31,9 +31,9 @@ def to_html(s):
     r"""Display nicely formatted HTML string
     INPUT: string s
     OUPUT: string
-    FIXME use sphinx.writers.html or sth similar
     """
-    return s.replace('\n', '<br/>')
+    from sage.misc.sphinxify import sphinxify
+    return sphinxify(s)
 
 def class_hierarchy(c):
     r"""Compute parental hierarchy tree for class c
