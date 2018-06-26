@@ -15,7 +15,7 @@ AUTHORS:
 """
 from ipywidgets import Layout, VBox, HBox, Text, Label, HTML, Select, Textarea, Accordion, Tab, Button
 import traitlets
-from inspect import getdoc, getsource, getmembers, ismethod, isbuiltin, getargspec
+from inspect import getdoc, getsource, getmembers, ismethod, isbuiltin, getargspec, getmro
 from sage.combinat.rooted_tree import LabelledRootedTree
 
 cell_layout = Layout(width='3em',height='2em', margin='0',padding='0')
@@ -71,6 +71,32 @@ def method_origin(obj, name):
                     ret = c
     return ret
 
+def method_origins(obj, names):
+    """Return class where methods in list 'names' are actually defined
+    INPUT: object 'obj', list of method names
+    """
+    c0 = obj.__class__
+    ct = class_hierarchy(c0)
+    traversal = ct.pre_order_traversal_iter()
+    # Initialisation
+    ret = {}
+    for name in names:
+        ret[name] = c0
+    while 1:
+        next = traversal.next()
+        if not next:
+            break
+        c = next.label()
+        if c == c0:
+            continue
+        for name in names:
+            if not name in [x[0] for x in getmembers(c)]:
+                continue
+            for x in getmembers(c):
+                if x[0] == name:
+                    if x[1] == getattr(c0, name):
+                        ret[name] = c
+    return ret
 
 
 class SageExplorer(VBox):
@@ -88,52 +114,36 @@ class SageExplorer(VBox):
         super(SageExplorer, self).__init__()
         self.obj = obj
         self.members = [x for x in getmembers(obj) if not x[0].startswith('_') and not 'deprecated' in str(type(x[1])).lower()]
-        c0 = obj.__class__
-        ct = class_hierarchy(c0)
-        traversal = ct.pre_order_traversal_iter()
-        #print ct
+        origins = method_origins(self.obj, [x[0] for x in self.members])
+        bases = []
         basemembers = {}
-        globbasemembers = []
-        while 1:
-            next = traversal.next()
-            if not next:
-                break
-            c = next.label()
-            if c == c0:
-                continue
+        print obj.__class__
+        for c in getmro(obj.__class__):
+            bases.append(c)
             basemembers[c] = []
-            for m in getmembers(c0):
-                if m[0].startswith('_') or 'deprecated' in str(type(m[1])).lower() or 'builtin' in str(m[1]).lower(): #isbuiltin(m[1]):
-                    continue
-                for x in getmembers(c):
-                    if x[0] == m[0]:
-                        if x in basemembers[c]:
-                            continue
-                        try:
-                            if getsource(x[1]) == getsource(m[1]):
-                                basemembers[c].append(x)
-                                if not m in globbasemembers:
-                                    globbasemembers.append(m)
-                        except:
-                            pass
-                            #print m, x
-        for c in basemembers.keys():
-            print c
-            print basemembers[c]
+        for name in origins:
+            basemembers[origins[name]].append(name)
+        for c in basemembers:
+            if not basemembers[c]:
+                bases.remove(c)
+            else:
+                print c, len(basemembers[c])
         self.attributes = [x for x in self.members if not ismethod(x[1]) and not isbuiltin(x[1])]
         self.methods = [x for x in self.members if ismethod(x[1])]
         self.builtins = [x for x in self.members if isbuiltin(x[1])]
         menus = []
-        menus.append(Select(rows=12, options = [('Object methods:', None)] + [x for x in self.methods if not x in globbasemembers]))
-        menus.append(Select(rows=12, options = [('Parent methods:', None)] + [x for x in self.methods if x in globbasemembers]))
+        for i in range(len(bases)):
+            c = bases[i]
+            menus.append(Select(rows=12, options = [("{c}:".format(c=c), None)] + [x for x in self.methods if x[0] in basemembers[c]]))
         menus.append(Select(rows=12, options = [('Builtins:', None)] + self.builtins))
+        self.menus = Accordion(menus)
+        for i in range(len(bases)):
+            c = bases[i]
+            self.menus.set_title(i, str(c))
+        self.menus.set_title(len(bases), 'Builtins')
         self.title = Label(str(obj.parent()))
         self.visual = Textarea(obj._repr_diagram())
         self.top = HBox([self.title, self.visual])
-        self.menus = Accordion(menus)
-        self.menus.set_title(0, 'Object methods')
-        self.menus.set_title(1, 'Parent methods')
-        self.menus.set_title(2, 'Builtins')
         self.inputs = HBox()
         self.gobutton = Button(description='Run!', tooltip='Run the function or method, with specified arguments')
         self.output = HTML()
@@ -150,6 +160,7 @@ class SageExplorer(VBox):
         """Get some attributes, depending on the object
         Create links between menus and output tabs"""
         # FIXME attributes
+        # FIXME compute list of methods here
         def menu_on_change(change):
             selected_func = change.new
             self.doctab.value = to_html(selected_func.__doc__)
