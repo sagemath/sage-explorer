@@ -15,7 +15,8 @@ AUTHORS:
 """
 from ipywidgets import Layout, VBox, HBox, Text, Label, HTML, Select, Textarea, Accordion, Tab, Button
 import traitlets
-from inspect import getdoc, getsource, getmembers, ismethod, isbuiltin, getargspec, getmro
+from inspect import getdoc, getsource, getmembers, getmro, ismethod, isbuiltin, isfunction
+from sage.misc.sageinspect import sage_getargspec
 from sage.combinat.rooted_tree import LabelledRootedTree
 
 cell_layout = Layout(width='3em',height='2em', margin='0',padding='0')
@@ -140,11 +141,13 @@ class SageExplorer(VBox):
         """
         super(SageExplorer, self).__init__()
         self.obj = obj
-        self.methods = [x for x in getmembers(obj) if not x[0].startswith('_') and ismethod(x[1]) and not 'deprecated' in str(type(x[1])).lower()]
+        self.members = [x for x in getmembers(obj) if not x[0].startswith('_') and not 'deprecated' in str(type(x[1])).lower()]
+        self.attributes = [x for x in self.members if not ismethod(x[1]) and not isfunction(x[1])]
+        self.methods = [x for x in self.members if ismethod(x[1])]
+        self.builtins = [x for x in self.members if isbuiltin(x[1])]
         origins = method_origins(self.obj, [x[0] for x in self.methods])
         bases = []
         basemembers = {}
-        print obj.__class__
         for c in getmro(obj.__class__):
             bases.append(c)
             basemembers[c] = []
@@ -155,18 +158,18 @@ class SageExplorer(VBox):
                 bases.remove(c)
             else:
                 print c, len(basemembers[c])
-        #self.attributes = [x for x in getmembers(obj) if not ismethod(x[1]) and not isbuiltin(x[1])]
-        self.builtins = [x for x in getmembers(obj) if isbuiltin(x[1])]
         menus = []
         for i in range(len(bases)):
             c = bases[i]
-            menus.append(Select(rows=12, options = [("{c}:".format(c=c), None)] + [x for x in self.methods if x[0] in basemembers[c]]))
+            menus.append(Select(rows=12, options = [("{c}:".format(c=extract_classname(c)), None)] + [x for x in self.methods if x[0] in basemembers[c]]))
         menus.append(Select(rows=12, options = [('Builtins:', None)] + self.builtins))
+        menus.append(Select(rows=12, options = [('Attributes:', None)] + self.attributes))
         self.menus = Accordion(menus)
         for i in range(len(bases)):
             c = bases[i]
             self.menus.set_title(i, extract_classname(c))
         self.menus.set_title(len(bases), 'Builtins')
+        self.menus.set_title(len(bases) + 1, 'Attributes')
         self.title = Label(extract_classname(obj.__class__, element_ok=False))
         self.visual = Textarea(obj._repr_diagram())
         self.top = HBox([self.title, self.visual])
@@ -191,10 +194,14 @@ class SageExplorer(VBox):
             selected_func = change.new
             self.doctab.value = to_html(selected_func.__doc__)
             inputs = []
-            for argname in getargspec(selected_func).args:
-                if argname in ['self']:
-                    continue
-                inputs.append(Text(placeholder=argname))
+            try:
+                for argname in sage_getargspec(selected_func).args:
+                    if argname in ['self']:
+                        continue
+                    inputs.append(Text(placeholder=argname))
+            except:
+                print selected_func, "attr?"
+                inputs.append(HTML(getattr(selected_func)))
             self.inputs.children = inputs
         for menu in self.menus.children:
             menu.observe(menu_on_change, names='value')
