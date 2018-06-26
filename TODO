@@ -1,0 +1,23 @@
+Affichage général
+-----------------
+at premier jet d'une structure générale du widget (affichage)
+* style : dimensionnement et plus
+
+Objet
+-----
+ok affichage de l'objet brut dans un Textarea
+* intégration d'un widget dédié, si possible configurable
+* affichage des attributs "principaux" de l'objet
+* amélioration du titre
+
+Méthodes
+--------
+at menus des méthodes (à finir et à soumettre) 
+ok affichage interactif de la doc d'une méthode
+ec affichage interactif des cases d'input
+* calcul et affichage output
+
+Meta
+----
+* décorateurs ?
+* configuration
