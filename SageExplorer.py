@@ -98,6 +98,33 @@ def method_origins(obj, names):
                         ret[name] = c
     return ret
 
+def extract_classname(c, element_ok=True):
+    """Extract proper class name from class
+    INPUT: class c
+    OUTPUT: string
+
+    TESTS::
+    >> s = <class 'sage.combinat.tableau.StandardTableau'>
+    >> extract_classname(s)
+    StandardTableau
+    >> s = <class 'sage.combinat.tableau.StandardTableaux_all_with_category.element_class'>
+    >> extract_classname(s)
+    StandardTableau
+    """
+    s = str(c)
+    if 'element_class' in s and not element_ok:
+        s = str(c.__bases__[0])
+    if s.endswith('>'):
+        s = s[:-1]
+        s = s.strip()
+    if s.endswith("'"):
+        s = s [:-1]
+        s = s.strip()
+    ret = s.split('.')[-1]
+    if ret == 'element_class':
+        return '.'.join(s.split('.')[-2:])
+    return ret
+
 
 class SageExplorer(VBox):
     """Sage Explorer in Jupyter Notebook"""
@@ -139,9 +166,9 @@ class SageExplorer(VBox):
         self.menus = Accordion(menus)
         for i in range(len(bases)):
             c = bases[i]
-            self.menus.set_title(i, str(c))
+            self.menus.set_title(i, extract_classname(c))
         self.menus.set_title(len(bases), 'Builtins')
-        self.title = Label(str(obj.parent()))
+        self.title = Label(extract_classname(obj.__class__, element_ok=False))
         self.visual = Textarea(obj._repr_diagram())
         self.top = HBox([self.title, self.visual])
         self.inputs = HBox()
