@@ -140,8 +140,8 @@ class SageExplorer(VBox):
         """
         super(SageExplorer, self).__init__()
         self.obj = obj
-        self.members = [x for x in getmembers(obj) if not x[0].startswith('_') and not 'deprecated' in str(type(x[1])).lower()]
-        origins = method_origins(self.obj, [x[0] for x in self.members])
+        self.methods = [x for x in getmembers(obj) if not x[0].startswith('_') and ismethod(x[1]) and not 'deprecated' in str(type(x[1])).lower()]
+        origins = method_origins(self.obj, [x[0] for x in self.methods])
         bases = []
         basemembers = {}
         print obj.__class__
@@ -155,9 +155,8 @@ class SageExplorer(VBox):
                 bases.remove(c)
             else:
                 print c, len(basemembers[c])
-        self.attributes = [x for x in self.members if not ismethod(x[1]) and not isbuiltin(x[1])]
-        self.methods = [x for x in self.members if ismethod(x[1])]
-        self.builtins = [x for x in self.members if isbuiltin(x[1])]
+        #self.attributes = [x for x in getmembers(obj) if not ismethod(x[1]) and not isbuiltin(x[1])]
+        self.builtins = [x for x in getmembers(obj) if isbuiltin(x[1])]
         menus = []
         for i in range(len(bases)):
             c = bases[i]
