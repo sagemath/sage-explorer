@@ -15,9 +15,9 @@ AUTHORS:
 """
 from ipywidgets import Layout, VBox, HBox, Text, Label, HTML, Select, Textarea, Accordion, Tab, Button
 import traitlets
-from inspect import getdoc, getsource, getmembers, getmro, ismethod, isbuiltin, isfunction
+from inspect import getdoc, getsource, getmembers, getmro, ismethod, isbuiltin, isfunction, ismethoddescriptor
 from sage.misc.sageinspect import sage_getargspec
-from sage.combinat.rooted_tree import LabelledRootedTree
+from sage.combinat.posets.posets import Poset
 
 cell_layout = Layout(width='3em',height='2em', margin='0',padding='0')
 box_layout = Layout()
@@ -39,37 +39,64 @@ def to_html(s):
 def class_hierarchy(c):
     r"""Compute parental hierarchy tree for class c
     INPUT: class
-    OUTPUT: LabelledRootedTree of its parents
+    OUTPUT: Poset of its parents
     EXAMPLES::
     sage: var('X')
     sage: P = 2*X^2 + 3*X + 4
-    sage: hierarchy(P.__class__)
-    <type 'sage.symbolic.expression.Expression'>[<type 'sage.structure.element.CommutativeRingElement'>[<type 'sage.structure.element.RingElement'>[<type 'sage.structure.element.ModuleElement'>[<type 'sage.structure.element.Element'>[<type 'sage.structure.sage_object.SageObject'>[<type 'object'>[]]]]]]]
+    sage: class_hierarchy(P.__class__)
+    Finite poset containing 7 elements
+
     sage: P = Partitions(7)[3]
-    sage: hierarchy(P.__class__)
-    <class 'sage.combinat.partition.Partitions_n_with_category.element_class'>[<class 'sage.combinat.partition.Partition'>[<class 'sage.combinat.combinat.CombinatorialElement'>[<class 'sage.combinat.combinat.CombinatorialObject'>[<type 'sage.structure.sage_object.SageObject'>[<type 'object'>[]]], <type 'sage.structure.element.Element'>[<type 'sage.structure.sage_object.SageObject'>[<type 'object'>[]]]]], <class 'sage.categories.finite_enumerated_sets.FiniteEnumeratedSets.element_class'>[<class 'sage.categories.enumerated_sets.EnumeratedSets.element_class'>[<class 'sage.categories.sets_cat.Sets.element_class'>[<class 'sage.categories.sets_with_partial_maps.SetsWithPartialMaps.element_class'>[<class 'sage.categories.objects.Objects.element_class'>[<type 'object'>[]]]]], <class 'sage.categories.finite_sets.FiniteSets.element_class'>[<class 'sage.categories.sets_cat.Sets.element_class'>[<class 'sage.categories.sets_with_partial_maps.SetsWithPartialMaps.element_class'>[<class 'sage.categories.objects.Objects.element_class'>[<type 'object'>[]]]]]]]
+    sage: class_hierarchy(P.__class__)
+    [[<class 'sage.combinat.partition.Partitions_n_with_category.element_class'>,
+    <class 'sage.categories.finite_enumerated_sets.FiniteEnumeratedSets.element_class'>,
+    <class 'sage.categories.enumerated_sets.EnumeratedSets.element_class'>,
+    <class 'sage.categories.sets_cat.Sets.element_class'>,
+    <class 'sage.categories.sets_with_partial_maps.SetsWithPartialMaps.element_class'>,
+    <class 'sage.categories.objects.Objects.element_class'>,
+    <type 'object'>],
+    [<class 'sage.combinat.partition.Partitions_n_with_category.element_class'>,
+    <class 'sage.categories.finite_enumerated_sets.FiniteEnumeratedSets.element_class'>,
+    <class 'sage.categories.finite_sets.FiniteSets.element_class'>,
+    <class 'sage.categories.sets_cat.Sets.element_class'>,
+    <class 'sage.categories.sets_with_partial_maps.SetsWithPartialMaps.element_class'>,
+    <class 'sage.categories.objects.Objects.element_class'>,
+    <type 'object'>],
+    [<class 'sage.combinat.partition.Partitions_n_with_category.element_class'>,
+    <class 'sage.combinat.partition.Partition'>,
+    <class 'sage.combinat.combinat.CombinatorialElement'>,
+    <class 'sage.combinat.combinat.CombinatorialObject'>,
+    <type 'sage.structure.sage_object.SageObject'>,
+    <type 'object'>],
+    [<class 'sage.combinat.partition.Partitions_n_with_category.element_class'>,
+    <class 'sage.combinat.partition.Partition'>,
+    <class 'sage.combinat.combinat.CombinatorialElement'>,
+    <type 'sage.structure.element.Element'>,
+    <type 'sage.structure.sage_object.SageObject'>,
+    <type 'object'>]]
     """
-    return LabelledRootedTree([class_hierarchy(b) for b in c.__bases__], label=c)
+    elts = [c]
+    rels = []
+    for b in c.__bases__:
+        elts.append(b)
+        rels.append([c, b])
+        elts += list(class_hierarchy(b))
+        rels += class_hierarchy(b).cover_relations()
+    return Poset((elts, rels))
 
 def method_origin(obj, name):
     """Return class where method 'name' is actually defined"""
     c0 = obj.__class__
     ct = class_hierarchy(c0)
-    traversal = ct.pre_order_traversal_iter()
     ret = c0
-    while 1:
-        next = traversal.next()
-        if not next:
-            break
-        c = next.label()
-        if c == c0:
-            continue
-        if not name in [x[0] for x in getmembers(c)]:
-            continue
-        for x in getmembers(c):
-            if x[0] == name:
-                if x[1] == getattr(c0, name):
-                    ret = c
+    for ch in ct.maximal_chains():
+        for c in ch[1:]:
+            if not name in [x[0] for x in getmembers(c)]:
+                break
+            for x in getmembers(c):
+                if x[0] == name:
+                    if x[1] == getattr(c0, name):
+                        ret = c
     return ret
 
 def method_origins(obj, names):
@@ -78,25 +105,19 @@ def method_origins(obj, names):
     """
     c0 = obj.__class__
     ct = class_hierarchy(c0)
-    traversal = ct.pre_order_traversal_iter()
     # Initialisation
     ret = {}
     for name in names:
         ret[name] = c0
-    while 1:
-        next = traversal.next()
-        if not next:
-            break
-        c = next.label()
-        if c == c0:
-            continue
-        for name in names:
-            if not name in [x[0] for x in getmembers(c)]:
-                continue
-            for x in getmembers(c):
-                if x[0] == name:
-                    if x[1] == getattr(c0, name):
-                        ret[name] = c
+    for ch in ct.maximal_chains():
+        for c in ch[1:]:
+            for name in names:
+                if not name in [x[0] for x in getmembers(c)]:
+                    continue
+                for x in getmembers(c):
+                    if x[0] == name:
+                        if x[1] == getattr(c0, name):
+                            ret[name] = c
     return ret
 
 def extract_classname(c, element_ok=True):
@@ -143,8 +164,8 @@ class SageExplorer(VBox):
         self.obj = obj
         self.members = [x for x in getmembers(obj) if not x[0].startswith('_') and not 'deprecated' in str(type(x[1])).lower()]
         self.attributes = [x for x in self.members if not ismethod(x[1]) and not isfunction(x[1])]
-        self.methods = [x for x in self.members if ismethod(x[1])]
-        self.builtins = [x for x in self.members if isbuiltin(x[1])]
+        self.methods = [x for x in self.members if ismethod(x[1]) or ismethoddescriptor(x[1])]
+        self.builtins = [x for x in self.members if not x in self.methods and isbuiltin(x[1])]
         origins = method_origins(self.obj, [x[0] for x in self.methods])
         bases = []
         basemembers = {}
@@ -171,7 +192,7 @@ class SageExplorer(VBox):
         self.menus.set_title(len(bases), 'Builtins')
         self.menus.set_title(len(bases) + 1, 'Attributes')
         self.title = Label(extract_classname(obj.__class__, element_ok=False))
-        self.visual = Textarea(obj._repr_diagram())
+        self.visual = Textarea(repr(obj._ascii_art_()))
         self.top = HBox([self.title, self.visual])
         self.inputs = HBox()
         self.gobutton = Button(description='Run!', tooltip='Run the function or method, with specified arguments')
