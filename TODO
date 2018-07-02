@@ -1,6 +1,6 @@
 Affichage général
 -----------------
-at premier jet d'une structure générale du widget (affichage)
+ok premier jet d'une structure générale du widget (affichage)
 * style : dimensionnement et plus
 * affichage plein écran
 
@@ -10,14 +10,16 @@ ok affichage de l'objet brut dans un Textarea
 * intégration d'un widget dédié, si possible configurable
 * affichage des attributs "principaux" de l'objet
 at amélioration du titre
+* affichage de la doc de l'objet
 
 Méthodes
 --------
-at menus des méthodes
+ok menus des méthodes
   ok améliorer l'affichage du nom de la classe
 ok affichage interactif de la doc d'une méthode
-ec affichage interactif des cases d'input
-* calcul et affichage output
+ok affichage interactif des cases d'input
+ at utiliser les valeurs par défaut quand il y en a ; au besoin les inventer (?)
+ok calcul et affichage output
 
 Meta
 ----

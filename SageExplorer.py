@@ -166,13 +166,12 @@ class SageExplorer(VBox):
                     shift = 1
                     continue
                 default = ''
-                if defaults and defaults[i - shift]:
+                if defaults and len(defaults) > i - shift and defaults[i - shift]:
                     default = argspec.defaults[i - shift]
                 inputs.append(Text(description=argname, placeholder=str(default)))
         except:
             print func, "attr?"
             print argspec
-            #inputs.append(HTML(getattr(func)))
         self.inputs.children = inputs
 
     def compute(self):
@@ -183,20 +182,6 @@ class SageExplorer(VBox):
         def menu_on_change(change):
             self.selected_func = change.new
             self.init_selected_method()
-            """self.doctab.value = to_html(selected_func.__doc__)
-            if self.overrides[selected_func.__name__]:
-                self.doctab.value += to_html("Overrides:")
-                self.doctab.value += to_html([extract_classname(x) for x in self.overrides[selected_func.__name__]])
-            inputs = []
-            try:
-                for argname in sage_getargspec(selected_func).args:
-                    if argname in ['self']:
-                        continue
-                    inputs.append(Text(placeholder=argname))
-            except:
-                print selected_func, "attr?"
-                inputs.append(HTML(getattr(selected_func)))
-            self.inputs.children = inputs"""
         for menu in self.menus.children:
             menu.observe(menu_on_change, names='value')
         def compute_selected_method(button):
