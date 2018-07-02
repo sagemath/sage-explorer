@@ -15,7 +15,7 @@ AUTHORS:
 """
 from ipywidgets import Layout, VBox, HBox, Text, Label, HTML, Select, Textarea, Accordion, Tab, Button
 import traitlets
-from inspect import getdoc, getsource, getmembers, getmro, ismethod, isbuiltin, isfunction, ismethoddescriptor, isclass
+from inspect import getdoc, getsource, getmembers, getmro, ismethod, isfunction, ismethoddescriptor, isclass
 from sage.misc.sageinspect import sage_getargspec
 from sage.combinat.posets.posets import Poset
 
@@ -28,78 +28,19 @@ except:
     pass # We are not in a notebook
 
 
+excluded_members = ['__init__', '__repr__', '__str__']
+
 def to_html(s):
     r"""Display nicely formatted HTML string
     INPUT: string s
     OUPUT: string
     """
+    if type(s) == type([]):
+        s = ', '.join(s)
+    elif type(s) != type(''):
+        s = str(s)
     from sage.misc.sphinxify import sphinxify
     return sphinxify(s)
-
-def class_hierarchy(c):
-    r"""Compute parental hierarchy tree for class c
-    INPUT: class
-    OUTPUT: Poset of its parents
-    EXAMPLES::
-    sage: var('X')
-    sage: P = 2*X^2 + 3*X + 4
-    sage: class_hierarchy(P.__class__)
-    Finite poset containing 7 elements
-
-    sage: P = Partitions(7)[3]
-    sage: class_hierarchy(P.__class__)
-    [[<class 'sage.combinat.partition.Partitions_n_with_category.element_class'>,
-    <class 'sage.categories.finite_enumerated_sets.FiniteEnumeratedSets.element_class'>,
-    <class 'sage.categories.enumerated_sets.EnumeratedSets.element_class'>,
-    <class 'sage.categories.sets_cat.Sets.element_class'>,
-    <class 'sage.categories.sets_with_partial_maps.SetsWithPartialMaps.element_class'>,
-    <class 'sage.categories.objects.Objects.element_class'>,
-    <type 'object'>],
-    [<class 'sage.combinat.partition.Partitions_n_with_category.element_class'>,
-    <class 'sage.categories.finite_enumerated_sets.FiniteEnumeratedSets.element_class'>,
-    <class 'sage.categories.finite_sets.FiniteSets.element_class'>,
-    <class 'sage.categories.sets_cat.Sets.element_class'>,
-    <class 'sage.categories.sets_with_partial_maps.SetsWithPartialMaps.element_class'>,
-    <class 'sage.categories.objects.Objects.element_class'>,
-    <type 'object'>],
-    [<class 'sage.combinat.partition.Partitions_n_with_category.element_class'>,
-    <class 'sage.combinat.partition.Partition'>,
-    <class 'sage.combinat.combinat.CombinatorialElement'>,
-    <class 'sage.combinat.combinat.CombinatorialObject'>,
-    <type 'sage.structure.sage_object.SageObject'>,
-    <type 'object'>],
-    [<class 'sage.combinat.partition.Partitions_n_with_category.element_class'>,
-    <class 'sage.combinat.partition.Partition'>,
-    <class 'sage.combinat.combinat.CombinatorialElement'>,
-    <type 'sage.structure.element.Element'>,
-    <type 'sage.structure.sage_object.SageObject'>,
-    <type 'object'>]]
-    """
-    elts = [c]
-    rels = []
-    for b in c.__bases__:
-        elts.append(b)
-        rels.append([c, b])
-        elts += list(class_hierarchy(b))
-        rels += class_hierarchy(b).cover_relations()
-    return Poset((elts, rels))
-
-def method_origin(obj, name):
-    """Return class where method 'name' is actually defined"""
-    c0 = obj
-    if not isclass(c0):
-        c0 = obj.__class__
-    ct = class_hierarchy(c0)
-    ret = c0
-    for ch in ct.maximal_chains():
-        for c in ch[1:]:
-            if not name in [x[0] for x in getmembers(c)]:
-                break
-            for x in getmembers(c):
-                if x[0] == name:
-                    if x[1] == getattr(c0, name):
-                        ret = c
-    return ret
 
 def method_origins(obj, names):
     """Return class where methods in list 'names' are actually defined
@@ -108,21 +49,22 @@ def method_origins(obj, names):
     c0 = obj
     if not isclass(c0):
         c0 = obj.__class__
-    ct = class_hierarchy(c0)
     # Initialisation
-    ret = {}
+    origins, overrides = {}, {}
     for name in names:
-        ret[name] = c0
-    for ch in ct.maximal_chains():
-        for c in ch[1:]:
-            for name in names:
-                if not name in [x[0] for x in getmembers(c)]:
-                    continue
-                for x in getmembers(c):
-                    if x[0] == name:
-                        if x[1] == getattr(c0, name):
-                            ret[name] = c
-    return ret
+        origins[name] = c0
+        overrides[name] = []
+    for c in c0.__mro__[1:]:
+        for name in names:
+            if not name in [x[0] for x in getmembers(c)]:
+                continue
+            for x in getmembers(c):
+                if x[0] == name:
+                    if x[1] == getattr(c0, name):
+                        origins[name] = c
+                    else:
+                        overrides[name].append(c)
+    return origins, overrides
 
 def extract_classname(c, element_ok=True):
     """Extract proper class name from class
@@ -137,7 +79,7 @@ def extract_classname(c, element_ok=True):
     >> extract_classname(s)
     StandardTableau
     """
-    s = str(c)
+    s = str(c.__name__)
     if 'element_class' in s and not element_ok:
         s = str(c.__bases__[0])
     if s.endswith('>'):
@@ -167,11 +109,11 @@ class SageExplorer(VBox):
         super(SageExplorer, self).__init__()
         self.obj = obj
         c0 = obj.__class__
-        self.members = [x for x in getmembers(c0) if not x[0].startswith('_') and not 'deprecated' in str(type(x[1])).lower()]
-        self.attributes = [x for x in self.members if not ismethod(x[1]) and not isfunction(x[1]) and not ismethoddescriptor(x[1])]
+        global excluded_members
+        self.members = [x for x in getmembers(c0) if not x[0] in excluded_members and (not x[0].startswith('_') or x[0].startswith('__')) and not 'deprecated' in str(type(x[1])).lower()]
         self.methods = [x for x in self.members if ismethod(x[1]) or ismethoddescriptor(x[1])]
-        self.builtins = [x for x in self.members if not x in self.methods and isbuiltin(x[1])]
-        origins = method_origins(c0, [x[0] for x in self.methods])
+        origins, overrides = method_origins(c0, [x[0] for x in self.methods])
+        self.overrides = overrides
         bases = []
         basemembers = {}
         for c in getmro(c0):
@@ -187,15 +129,11 @@ class SageExplorer(VBox):
         menus = []
         for i in range(len(bases)):
             c = bases[i]
-            menus.append(Select(rows=12, options = [("{c}:".format(c=extract_classname(c)), None)] + [x for x in self.methods if x[0] in basemembers[c]]))
-        #menus.append(Select(rows=12, options = [('Builtins:', None)] + self.builtins))
-        #menus.append(Select(rows=12, options = [('Attributes:', None)] + self.attributes))
+            menus.append(Select(rows=12, options = [x for x in self.methods if x[0] in basemembers[c]]))
         self.menus = Accordion(menus)
         for i in range(len(bases)):
             c = bases[i]
             self.menus.set_title(i, extract_classname(c))
-        #self.menus.set_title(len(bases), 'Builtins')
-        #self.menus.set_title(len(bases) + 1, 'Attributes')
         self.title = Label(extract_classname(obj.__class__, element_ok=False))
         self.visual = Textarea(repr(obj._ascii_art_()))
         self.top = HBox([self.title, self.visual])
@@ -204,6 +142,8 @@ class SageExplorer(VBox):
         self.output = HTML()
         self.worktab = VBox((self.inputs, self.gobutton, self.output))
         self.doctab = HTML()
+        self.selected_func = menus[0].options[0][1] # Initialize value to first method in all menus
+        self.init_selected_method()
         self.main = Tab((self.worktab, self.doctab))
         self.main.set_title(0, 'Main')
         self.main.set_title(1, 'Help')
@@ -211,14 +151,35 @@ class SageExplorer(VBox):
         self.children = (self.top, self.bottom)
         self.compute()
 
+    def init_selected_method(self):
+        func = self.selected_func
+        self.doctab.value = to_html(func.__doc__)
+        if self.overrides[func.__name__]:
+            self.doctab.value += to_html("Overrides:")
+            self.doctab.value += to_html([extract_classname(x) for x in self.overrides[func.__name__]])
+        inputs = []
+        try:
+            for argname in sage_getargspec(func).args:
+                if argname in ['self']:
+                    continue
+                inputs.append(Text(placeholder=argname))
+        except:
+            print func, "attr?"
+            inputs.append(HTML(getattr(func)))
+        self.inputs.children = inputs
+
     def compute(self):
         """Get some attributes, depending on the object
         Create links between menus and output tabs"""
         # FIXME attributes
         # FIXME compute list of methods here
         def menu_on_change(change):
-            selected_func = change.new
-            self.doctab.value = to_html(selected_func.__doc__)
+            self.selected_func = change.new
+            self.init_selected_method()
+            """self.doctab.value = to_html(selected_func.__doc__)
+            if self.overrides[selected_func.__name__]:
+                self.doctab.value += to_html("Overrides:")
+                self.doctab.value += to_html([extract_classname(x) for x in self.overrides[selected_func.__name__]])
             inputs = []
             try:
                 for argname in sage_getargspec(selected_func).args:
@@ -228,9 +189,24 @@ class SageExplorer(VBox):
             except:
                 print selected_func, "attr?"
                 inputs.append(HTML(getattr(selected_func)))
-            self.inputs.children = inputs
+            self.inputs.children = inputs"""
         for menu in self.menus.children:
             menu.observe(menu_on_change, names='value')
+        def compute_selected_method(button):
+            args = []
+            for i in self.inputs.children:
+                try:
+                    args.append(eval(i.value))
+                except:
+                    self.output.value = to_html("Could not evaluate arg " + i.value)
+                    return
+            try:
+                out = self.selected_func(self.obj, *args)
+            except Exception as e:
+                self.output.value = to_html(e)
+                return
+            self.output.value = to_html(out)
+        self.gobutton.on_click(compute_selected_method)
 
     def get_object(self):
         return self.obj
