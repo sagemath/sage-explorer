@@ -15,7 +15,7 @@ AUTHORS:
 """
 from ipywidgets import Layout, VBox, HBox, Text, Label, HTML, Select, Textarea, Accordion, Tab, Button
 import traitlets
-from inspect import getdoc, getsource, getmembers, getmro, ismethod, isbuiltin, isfunction, ismethoddescriptor
+from inspect import getdoc, getsource, getmembers, getmro, ismethod, isbuiltin, isfunction, ismethoddescriptor, isclass
 from sage.misc.sageinspect import sage_getargspec
 from sage.combinat.posets.posets import Poset
 
@@ -86,7 +86,9 @@ def class_hierarchy(c):
 
 def method_origin(obj, name):
     """Return class where method 'name' is actually defined"""
-    c0 = obj.__class__
+    c0 = obj
+    if not isclass(c0):
+        c0 = obj.__class__
     ct = class_hierarchy(c0)
     ret = c0
     for ch in ct.maximal_chains():
@@ -103,7 +105,9 @@ def method_origins(obj, names):
     """Return class where methods in list 'names' are actually defined
     INPUT: object 'obj', list of method names
     """
-    c0 = obj.__class__
+    c0 = obj
+    if not isclass(c0):
+        c0 = obj.__class__
     ct = class_hierarchy(c0)
     # Initialisation
     ret = {}
@@ -162,14 +166,15 @@ class SageExplorer(VBox):
         """
         super(SageExplorer, self).__init__()
         self.obj = obj
-        self.members = [x for x in getmembers(obj) if not x[0].startswith('_') and not 'deprecated' in str(type(x[1])).lower()]
-        self.attributes = [x for x in self.members if not ismethod(x[1]) and not isfunction(x[1])]
+        c0 = obj.__class__
+        self.members = [x for x in getmembers(c0) if not x[0].startswith('_') and not 'deprecated' in str(type(x[1])).lower()]
+        self.attributes = [x for x in self.members if not ismethod(x[1]) and not isfunction(x[1]) and not ismethoddescriptor(x[1])]
         self.methods = [x for x in self.members if ismethod(x[1]) or ismethoddescriptor(x[1])]
         self.builtins = [x for x in self.members if not x in self.methods and isbuiltin(x[1])]
-        origins = method_origins(self.obj, [x[0] for x in self.methods])
+        origins = method_origins(c0, [x[0] for x in self.methods])
         bases = []
         basemembers = {}
-        for c in getmro(obj.__class__):
+        for c in getmro(c0):
             bases.append(c)
             basemembers[c] = []
         for name in origins:
@@ -183,14 +188,14 @@ class SageExplorer(VBox):
         for i in range(len(bases)):
             c = bases[i]
             menus.append(Select(rows=12, options = [("{c}:".format(c=extract_classname(c)), None)] + [x for x in self.methods if x[0] in basemembers[c]]))
-        menus.append(Select(rows=12, options = [('Builtins:', None)] + self.builtins))
-        menus.append(Select(rows=12, options = [('Attributes:', None)] + self.attributes))
+        #menus.append(Select(rows=12, options = [('Builtins:', None)] + self.builtins))
+        #menus.append(Select(rows=12, options = [('Attributes:', None)] + self.attributes))
         self.menus = Accordion(menus)
         for i in range(len(bases)):
             c = bases[i]
             self.menus.set_title(i, extract_classname(c))
-        self.menus.set_title(len(bases), 'Builtins')
-        self.menus.set_title(len(bases) + 1, 'Attributes')
+        #self.menus.set_title(len(bases), 'Builtins')
+        #self.menus.set_title(len(bases) + 1, 'Attributes')
         self.title = Label(extract_classname(obj.__class__, element_ok=False))
         self.visual = Textarea(repr(obj._ascii_art_()))
         self.top = HBox([self.title, self.visual])
