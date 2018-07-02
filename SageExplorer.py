@@ -35,10 +35,7 @@ def to_html(s):
     INPUT: string s
     OUPUT: string
     """
-    if type(s) == type([]):
-        s = ', '.join(s)
-    elif type(s) != type(''):
-        s = str(s)
+    s = str(s)
     from sage.misc.sphinxify import sphinxify
     return sphinxify(s)
 
@@ -154,18 +151,28 @@ class SageExplorer(VBox):
     def init_selected_method(self):
         func = self.selected_func
         self.doctab.value = to_html(func.__doc__)
+        self.output.value = ''
         if self.overrides[func.__name__]:
             self.doctab.value += to_html("Overrides:")
-            self.doctab.value += to_html([extract_classname(x) for x in self.overrides[func.__name__]])
+            self.doctab.value += to_html(', '.join([extract_classname(x) for x in self.overrides[func.__name__]]))
         inputs = []
         try:
-            for argname in sage_getargspec(func).args:
+            argspec = sage_getargspec(func)
+            argnames, defaults = sage_getargspec(func).args, sage_getargspec(func).defaults
+            shift = 0
+            for i in range(len(argspec.args)):
+                argname = argnames[i]
                 if argname in ['self']:
+                    shift = 1
                     continue
-                inputs.append(Text(placeholder=argname))
+                default = ''
+                if defaults and defaults[i - shift]:
+                    default = argspec.defaults[i - shift]
+                inputs.append(Text(description=argname, placeholder=str(default)))
         except:
             print func, "attr?"
-            inputs.append(HTML(getattr(func)))
+            print argspec
+            #inputs.append(HTML(getattr(func)))
         self.inputs.children = inputs
 
     def compute(self):
@@ -196,9 +203,13 @@ class SageExplorer(VBox):
             args = []
             for i in self.inputs.children:
                 try:
-                    args.append(eval(i.value))
+                    arg = i.value or i.placeholder
+                    if not arg:
+                        self.output.value = to_html("Argument '%s' is empty!" % i.description)
+                        return
+                    args.append(arg)
                 except:
-                    self.output.value = to_html("Could not evaluate arg " + i.value)
+                    self.output.value = to_html("Could not evaluate argument '%s'" % i.description)
                     return
             try:
                 out = self.selected_func(self.obj, *args)
