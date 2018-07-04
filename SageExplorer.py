@@ -25,6 +25,9 @@ box_layout = Layout()
 css_lines = []
 css_lines.append(".invisible {display: none; width: 0; height: 0}")
 css_lines.append(".visible {display: table}")
+css_lines.append(".titlebox {width: 40%}")
+css_lines.append(".title {font-size: 150%}")
+css_lines.append(".visualbox {min-height: 100px; padding: 15px}")
 css = HTML("<style>%s</style>"% '\n'.join(css_lines))
 try:
     display(css)
@@ -150,7 +153,8 @@ class SageExplorer(VBox):
             if not basemembers[c]:
                 bases.remove(c)
             else:
-                print c, len(basemembers[c])
+                pass
+                #print c, len(basemembers[c])
         menus = []
         for i in range(len(bases)):
             c = bases[i]
@@ -162,8 +166,15 @@ class SageExplorer(VBox):
             c = bases[i]
             self.menus.set_title(i, extract_classname(c))
         self.title = Label(self.classname)
-        self.visual = Textarea(repr(obj._ascii_art_()))
-        self.top = HBox([self.title, self.visual])
+        self.title.add_class('title')
+        self.titlebox = VBox()
+        self.titlebox.add_class('titlebox')
+        self.titlebox.children = [self.title]
+        self.visualbox = Box()
+        self.visual = Textarea(repr(obj._ascii_art_()), rows=8)
+        self.visualbox.add_class('visualbox')
+        self.visualbox.children = [self.visual]
+        self.top = HBox([self.titlebox, self.visualbox])
         self.inputs = HBox()
         self.gobutton = Button(description='Run!', tooltip='Run the function or method, with specified arguments')
         self.output = HTML()
