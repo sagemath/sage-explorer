@@ -123,6 +123,17 @@ class TestBox(Box):
         self.elt2.remove_class('visible')
         self.elt2.add_class('invisible')
 
+    def append_child(self, new_child):
+        self.children = [ x for x in self.children ] + [ new_child ]
+
+class TestSelect(Select):
+    def __init__(self):
+        super(TestSelect, self).__init__()
+        self.options = [1,2]
+
+    def switch(self, options):
+        self.options = options
+
 
 class SageExplorer(VBox):
     """Sage Explorer in Jupyter Notebook"""
@@ -238,7 +249,7 @@ class SageExplorer(VBox):
         """Get some attributes, depending on the object
         Create links between menus and output tabs"""
         # FIXME attributes
-        # FIXME compute list of methods here
+        # FIXME compute list of methods here ?
         def menu_on_change(change):
             self.selected_func = change.new
             self.init_selected_method()
