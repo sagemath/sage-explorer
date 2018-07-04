@@ -13,7 +13,7 @@ AUTHORS:
 - Odile Bénassy, Nicolas Thiéry
 
 """
-from ipywidgets import Layout, VBox, HBox, Text, Label, HTML, Select, Textarea, Accordion, Tab, Button
+from ipywidgets import Layout, Box, VBox, HBox, Text, Label, HTML, Select, Textarea, Accordion, Tab, Button
 import traitlets
 from inspect import getdoc, getsource, getmembers, getmro, ismethod, isfunction, ismethoddescriptor, isclass
 from sage.misc.sageinspect import sage_getargspec
@@ -105,6 +105,7 @@ class SageExplorer(VBox):
         """
         super(SageExplorer, self).__init__()
         self.obj = obj
+        self.selected_func = None
         c0 = obj.__class__
         self.classname = extract_classname(c0, element_ok=False)
         global excluded_members
@@ -141,49 +142,49 @@ class SageExplorer(VBox):
         self.gobutton = Button(description='Run!', tooltip='Run the function or method, with specified arguments')
         self.output = HTML()
         self.worktab = VBox((self.inputs, self.gobutton, self.output))
-        self.doctab = HTML(to_html(self.obj.__doc__)) # Initialize to object docstring
-        self.main = Tab((self.worktab, self.doctab))
+        self.doc = HTML(to_html(self.obj.__doc__)) # Initialize to object docstring
+        self.doctab = HTML() # For the method docstring
+        self.main = Tab((self.worktab, self.doctab)) # Will be used when a method is selected
         self.main.set_title(0, 'Main')
-        self.main.set_title(1, self.classname)
-        self.main.selected_index = 1 # Open the doctab at start
-        self.selected_func = None
+        self.main.set_title(1, 'Help')
+        #self.tabs.add_class('invisible') # Hide tabs at first display
         self.bottom = HBox((self.menus, self.main))
         self.children = (self.top, self.bottom)
         self.compute()
 
     def init_selected_method(self):
+        self.output.value = ''
         func = self.selected_func
         if not func:
-            self.doctab.value = to_html(self.obj.__doc__)
-            self.main.selected_index = 1
-            self.output.value = ''
-        else:
-            self.main.set_title(1, 'Help')
-            self.doctab.value = to_html(func.__doc__)
+            self.doctab.value = ''
             self.inputs.children = []
-            self.gobutton.add_class("invisible")
-            self.output.value = ''
-            if self.overrides[func.__name__]:
-                self.doctab.value += to_html("Overrides:")
-                self.doctab.value += to_html(', '.join([extract_classname(x) for x in self.overrides[func.__name__]]))
-            inputs = []
-            try:
-                argspec = sage_getargspec(func)
-                argnames, defaults = sage_getargspec(func).args, sage_getargspec(func).defaults
-                shift = 0
-                for i in range(len(argspec.args)):
-                    argname = argnames[i]
-                    if argname in ['self']:
-                        shift = 1
-                        continue
-                    default = ''
-                    if defaults and len(defaults) > i - shift and defaults[i - shift]:
-                        default = argspec.defaults[i - shift]
-                    inputs.append(Text(description=argname, placeholder=str(default)))
-            except:
-                print func, "attr?"
-                print argspec
-            self.inputs.children = inputs
+            #self.tabs.remove_class('invisible')
+            #self.doc.add_class('invisible')
+            return
+        self.doctab.value = to_html(func.__doc__)
+        if self.overrides[func.__name__]:
+            self.doctab.value += to_html("Overrides:")
+            self.doctab.value += to_html(', '.join([extract_classname(x) for x in self.overrides[func.__name__]]))
+        inputs = []
+        try:
+            argspec = sage_getargspec(func)
+            argnames, defaults = sage_getargspec(func).args, sage_getargspec(func).defaults
+            shift = 0
+            for i in range(len(argspec.args)):
+                argname = argnames[i]
+                if argname in ['self']:
+                    shift = 1
+                    continue
+                default = ''
+                if defaults and len(defaults) > i - shift and defaults[i - shift]:
+                    default = argspec.defaults[i - shift]
+                inputs.append(Text(description=argname, placeholder=str(default)))
+        except:
+            print func, "attr?"
+            print argspec
+        self.inputs.children = inputs
+        #self.tabs.add_class('invisible')
+        #self.doc.remove_class('invisible')
 
     def compute(self):
         """Get some attributes, depending on the object
