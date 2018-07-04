@@ -16,18 +16,21 @@ AUTHORS:
 from ipywidgets import Layout, Box, VBox, HBox, Text, Label, HTML, Select, Textarea, Accordion, Tab, Button
 import traitlets
 from inspect import getdoc, getsource, getmembers, getmro, ismethod, isfunction, ismethoddescriptor, isclass
+from cysignals.alarm import alarm, cancel_alarm, AlarmInterrupt
 from sage.misc.sageinspect import sage_getargspec
 from sage.combinat.posets.posets import Poset
 
 cell_layout = Layout(width='3em',height='2em', margin='0',padding='0')
 box_layout = Layout()
-css = HTML("<style></style>")
+css_lines = []
+css_lines.append(".invisible {display: None}")
+css = HTML("<style>%s</style>"% '\n'.join(css_lines))
 try:
     display(css)
 except:
     pass # We are not in a notebook
 
-
+TIMEOUT = 15 # in seconds
 excluded_members = ['__init__', '__repr__', '__str__']
 
 def to_html(s):
@@ -209,7 +212,11 @@ class SageExplorer(VBox):
                     self.output.value = to_html("Could not evaluate argument '%s'" % i.description)
                     return
             try:
+                alarm(TIMEOUT)
                 out = self.selected_func(self.obj, *args)
+                cancel_alarm()
+            except AlarmInterrupt:
+                self.output.value = to_html("Timeout!")
             except Exception as e:
                 self.output.value = to_html(e)
                 return
