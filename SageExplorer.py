@@ -145,55 +145,24 @@ class SageExplorer(VBox):
         sage: S = StandardTableaux(15)
         sage: t = S.random_element()
         sage: widget = SageExplorer(t)
-        sage: widget.compute()
         """
         super(SageExplorer, self).__init__()
-        self.obj = obj
-        c0 = obj.__class__
-        self.classname = extract_classname(c0, element_ok=False)
-        self.selected_func = c0
-        self.members = [x for x in getmembers(c0) if not x[0] in EXCLUDED_MEMBERS and (not x[0].startswith('_') or x[0].startswith('__')) and not 'deprecated' in str(type(x[1])).lower()]
-        self.methods = [x for x in self.members if ismethod(x[1]) or ismethoddescriptor(x[1])]
-        origins, overrides = method_origins(c0, [x[0] for x in self.methods])
-        self.overrides = overrides
-        bases = []
-        basemembers = {}
-        for c in getmro(c0):
-            bases.append(c)
-            basemembers[c] = []
-        for name in origins:
-            basemembers[origins[name]].append(name)
-        for c in basemembers:
-            if not basemembers[c]:
-                bases.remove(c)
-            else:
-                pass
-                #print c, len(basemembers[c])
-        menus = []
-        for i in range(len(bases)):
-            c = bases[i]
-            menus.append(Select(rows=12,
-                                options = [('----', c)] + [x for x in self.methods if x[0] in basemembers[c]]
-            ))
-        self.menus = Accordion(menus)
-        for i in range(len(bases)):
-            c = bases[i]
-            self.menus.set_title(i, extract_classname(c))
-        self.title = Label(self.classname)
+        self.title = Label()
         self.title.add_class('title')
         self.titlebox = VBox()
         self.titlebox.add_class('titlebox')
         self.titlebox.children = [self.title]
         self.visualbox = Box()
-        self.visual = Textarea(repr(obj._ascii_art_()), rows=8)
+        self.visual = Textarea('', rows=8)
         self.visualbox.add_class('visualbox')
         self.visualbox.children = [self.visual]
         self.top = HBox([self.titlebox, self.visualbox])
+        self.menus = Accordion()
         self.inputs = HBox()
         self.gobutton = Button(description='Run!', tooltip='Run the function or method, with specified arguments')
         self.output = HTML()
         self.worktab = VBox((self.inputs, self.gobutton, self.output))
-        self.doc = HTML(to_html(self.obj.__doc__)) # Initialize to object docstring
+        self.doc = HTML()
         self.doctab = HTML() # For the method docstring
         self.tabs = Tab((self.worktab, self.doctab)) # Will be used when a method is selected
         self.tabs.add_class('tabs')
@@ -204,7 +173,7 @@ class SageExplorer(VBox):
         self.tabs.add_class('invisible') # Hide tabs at first display
         self.bottom = HBox((self.menus, self.main))
         self.children = (self.top, self.bottom)
-        self.compute()
+        self.compute(obj)
 
     def init_selected_method(self):
         self.output.value = ''
@@ -245,11 +214,45 @@ class SageExplorer(VBox):
         self.tabs.remove_class('invisible')
         self.tabs.add_class('visible')
 
-    def compute(self):
+    def compute(self, obj):
         """Get some attributes, depending on the object
         Create links between menus and output tabs"""
         # FIXME attributes
-        # FIXME compute list of methods here ?
+        # Compute list of methods here
+        self.obj = obj
+        self.visual.value = repr(obj._ascii_art_())
+        c0 = obj.__class__
+        self.classname = extract_classname(c0, element_ok=False)
+        self.title.value = self.classname
+        self.doc.value = to_html(obj.__doc__) # Initialize to object docstring
+        self.selected_func = c0
+        self.members = [x for x in getmembers(c0) if not x[0] in EXCLUDED_MEMBERS and (not x[0].startswith('_') or x[0].startswith('__')) and not 'deprecated' in str(type(x[1])).lower()]
+        self.methods = [x for x in self.members if ismethod(x[1]) or ismethoddescriptor(x[1])]
+        origins, overrides = method_origins(c0, [x[0] for x in self.methods])
+        self.overrides = overrides
+        bases = []
+        basemembers = {}
+        for c in getmro(c0):
+            bases.append(c)
+            basemembers[c] = []
+        for name in origins:
+            basemembers[origins[name]].append(name)
+        for c in basemembers:
+            if not basemembers[c]:
+                bases.remove(c)
+            else:
+                pass
+                #print c, len(basemembers[c])
+        menus = []
+        for i in range(len(bases)):
+            c = bases[i]
+            menus.append(Select(rows=12,
+                                options = [('----', c)] + [x for x in self.methods if x[0] in basemembers[c]]
+            ))
+        self.menus.children = menus
+        for i in range(len(bases)):
+            c = bases[i]
+            self.menus.set_title(i, extract_classname(c))
         def menu_on_change(change):
             self.selected_func = change.new
             self.init_selected_method()
@@ -269,7 +272,7 @@ class SageExplorer(VBox):
                     return
             try:
                 alarm(TIMEOUT)
-                out = self.selected_func(self.obj, *args)
+                out = self.selected_func(obj, *args)
                 cancel_alarm()
             except AlarmInterrupt:
                 self.output.value = to_html("Timeout!")
