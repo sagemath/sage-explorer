@@ -1,16 +1,18 @@
 Affichage général
 -----------------
 ok premier jet d'une structure générale du widget (affichage)
-* style : dimensionnement et plus
-* affichage plein écran
+ok style : dimensionnement et plus
+[* affichage plein écran]
 
 Objet
 -----
 ok affichage de l'objet brut dans un Textarea
-* intégration d'un widget dédié, si possible configurable
+* intégration d'un widget dédié, si possible configurable (et en cascade)
 * affichage des attributs "principaux" de l'objet
-at amélioration du titre
-* affichage de la doc de l'objet
+ok amélioration du titre
+ok affichage de la doc de l'objet
+* cas des catégories
+* cas des morphismes
 
 Méthodes
 --------
@@ -20,6 +22,8 @@ ok affichage interactif de la doc d'une méthode
 ok affichage interactif des cases d'input
  at utiliser les valeurs par défaut quand il y en a ; au besoin les inventer (?)
 ok calcul et affichage output
+ ok timeout automatique de 15 secondes
+ ** bouton pour arrêter le calcul efficacement, au choix de l'utilisateur
 
 Meta
 ----

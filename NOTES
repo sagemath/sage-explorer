@@ -1,0 +1,41 @@
+Penser à
+--------
+* timeout (configurable) lors du lancement de la méthode
+*
+
+Erik
+----
+LaTeX rendering is not inside sphinxify?
+mathjax javascript -> math in HTML
+Jupyter API for '?' -> std fallback for py, override to sphinxify
+http://jupyter-client.readthedocs.io/en/stable/messaging.html#introspection
+
+Sage alarm function
+
+class Tableau:
+  @classmethod
+  def __widget__(cls):
+    return TableauWidget
+
+
+Nicolas
+-------
+ok __class__.__name__
+* si pas de widget
+unicode_art, ascii_art, rep
+* mettre à part la comparaison de la meth de l'obj et de celle du parent
+ok essayer de nouveau avec le mro
+** objet élément d'un corps
+* garder les méthodes qui ont un underscore de chaque côté exmpl __add__
+* regarder les méth fournies par les catégories et écrire "élement de"  si la cat fournit des meth, "morphisme de"
+3 cas :
+Fields		Element Fields		Fields Morphism / Morphism in Fields
+éventuellement mettre au singulier
+* s'intéresser aux catégories ?
+* possibilité de grouper toutes les méthodes de l'objet
+* sphinx : comment calcule-t-il où la méthode est déclarée / définie ?
+ ** affichage des maths
+* javadoc : comment les override de méthodes sont affichés ?
+* regarder les L-fonctions
+* sig_on() ; foo() ; sig_off() (SIGALRM)
+  raise Timeout
