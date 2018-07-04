@@ -23,7 +23,8 @@ from sage.combinat.posets.posets import Poset
 cell_layout = Layout(width='3em',height='2em', margin='0',padding='0')
 box_layout = Layout()
 css_lines = []
-css_lines.append(".invisible {display: None}")
+css_lines.append(".invisible {display: none; width: 0; height: 0}")
+css_lines.append(".visible {display: table}")
 css = HTML("<style>%s</style>"% '\n'.join(css_lines))
 try:
     display(css)
@@ -31,7 +32,7 @@ except:
     pass # We are not in a notebook
 
 TIMEOUT = 15 # in seconds
-excluded_members = ['__init__', '__repr__', '__str__']
+EXCLUDED_MEMBERS = ['__init__', '__repr__', '__str__']
 
 def to_html(s):
     r"""Display nicely formatted HTML string
@@ -94,6 +95,29 @@ def extract_classname(c, element_ok=True):
     return ret
 
 
+class TestBox(Box):
+    """Test de l'objet Box"""
+    def __init__(self):
+        super(TestBox, self).__init__()
+        self.elt1 = HTML("OK1")
+        self.elt2 = Tab((HTML("OK2"), HTML("OK3")))
+        self.children = [self.elt1, self.elt2]
+        self.switch()
+
+    def switch(self, state=0):
+        if state:
+            self.elt1.remove_class('visible')
+            self.elt1.add_class('invisible')
+            self.elt2.remove_class('invisible')
+            self.elt2.add_class('visible')
+            print "Should be OK2"
+            return
+        self.elt1.remove_class('invisible')
+        self.elt1.add_class('visible')
+        self.elt2.remove_class('visible')
+        self.elt2.add_class('invisible')
+
+
 class SageExplorer(VBox):
     """Sage Explorer in Jupyter Notebook"""
 
@@ -108,11 +132,10 @@ class SageExplorer(VBox):
         """
         super(SageExplorer, self).__init__()
         self.obj = obj
-        self.selected_func = None
         c0 = obj.__class__
         self.classname = extract_classname(c0, element_ok=False)
-        global excluded_members
-        self.members = [x for x in getmembers(c0) if not x[0] in excluded_members and (not x[0].startswith('_') or x[0].startswith('__')) and not 'deprecated' in str(type(x[1])).lower()]
+        self.selected_func = c0
+        self.members = [x for x in getmembers(c0) if not x[0] in EXCLUDED_MEMBERS and (not x[0].startswith('_') or x[0].startswith('__')) and not 'deprecated' in str(type(x[1])).lower()]
         self.methods = [x for x in self.members if ismethod(x[1]) or ismethoddescriptor(x[1])]
         origins, overrides = method_origins(c0, [x[0] for x in self.methods])
         self.overrides = overrides
@@ -132,7 +155,7 @@ class SageExplorer(VBox):
         for i in range(len(bases)):
             c = bases[i]
             menus.append(Select(rows=12,
-                                options = [('----', None)] + [x for x in self.methods if x[0] in basemembers[c]]
+                                options = [('----', c)] + [x for x in self.methods if x[0] in basemembers[c]]
             ))
         self.menus = Accordion(menus)
         for i in range(len(bases)):
@@ -147,10 +170,11 @@ class SageExplorer(VBox):
         self.worktab = VBox((self.inputs, self.gobutton, self.output))
         self.doc = HTML(to_html(self.obj.__doc__)) # Initialize to object docstring
         self.doctab = HTML() # For the method docstring
-        self.main = Tab((self.worktab, self.doctab)) # Will be used when a method is selected
-        self.main.set_title(0, 'Main')
-        self.main.set_title(1, 'Help')
-        #self.tabs.add_class('invisible') # Hide tabs at first display
+        self.tabs = Tab((self.worktab, self.doctab)) # Will be used when a method is selected
+        self.tabs.set_title(0, 'Main')
+        self.tabs.set_title(1, 'Help')
+        self.main = Box((self.doc, self.tabs))
+        self.tabs.add_class('invisible') # Hide tabs at first display
         self.bottom = HBox((self.menus, self.main))
         self.children = (self.top, self.bottom)
         self.compute()
@@ -158,11 +182,14 @@ class SageExplorer(VBox):
     def init_selected_method(self):
         self.output.value = ''
         func = self.selected_func
-        if not func:
+        if isclass(func):
+            self.doc.value = to_html(func.__doc__)
             self.doctab.value = ''
             self.inputs.children = []
-            #self.tabs.remove_class('invisible')
-            #self.doc.add_class('invisible')
+            self.tabs.remove_class('visible')
+            self.tabs.add_class('invisible')
+            self.doc.remove_class('invisible')
+            self.doc.add_class('visible')
             return
         self.doctab.value = to_html(func.__doc__)
         if self.overrides[func.__name__]:
@@ -186,8 +213,10 @@ class SageExplorer(VBox):
             print func, "attr?"
             print argspec
         self.inputs.children = inputs
-        #self.tabs.add_class('invisible')
-        #self.doc.remove_class('invisible')
+        self.doc.remove_class('visible')
+        self.doc.add_class('invisible')
+        self.tabs.remove_class('invisible')
+        self.tabs.add_class('visible')
 
     def compute(self):
         """Get some attributes, depending on the object
