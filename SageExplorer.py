@@ -28,6 +28,9 @@ css_lines.append(".visible {display: table}")
 css_lines.append(".titlebox {width: 40%}")
 css_lines.append(".title {font-size: 150%}")
 css_lines.append(".visualbox {min-height: 100px; padding: 15px}")
+css_lines.append(".main {width: 100%}")
+css_lines.append(".tabs {width: 100%}")
+css_lines.append(".widget-text .widget-label {width: auto}")
 css = HTML("<style>%s</style>"% '\n'.join(css_lines))
 try:
     display(css)
@@ -182,9 +185,11 @@ class SageExplorer(VBox):
         self.doc = HTML(to_html(self.obj.__doc__)) # Initialize to object docstring
         self.doctab = HTML() # For the method docstring
         self.tabs = Tab((self.worktab, self.doctab)) # Will be used when a method is selected
+        self.tabs.add_class('tabs')
         self.tabs.set_title(0, 'Main')
         self.tabs.set_title(1, 'Help')
         self.main = Box((self.doc, self.tabs))
+        self.main.add_class('main')
         self.tabs.add_class('invisible') # Hide tabs at first display
         self.bottom = HBox((self.menus, self.main))
         self.children = (self.top, self.bottom)
