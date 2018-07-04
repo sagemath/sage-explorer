@@ -106,6 +106,7 @@ class SageExplorer(VBox):
         super(SageExplorer, self).__init__()
         self.obj = obj
         c0 = obj.__class__
+        self.classname = extract_classname(c0, element_ok=False)
         global excluded_members
         self.members = [x for x in getmembers(c0) if not x[0] in excluded_members and (not x[0].startswith('_') or x[0].startswith('__')) and not 'deprecated' in str(type(x[1])).lower()]
         self.methods = [x for x in self.members if ismethod(x[1]) or ismethoddescriptor(x[1])]
@@ -126,53 +127,63 @@ class SageExplorer(VBox):
         menus = []
         for i in range(len(bases)):
             c = bases[i]
-            menus.append(Select(rows=12, options = [x for x in self.methods if x[0] in basemembers[c]]))
+            menus.append(Select(rows=12,
+                                options = [('----', None)] + [x for x in self.methods if x[0] in basemembers[c]]
+            ))
         self.menus = Accordion(menus)
         for i in range(len(bases)):
             c = bases[i]
             self.menus.set_title(i, extract_classname(c))
-        self.title = Label(extract_classname(obj.__class__, element_ok=False))
+        self.title = Label(self.classname)
         self.visual = Textarea(repr(obj._ascii_art_()))
         self.top = HBox([self.title, self.visual])
         self.inputs = HBox()
         self.gobutton = Button(description='Run!', tooltip='Run the function or method, with specified arguments')
         self.output = HTML()
         self.worktab = VBox((self.inputs, self.gobutton, self.output))
-        self.doctab = HTML()
-        self.selected_func = menus[0].options[0][1] # Initialize value to first method in all menus
-        self.init_selected_method()
+        self.doctab = HTML(to_html(self.obj.__doc__)) # Initialize to object docstring
         self.main = Tab((self.worktab, self.doctab))
         self.main.set_title(0, 'Main')
-        self.main.set_title(1, 'Help')
+        self.main.set_title(1, self.classname)
+        self.main.selected_index = 1 # Open the doctab at start
+        self.selected_func = None
         self.bottom = HBox((self.menus, self.main))
         self.children = (self.top, self.bottom)
         self.compute()
 
     def init_selected_method(self):
         func = self.selected_func
-        self.doctab.value = to_html(func.__doc__)
-        self.output.value = ''
-        if self.overrides[func.__name__]:
-            self.doctab.value += to_html("Overrides:")
-            self.doctab.value += to_html(', '.join([extract_classname(x) for x in self.overrides[func.__name__]]))
-        inputs = []
-        try:
-            argspec = sage_getargspec(func)
-            argnames, defaults = sage_getargspec(func).args, sage_getargspec(func).defaults
-            shift = 0
-            for i in range(len(argspec.args)):
-                argname = argnames[i]
-                if argname in ['self']:
-                    shift = 1
-                    continue
-                default = ''
-                if defaults and len(defaults) > i - shift and defaults[i - shift]:
-                    default = argspec.defaults[i - shift]
-                inputs.append(Text(description=argname, placeholder=str(default)))
-        except:
-            print func, "attr?"
-            print argspec
-        self.inputs.children = inputs
+        if not func:
+            self.doctab.value = to_html(self.obj.__doc__)
+            self.main.selected_index = 1
+            self.output.value = ''
+        else:
+            self.main.set_title(1, 'Help')
+            self.doctab.value = to_html(func.__doc__)
+            self.inputs.children = []
+            self.gobutton.add_class("invisible")
+            self.output.value = ''
+            if self.overrides[func.__name__]:
+                self.doctab.value += to_html("Overrides:")
+                self.doctab.value += to_html(', '.join([extract_classname(x) for x in self.overrides[func.__name__]]))
+            inputs = []
+            try:
+                argspec = sage_getargspec(func)
+                argnames, defaults = sage_getargspec(func).args, sage_getargspec(func).defaults
+                shift = 0
+                for i in range(len(argspec.args)):
+                    argname = argnames[i]
+                    if argname in ['self']:
+                        shift = 1
+                        continue
+                    default = ''
+                    if defaults and len(defaults) > i - shift and defaults[i - shift]:
+                        default = argspec.defaults[i - shift]
+                    inputs.append(Text(description=argname, placeholder=str(default)))
+            except:
+                print func, "attr?"
+                print argspec
+            self.inputs.children = inputs
 
     def compute(self):
         """Get some attributes, depending on the object
