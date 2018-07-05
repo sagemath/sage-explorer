@@ -1,7 +1,6 @@
 Penser à
 --------
-* timeout (configurable) lors du lancement de la méthode
-*
+at timeout (configurable) lors du lancement de la méthode
 
 Erik
 ----
@@ -39,3 +38,28 @@ Fields		Element Fields		Fields Morphism / Morphism in Fields
 * regarder les L-fonctions
 * sig_on() ; foo() ; sig_off() (SIGALRM)
   raise Timeout
+
+Sur la navigation
+------------------
+* pour tous les éléments, on veut leur parent
+* pour tous les parents, on veut leur catégorie
+* pour les catégories, on veut un exemple
+* pour les morphismes, on veut voir sur quels ensembles ils opérent
+* dès qu'on peut définir les automorphismes sur l'objet (par exemple un corps), on le fait
+* on peut utiliser morphism_class quand elle est définie, sur une catégorie, sur un parent, et peut-être aussi sur un élément à travers son parent
+* utiliser an_instance sur les catégories
+* pour les catégories, mettre les sous-catégories quand il n'y en a pas trop (pointillés ?)
+
+Sur la configuration
+--------------------
+* pour tous les éléments ayant FiniteEnumeratedSets comme catégorie, on veut cardinality (sous le nom "Cardinality")
+* pour tous les éléments ayant FiniteSemigroups comme catégorie, on veut en plus multiplication_table ("Multiplication Table") si cardinality < 21
+* pour tous les éléments ayant Partition comme catégorie, on veut conjugate ('Conjugate') et hook_lengths ('Hook lengths')
+* pour tous les éléments de type FiniteField, on veut leur polynôme sous une forme standard, donc polynomial (Polynomial)
+* base_ring pour les polynômes, les matrices... il suffit pour cela de vérifier has_base()
+* evaluation pour les tableaux non-standard
+* 
+
+
+
+
