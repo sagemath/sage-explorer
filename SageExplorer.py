@@ -73,7 +73,7 @@ def method_origins(obj, names):
                         overrides[name].append(c)
     return origins, overrides
 
-def extract_classname(c, element_ok=True):
+def extract_classname(c, element_ok=False):
     """Extract proper class name from class
     INPUT: class c
     OUTPUT: string
@@ -87,7 +87,7 @@ def extract_classname(c, element_ok=True):
     StandardTableau
     """
     s = str(c.__name__)
-    if 'element_class' in s and not element_ok:
+    if ('element_class' in s or 'parent_class' in s) and not element_ok:
         s = str(c.__bases__[0])
     if s.endswith('>'):
         s = s[:-1]
@@ -135,6 +135,13 @@ class TestSelect(Select):
         self.options = options
 
 
+class TestLink(HTML):
+    """Test d'un lien HTML"""
+    def __init__(self, s):
+        super(TestLink, self).__init__()
+        self.value = '<a href="%s">%s</a>' % (s,s)
+
+
 class SageExplorer(VBox):
     """Sage Explorer in Jupyter Notebook"""
 
@@ -149,9 +156,10 @@ class SageExplorer(VBox):
         super(SageExplorer, self).__init__()
         self.title = Label()
         self.title.add_class('title')
+        self.props = HTML('OK')
         self.titlebox = VBox()
         self.titlebox.add_class('titlebox')
-        self.titlebox.children = [self.title]
+        self.titlebox.children = [self.title, self.props]
         self.visualbox = Box()
         self.visual = Textarea('', rows=8)
         self.visualbox.add_class('visualbox')
@@ -190,7 +198,7 @@ class SageExplorer(VBox):
         self.doctab.value = to_html(func.__doc__)
         if self.overrides[func.__name__]:
             self.doctab.value += to_html("Overrides:")
-            self.doctab.value += to_html(', '.join([extract_classname(x) for x in self.overrides[func.__name__]]))
+            self.doctab.value += to_html(', '.join([extract_classname(x, element_ok=True) for x in self.overrides[func.__name__]]))
         inputs = []
         try:
             argspec = sage_getargspec(func)
