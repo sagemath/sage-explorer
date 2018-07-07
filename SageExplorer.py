@@ -111,11 +111,13 @@ def is_relevant_attribute(c, funcname):
         return False
     config = CONFIG_ATTRIBUTES[funcname]
     if 'category' in config.keys():
-        """test this category"""
-        pass
+        """Test in category"""
+        if not c is_in eval(config['category'] + '()'):
+            return False
     if 'ncategory' in config.keys():
-        """test this not category"""
-        pass
+        """Test not in category"""
+        if c is_in eval(config['category'] + '()'):
+            return False
     def test_when(func, expected, args=None):
         if args:
             res = getattr(c, func)(*args)
