@@ -124,7 +124,7 @@ def printed_attribute(obj, funcname):
     def test_when(funcname, expected, operator=None, complement=None):
         res = getattr(obj, funcname)
         if operator and complement:
-            res = eval(operatorname)(res, eval(complement))
+            res = operator(res, eval(complement))
         return (res == expected)
     def split_when(s):
         when_parts = config['when'].split()
