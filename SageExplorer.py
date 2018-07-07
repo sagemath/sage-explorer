@@ -40,7 +40,8 @@ except:
 
 TIMEOUT = 15 # in seconds
 EXCLUDED_MEMBERS = ['__init__', '__repr__', '__str__']
-CONFIG_ATTRIBUTES = yaml.load(open("attributes.yml").read())
+EXPL_ROOT = '/home/odile/odk/sage/git/nthiery/odile/explorer'
+CONFIG_ATTRIBUTES = yaml.load(open(EXPL_ROOT + "/attributes.yml").read())
 
 def to_html(s):
     r"""Display nicely formatted HTML string
@@ -102,13 +103,13 @@ def extract_classname(c, element_ok=False):
         return '.'.join(s.split('.')[-2:])
     return ret
 
-def is_relevant_attribute(obj, funcname):
+def printed_attribute(obj, funcname):
     """Test whether this method, for this object,
     will be calculated at opening and displayed on this widget
     If True, return a label.
     INPUT: object obj, method name funcname
     OUTPUT: String or None"""
-    if not func in CONFIG_ATTRIBUTES.keys():
+    if not funcname in CONFIG_ATTRIBUTES.keys():
         return
     config = CONFIG_ATTRIBUTES[funcname]
     if 'category' in config.keys():
@@ -136,16 +137,16 @@ def is_relevant_attribute(obj, funcname):
                     return
     if 'nwhen' in config.keys():
         """Test not when predicate(s)"""
-        if isinstance(config['when'], six.string_types):
-            if not test_when(config['when'],False):
+        if isinstance(config['nwhen'], six.string_types):
+            if not test_when(config['nwhen'],False):
                 return
-        elif isinstance(config['when'], (list,)):
-            for func in config['when']:
+        elif isinstance(config['nwhen'], (list,)):
+            for func in config['nwhen']:
                 if not test_when(func, False):
                     return
     if 'label' in config.keys():
-        return True, config['label']
-    return True, ' '.join([x.capitalize() for x in config['label'].split('_')])
+        return config['label']
+    return join([x.capitalize() for x in config['label'].split('_')])
 
 
 class TestBox(Box):
