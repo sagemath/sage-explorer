@@ -1,10 +1,9 @@
 parent:
   label: is element of
-  predicate: 
 
 base_ring:
   label: Base Ring
-  predicate: has_base
+  when: has_base
 
 category:
   label: Category
@@ -19,24 +18,25 @@ super_categories:
   pass
   
 cardinality:
-  predicate: FiniteEnumeratedSet
+  category: FiniteEnumeratedSet
 
 multiplication_table:
-  predicate: FiniteSemigroups
-  predicate: cardinality < 21
+  category: FiniteSemigroups
+  when: cardinality < 21
 
 conjugate:
-  predicate: Partition
+  category: Partition
 
 hook_lengths:
-  predicate: Partition
+  category: Partition
 
 polynomial:
-  predicate: FiniteField
+  category: FiniteField
 
 evaluation:
-  predicate: Tableau
-  predicate: not is_standard
+  category: Tableau
+  nonwhen: is_standard
 
 is_standard:
-  predicate: not Standard
+  category: Tableau
+  noncategory: StandardTableau
