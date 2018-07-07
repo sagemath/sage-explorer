@@ -146,7 +146,7 @@ def printed_attribute(obj, funcname):
                     return
     if 'label' in config.keys():
         return config['label']
-    return join([x.capitalize() for x in config['label'].split('_')])
+    return ' '.join([x.capitalize() for x in funcname.split('_')])
 
 
 class TestBox(Box):

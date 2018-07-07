@@ -30,6 +30,9 @@ conjugate:
 hook_lengths:
   category: Partitions
 
+characteristic:
+  category: Fields
+
 polynomial:
   category: FiniteFields
 

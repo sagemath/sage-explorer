@@ -60,6 +60,31 @@ Sur la configuration
 * evaluation pour les tableaux non-standard
 * 
 
+Nicolas
+-------
+remplacer le début par des tests
+
+remplacer la fin par la un test sur la classe
+
+remplacer le nom de la catégorie par un prédicat
+
+utiliser "predicate="
+2 éléments du même parent sont affichés de la même manière (sauf si c'est trop gros)
+table de multiplication (afficher le début si nécessaire)
+
+Tableau :
+
+prévoir t.shape() pour les aveugles
+
+Corps : la caractéristique
+
+Liste des parents pour une catégorie ?
+
+communiquer avec Minr au sujet des liens javascript
+
+faire une démo sur Binder : dépôt git (github dans org sagemath) + docker file
+
+journées Sage et combinatoire dans 15 jours
 
 
 
