@@ -1,0 +1,42 @@
+parent:
+  label: is element of
+  predicate: 
+
+base_ring:
+  label: Base Ring
+  predicate: has_base
+
+category:
+  label: Category
+
+example:
+  label: Example
+
+an_instance:
+  label: A [typical] instance
+
+super_categories:
+  pass
+  
+cardinality:
+  predicate: FiniteEnumeratedSet
+
+multiplication_table:
+  predicate: FiniteSemigroups
+  predicate: cardinality < 21
+
+conjugate:
+  predicate: Partition
+
+hook_lengths:
+  predicate: Partition
+
+polynomial:
+  predicate: FiniteField
+
+evaluation:
+  predicate: Tableau
+  predicate: not is_standard
+
+is_standard:
+  predicate: not Standard
