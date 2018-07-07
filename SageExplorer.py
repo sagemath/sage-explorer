@@ -19,7 +19,7 @@ from inspect import getdoc, getsource, getmembers, getmro, ismethod, isfunction,
 from cysignals.alarm import alarm, cancel_alarm, AlarmInterrupt
 from sage.misc.sageinspect import sage_getargspec
 from sage.combinat.posets.posets import Poset
-import yaml, six
+import yaml, six, operator as OP
 
 cell_layout = Layout(width='3em',height='2em', margin='0',padding='0')
 box_layout = Layout()
@@ -41,6 +41,7 @@ except:
 TIMEOUT = 15 # in seconds
 EXCLUDED_MEMBERS = ['__init__', '__repr__', '__str__']
 EXPL_ROOT = '/home/odile/odk/sage/git/nthiery/odile/explorer'
+OPERATORS = {'==' : OP.eq, '<' : OP.lt, '<=' : OP.le, '>' : OP.gt, '>=' : OP.ge}
 CONFIG_ATTRIBUTES = yaml.load(open(EXPL_ROOT + "/attributes.yml").read())
 
 def to_html(s):
@@ -120,29 +121,58 @@ def printed_attribute(obj, funcname):
         """Test not in category"""
         if obj in eval(config['category'] + '()'):
             return
-    def test_when(func, expected, args=None):
-        if args:
-            res = getattr(obj, func)(*args)
-        else:
-            res = getattr(obj, func)()
+    def test_when(funcname, expected, operator=None, complement=None):
+        res = getattr(obj, funcname)
+        if operator and complement:
+            res = eval(operatorname)(res, eval(complement))
         return (res == expected)
+    def split_when(s):
+        when_parts = config['when'].split()
+        funcname = when_parts[0]
+        if len(when_parts) > 2:
+            operatorsign, complement = when_parts[1], when_parts[2]
+        elif len(when_parts) > 1:
+            operatorsign, complement = when_parts[1][0], when_parts[1][1:]
+        if operatorsign in OPERATORS.keys():
+            operator = OPERATORS[operatorsign]
+        else:
+            operator = "not found"
+        return funcname, operator, complement
     if 'when' in config.keys():
         """Test when predicate(s)"""
         if isinstance(config['when'], six.string_types):
-            if not test_when(config['when'],True):
-                return
+            when = [config['when']]
         elif isinstance(config['when'], (list,)):
-            for func in config['when']:
-                if not test_when(func, True):
+            when = config['when']
+        else:
+            return
+        for predicate in when:
+            if not ' ' in predicate:
+                if not test_when(predicate, True):
+                    return
+            else:
+                funcname, operator, complement = split_when(predicate)
+                if operator == "not found":
+                    return
+                if not test_when(funcname, True, operator, complement):
                     return
     if 'nwhen' in config.keys():
         """Test not when predicate(s)"""
         if isinstance(config['nwhen'], six.string_types):
+            nwhen = [config['nwhen']]
             if not test_when(config['nwhen'],False):
                 return
         elif isinstance(config['nwhen'], (list,)):
-            for func in config['nwhen']:
-                if not test_when(func, False):
+            nwhen = config['nwhen']
+        else:
+            return
+        for predicate in nwhen:
+            if not ' ' in predicate:
+                if not test_when(predicate, False):
+                    return
+            else:
+                funcname, operator, complement = split_when(predicate)
+                if not test_when(funcname, False, operator, complement):
                     return
     if 'label' in config.keys():
         return config['label']
