@@ -179,7 +179,7 @@ def printed_attribute(obj, funcname):
     return ' '.join([x.capitalize() for x in funcname.split('_')])
 
 def display_attribute(label, res):
-    return '%s: <a href="">%s</a>' % (label, res)
+    return '%s: `%s <http://www.april.org>`_' % (label, res)
 
 
 class TestBox(Box):
@@ -319,7 +319,7 @@ class SageExplorer(VBox):
             if printed_attribute(obj, x[0]):
                 self.printed_attributes.append(x)
                 attribute_labels[x] = printed_attribute(obj, x[0])
-        self.props.value = to_html('\n'.join([
+        self.props.value = to_html('* ' + '\n* '.join([
             display_attribute(attribute_labels[x], getattr(obj, x[0])()) for x in self.printed_attributes]))
         self.doc.value = to_html(obj.__doc__) # Initialize to object docstring
         self.selected_func = c0
