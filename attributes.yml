@@ -18,25 +18,25 @@ super_categories:
   null
   
 cardinality:
-  category: FiniteEnumeratedSet
+  category: FiniteEnumeratedSets
 
 multiplication_table:
   category: FiniteSemigroups
   when: cardinality < 21
 
 conjugate:
-  category: Partition
+  category: Partitions
 
 hook_lengths:
-  category: Partition
+  category: Partitions
 
 polynomial:
-  category: FiniteField
+  category: FiniteFields
 
 evaluation:
-  category: Tableau
+  category: Tableaux
   nwhen: is_standard
 
 is_standard:
-  category: Tableau
-  ncategory: StandardTableau
+  category: Tableaux
+  ncategory: StandardTableaux

@@ -102,46 +102,47 @@ def extract_classname(c, element_ok=False):
         return '.'.join(s.split('.')[-2:])
     return ret
 
-def is_relevant_attribute(c, funcname):
-    """Test whether this method will be calculated at opening and displayed on this widget
-    If True, return also a label
-    INPUT: class c, method name funcname
-    OUTPUT: Tuple(Boolean, String)"""
+def is_relevant_attribute(obj, funcname):
+    """Test whether this method, for this object,
+    will be calculated at opening and displayed on this widget
+    If True, return a label.
+    INPUT: object obj, method name funcname
+    OUTPUT: String or None"""
     if not func in CONFIG_ATTRIBUTES.keys():
-        return False
+        return
     config = CONFIG_ATTRIBUTES[funcname]
     if 'category' in config.keys():
         """Test in category"""
-        if not c is_in eval(config['category'] + '()'):
-            return False
+        if not obj in eval(config['category'] + '()'):
+            return
     if 'ncategory' in config.keys():
         """Test not in category"""
-        if c is_in eval(config['category'] + '()'):
-            return False
+        if obj in eval(config['category'] + '()'):
+            return
     def test_when(func, expected, args=None):
         if args:
-            res = getattr(c, func)(*args)
+            res = getattr(obj, func)(*args)
         else:
-            res = getattr(c, func)()
+            res = getattr(obj, func)()
         return (res == expected)
     if 'when' in config.keys():
         """Test when predicate(s)"""
         if isinstance(config['when'], six.string_types):
             if not test_when(config['when'],True):
-                return False
+                return
         elif isinstance(config['when'], (list,)):
             for func in config['when']:
                 if not test_when(func, True):
-                    return False
+                    return
     if 'nwhen' in config.keys():
         """Test not when predicate(s)"""
         if isinstance(config['when'], six.string_types):
             if not test_when(config['when'],False):
-                return False
+                return
         elif isinstance(config['when'], (list,)):
             for func in config['when']:
                 if not test_when(func, False):
-                    return False
+                    return
     if 'label' in config.keys():
         return True, config['label']
     return True, ' '.join([x.capitalize() for x in config['label'].split('_')])
