@@ -148,6 +148,9 @@ def printed_attribute(obj, funcname):
         return config['label']
     return ' '.join([x.capitalize() for x in funcname.split('_')])
 
+def display_attribute(label, res):
+    return '%s: <a href="">%s</a>' % (label, res)
+
 
 class TestBox(Box):
     """Test de l'objet Box"""
@@ -283,10 +286,11 @@ class SageExplorer(VBox):
         self.printed_attributes = []
         attribute_labels = {}
         for x in self.methods:
-            if printed_attribute(x[0]):
+            if printed_attribute(obj, x[0]):
                 self.printed_attributes.append(x)
-                attribute_labels[x] = printed_attribute(x[0])
-        self.props.value = to_html('\n'.join(display_attribute(self.printed_attributes)))
+                attribute_labels[x] = printed_attribute(obj, x[0])
+        self.props.value = to_html('\n'.join([
+            display_attribute(attribute_labels[x], getattr(obj, x[0])()) for x in self.printed_attributes]))
         self.doc.value = to_html(obj.__doc__) # Initialize to object docstring
         self.selected_func = c0
         origins, overrides = method_origins(c0, [x[0] for x in self.methods if not x in self.printed_attributes])
