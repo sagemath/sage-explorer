@@ -204,7 +204,7 @@ class SageExplorer(VBox):
         super(SageExplorer, self).__init__()
         self.title = Label()
         self.title.add_class('title')
-        self.props = HTML('OK')
+        self.props = HTML()
         self.titlebox = VBox()
         self.titlebox.add_class('titlebox')
         self.titlebox.children = [self.title, self.props]
@@ -273,18 +273,23 @@ class SageExplorer(VBox):
     def compute(self, obj):
         """Get some attributes, depending on the object
         Create links between menus and output tabs"""
-        # FIXME attributes
-        # Compute list of methods here
         self.obj = obj
         self.visual.value = repr(obj._ascii_art_())
         c0 = obj.__class__
         self.classname = extract_classname(c0, element_ok=False)
         self.title.value = self.classname
-        self.doc.value = to_html(obj.__doc__) # Initialize to object docstring
-        self.selected_func = c0
         self.members = [x for x in getmembers(c0) if not x[0] in EXCLUDED_MEMBERS and (not x[0].startswith('_') or x[0].startswith('__')) and not 'deprecated' in str(type(x[1])).lower()]
         self.methods = [x for x in self.members if ismethod(x[1]) or ismethoddescriptor(x[1])]
-        origins, overrides = method_origins(c0, [x[0] for x in self.methods])
+        self.printed_attributes = []
+        attribute_labels = {}
+        for x in self.methods:
+            if printed_attribute(x[0]):
+                self.printed_attributes.append(x)
+                attribute_labels[x] = printed_attribute(x[0])
+        self.props.value = to_html('\n'.join(display_attribute(self.printed_attributes)))
+        self.doc.value = to_html(obj.__doc__) # Initialize to object docstring
+        self.selected_func = c0
+        origins, overrides = method_origins(c0, [x[0] for x in self.methods if not x in self.printed_attributes])
         self.overrides = overrides
         bases = []
         basemembers = {}
