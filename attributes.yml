@@ -15,7 +15,7 @@ an_instance:
   label: A [typical] instance
 
 super_categories:
-  pass
+  null
   
 cardinality:
   category: FiniteEnumeratedSet
@@ -35,8 +35,8 @@ polynomial:
 
 evaluation:
   category: Tableau
-  nonwhen: is_standard
+  nwhen: is_standard
 
 is_standard:
   category: Tableau
-  noncategory: StandardTableau
+  ncategory: StandardTableau

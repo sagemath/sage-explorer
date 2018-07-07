@@ -19,6 +19,7 @@ from inspect import getdoc, getsource, getmembers, getmro, ismethod, isfunction,
 from cysignals.alarm import alarm, cancel_alarm, AlarmInterrupt
 from sage.misc.sageinspect import sage_getargspec
 from sage.combinat.posets.posets import Poset
+import yaml, six
 
 cell_layout = Layout(width='3em',height='2em', margin='0',padding='0')
 box_layout = Layout()
@@ -39,6 +40,7 @@ except:
 
 TIMEOUT = 15 # in seconds
 EXCLUDED_MEMBERS = ['__init__', '__repr__', '__str__']
+CONFIG_ATTRIBUTES = yaml.load(open("attributes.yml").read())
 
 def to_html(s):
     r"""Display nicely formatted HTML string
@@ -99,6 +101,48 @@ def extract_classname(c, element_ok=False):
     if ret == 'element_class':
         return '.'.join(s.split('.')[-2:])
     return ret
+
+def is_relevant_attribute(c, funcname):
+    """Test whether this method will be calculated at opening and displayed on this widget
+    If True, return also a label
+    INPUT: class c, method name funcname
+    OUTPUT: Tuple(Boolean, String)"""
+    if not func in CONFIG_ATTRIBUTES.keys():
+        return False
+    config = CONFIG_ATTRIBUTES[funcname]
+    if 'category' in config.keys():
+        """test this category"""
+        pass
+    if 'ncategory' in config.keys():
+        """test this not category"""
+        pass
+    def test_when(func, expected, args=None):
+        if args:
+            res = getattr(c, func)(*args)
+        else:
+            res = getattr(c, func)()
+        return (res == expected)
+    if 'when' in config.keys():
+        """Test when predicate(s)"""
+        if isinstance(config['when'], six.string_types):
+            if not test_when(config['when'],True):
+                return False
+        elif isinstance(config['when'], (list,)):
+            for func in config['when']:
+                if not test_when(func, True):
+                    return False
+    if 'nwhen' in config.keys():
+        """Test not when predicate(s)"""
+        if isinstance(config['when'], six.string_types):
+            if not test_when(config['when'],False):
+                return False
+        elif isinstance(config['when'], (list,)):
+            for func in config['when']:
+                if not test_when(func, False):
+                    return False
+    if 'label' in config.keys():
+        return True, config['label']
+    return True, ' '.join([x.capitalize() for x in config['label'].split('_')])
 
 
 class TestBox(Box):
