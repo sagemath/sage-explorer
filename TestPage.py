@@ -84,7 +84,7 @@ class LinkObj:
 
     def direct_html(self):
         #return '<a id="%d" title="%s" href="%s">%s</a>' % (self.ident, self.title, self.command, self.label)
-        return '<a id="%d" title="%s" href="">%s</a>' % (self.ident, self.title, self.label)
+        return '<a id="%d" title="%s" href="javascript:alert(\'%s\')">%s</a>' % (self.ident, self.title, self.cmd, self.label)
 
 class MyHTML(HTML):
     """Test création widget dédié pour navigation explorer"""
