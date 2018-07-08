@@ -11,5 +11,5 @@ var MyHTMLModel = /** @class */ (function (_super) {
     };
     return MyHTMLModel;
 }(HTMLModel));
-alert('ok')
+//model = MyHTMLModel()
 //exports.MyHTMLModel = MyHTMLModel;

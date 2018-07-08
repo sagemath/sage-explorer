@@ -89,6 +89,7 @@ class MyHTML(HTML):
     def __init__(self, linkobjs):
         """linkobjs est un dictionnaire ident -> linkobj"""
         super(MyHTML, self).__init__()
+        _model_name = traitlets.Unicode('MyHTMLModel').tag(sync=True)
         self.links = linkobjs
         self.value = ''
         for link, linkobj in self.links.items():
