@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*-
 r"""
-Sage Explorer in Jupyter Notebook
-
-EXAMPLES ::
-from SageExplorer import *
-S = StandardTableaux(15)
-t = S.random_element()
-widget = SageExplorer(t)
-display(t)
-
-AUTHORS:
-- Odile Bénassy, Nicolas Thiéry
-
+Tests in Jupyter Notebook
 """
 from ipywidgets import Layout, Box, VBox, HBox, Text, Label, HTML, Select, Textarea, Accordion, Tab, Button
 import traitlets
+
+EXPL_ROOT = '/home/odile/odk/sage/git/nthiery/odile/explorer'
+jscode = open(EXPL_ROOT + "/TestPage.js").read()
+js = HTML("<script>%s</script>" % jscode)
+try:
+    display(js)
+    print 'ok'
+except:
+    pass # We are not in a notebook
 
 class TestBox(Box):
     """Test de l'objet Box"""
@@ -55,3 +53,10 @@ class TestLink(HTML):
     def __init__(self, s):
         super(TestLink, self).__init__()
         self.value = '<a href="%s">%s</a>' % (s,s)
+
+
+class MyHTML(HTML):
+    """Test création widget dédié pour navigation explorer"""
+    def __init__(self):
+        super(MyHTML, self).__init__()
+        self.add_traits(**{'link' : traitlets.Unicode()})
