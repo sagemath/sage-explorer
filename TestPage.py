@@ -97,7 +97,7 @@ class MyHTML(HTML):
         self.value = ''
         for link, linkobj in self.links.items():
             self.value += "<p>%s : %s</p>" % (link, linkobj.direct_html())
-        self.add_traits(**{'selected_link' : traitlets.Unicode()})
+        self.add_traits(**{'selected_link' : traitlets.Unicode('No link selected yet!')})
 
     def update(self, ident):
         self.selected_link = self.links[ident].cmd
