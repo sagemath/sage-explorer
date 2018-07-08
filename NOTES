@@ -87,4 +87,10 @@ faire une démo sur Binder : dépôt git (github dans org sagemath) + docker fil
 journées Sage et combinatoire dans 15 jours
 
 
+Sur la navigation
+-----------------
+Il va falloir créer un lien javascript, peut-être en lui passant une info
+telle que this, ou this.$el ou this.$()
+afin de pouvoir appeler une méthode JS qui va réellement modifier le model.
 
+https://code.tutsplus.com/articles/backbone-views-and-the-dom--cms-25643
