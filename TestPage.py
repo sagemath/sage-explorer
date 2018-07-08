@@ -84,20 +84,32 @@ class LinkObj:
 
     def direct_html(self):
         #return '<a id="%d" title="%s" href="%s">%s</a>' % (self.ident, self.title, self.command, self.label)
-        return '<a id="%d" title="%s" href="javascript:alert(\'%s\')">%s</a>' % (self.ident, self.title, self.cmd, self.label)
+        return '<a id="%d" title="%s" href="javascript:alert(\'%s\'); NavHTMLModel.selected_link">%s</a>' % (self.ident, self.title, self.cmd, self.label)
 
-class MyHTML(HTML):
+class NavBox(VBox):
+    """Boîte de test pour navigation explorer.
+    Contient du HTML avec des liens, et un Label pour voir le résultat"""
+    def __init__(self, linkobjs):
+        super(NavBox, self).__init__()
+        self.html = NavHTML(linkobjs)
+        self.res = Label()
+        traitlets.dlink((self.html, 'selected_link'), (self.res, 'value'))
+        self.children = [self.html, self.res]
+
+class NavHTML(HTML):
     """Test création widget dédié pour navigation explorer"""
+    #selected_link = traitlets.Int(None, help="Selected link", allow_none=True).tag(sync=True)
+    selected_link = traitlets.Unicode('No link selected yet', help="Selected link", allow_none=True).tag(sync=True)
+
     def __init__(self, linkobjs):
         """linkobjs est un dictionnaire ident -> linkobj"""
-        super(MyHTML, self).__init__()
+        super(NavHTML, self).__init__()
         _view_name = traitlets.Unicode('MyHTMLView').tag(sync=True)
         _model_name = traitlets.Unicode('MyHTMLModel').tag(sync=True)
         self.links = linkobjs
         self.value = ''
         for link, linkobj in self.links.items():
             self.value += "<p>%s : %s</p>" % (link, linkobj.direct_html())
-        self.add_traits(**{'selected_link' : traitlets.Unicode('No link selected yet!')})
 
-    def update(self, ident):
-        self.selected_link = self.links[ident].cmd
+    #def update(self, ident):
+    #    self.selected_link = self.links[ident].cmd
