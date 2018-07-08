@@ -82,9 +82,17 @@ class LinkObj:
         """Use Sphinx syntax"""
         pass
 
-    def direct_html(self):
+    def direct_html(self, container=None):
         #return '<a id="%d" title="%s" href="%s">%s</a>' % (self.ident, self.title, self.command, self.label)
-        return '<a id="%d" title="%s" href="javascript:alert(\'%s\'); NavHTMLModel.selected_link">%s</a>' % (self.ident, self.title, self.cmd, self.label)
+        #return '<a id="%d" title="%s" href="javascript:alert(\'%s\')">%s</a>' % (self.ident, self.title, self.cmd, self.label)
+        #return '<a id="link#%d" title="%s" href="javascript:console.log($(this))">%s</a>' % (self.ident, self.title, self.label)
+        return '<a id="link#%d" title="%s" href="javascript:console.log(\'%s\')">%s</a>' % (self.ident, self.title, str(container.comm.comm_id).replace("'", "\'"), self.label)
+        #return '<a id="link#%d" title="%s" href="javascript:console.log(%s)">%s</a>' % (self.ident, self.title, str(container.comm.trait_names()).replace("'", "\'"), self.label)
+        #return '<a id="link#%d" title="%s" href="javascript:console.log(document.getElementById(\'link#1\').parentNode.parentNode)">%s</a>' % (self.ident, self.title, self.label)
+        #return '<a id="link#%d" title="%s" href="javascript:console.log(document.getElementsByClassName(\'widget-label\')[0])">%s</a>' % (self.ident, self.title, self.label)
+        #return '<a id="link#%d" title="%s" href="javascript:document.getElementsByClassName(\'widget-label\')[0].innerHTML=\'%s\'">%s</a>' % (self.ident, self.title, self.cmd, self.label)
+        #return '<a id="#%d" title="%s" href="javascript:console.log(document.activeElement.id)">%s</a>' % (self.ident, self.title, self.label)
+        #return '<a id="%d" title="%s" href="javascript:this.update_selection(\'%s\')">%s</a>' % (self.ident, self.title, self.cmd, self.label)
 
 class NavBox(VBox):
     """Boîte de test pour navigation explorer.
