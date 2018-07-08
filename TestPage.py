@@ -10,7 +10,6 @@ jscode = open(EXPL_ROOT + "/TestPage.js").read()
 js = HTML("<script>%s</script>" % jscode)
 try:
     display(js)
-    print 'ok'
 except:
     pass # We are not in a notebook
 
@@ -55,8 +54,46 @@ class TestLink(HTML):
         self.value = '<a href="%s">%s</a>' % (s,s)
 
 
+# Persisting link identifiers
+# On pourrait vouloir le mettre dans ip = get_ipython()
+mylinkids = []
+def increment(l):
+    """Append next positive integer at the end of list l"""
+    if not mylinkids:
+        newid = 1
+    else:
+        newid = mylinkids[-1] + 1
+    mylinkids.append(newid)
+    return newid
+
+
+class LinkObj:
+    """Un lien HTML riche d'informations
+    En particulier : un identifiant numérique
+    et la ligne de commande qui va permettre de créer un nouvel objet Sage"""
+    def __init__(self, label, command, title=None):
+        self.ident = increment(mylinkids)
+        self.label = label
+        self.command = command
+        self.title = title
+
+    def display(self):
+        """Use Sphinx syntax"""
+        pass
+
+    def direct_html(self):
+        return '<a id="%d" title="%s" href="%s">%s</a>' % (self.ident, self.title, self.command, self.label)
+
 class MyHTML(HTML):
     """Test création widget dédié pour navigation explorer"""
-    def __init__(self):
+    def __init__(self, linkobjs):
+        """linkobjs est un dictionnaire ident -> linkobj"""
         super(MyHTML, self).__init__()
-        self.add_traits(**{'link' : traitlets.Unicode()})
+        self.links = linkobjs
+        self.value = ''
+        for link, linkobj in self.links.items():
+            self.value += "<p>%s : %s</p>" % (link, linkobj.direct_html())
+        self.add_traits(**{'selected_link' : traitlets.Instance(LinkObj)})
+
+    def update(self, ident):
+        self.selected_link = self.links[ident]
