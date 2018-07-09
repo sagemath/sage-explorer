@@ -1,22 +1,36 @@
-parent:
-  label: Element of
+##############################################################################
+# Methods for categories
+
+an_instance:
+  isinstance: type # For category classes, and possibly other categories
+  label: A [typical] instance
+
+example:
+  isinstance: Category
+
+super_categories:
+  isinstance: Category
+
+axioms:
+  isinstance: Category
+
+structure:
+  isinstance: Category
+
+##############################################################################
+# Methods for parents
+
+# - axioms and structure of the category?
 
 base_ring:
-  label: Base Ring
   when: has_base
 
 category:
-  label: Category
+  in: Sets
 
-example:
-  label: Example
+an_element:
+  in: Sets
 
-an_instance:
-  label: A [typical] instance
-
-super_categories:
-  null
-  
 cardinality:
   in: EnumeratedSets.Finite
 
@@ -24,17 +38,26 @@ multiplication_table:
   in: Semigroups.Finite
   when: cardinality < 21
 
-conjugate:
-  in: Partitions()
-
-hook_lengths:
-  in: Partitions()
-
 characteristic:
   in: Fields
 
 polynomial:
   in: Fields.Finite
+
+##############################################################################
+# Methods for elements
+
+# - category of the parent?
+
+parent:
+  isinstance: Element
+  label: Element of
+
+conjugate:
+  in: Partitions()
+
+hook_lengths:
+  in: Partitions()
 
 evaluation:
   in: Tableaux()
@@ -43,3 +66,13 @@ evaluation:
 is_standard:
   in: Tableaux()
   not in: StandardTableaux()
+
+##############################################################################
+# Methods for homsets
+# - an_element (probably already derived from Parent)
+# - the category this is a morphism for
+
+##############################################################################
+# Methods for morphisms
+# - domain, codomain
+# - the category this is a morphism for
