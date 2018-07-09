@@ -32,6 +32,7 @@ css_lines.append(".visualbox {min-height: 100px; padding: 15px}")
 css_lines.append(".main {width: 100%}")
 css_lines.append(".tabs {width: 100%}")
 css_lines.append(".widget-text .widget-label {width: auto}")
+css_lines.append("UL {list-style-type: none; padding-left:0;}")
 css = HTML("<style>%s</style>"% '\n'.join(css_lines))
 try:
     display(css)
