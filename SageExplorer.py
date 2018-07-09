@@ -18,7 +18,7 @@ import traitlets
 from inspect import getdoc, getsource, getmembers, getmro, ismethod, isfunction, ismethoddescriptor, isclass
 from cysignals.alarm import alarm, cancel_alarm, AlarmInterrupt
 from sage.misc.sageinspect import sage_getargspec
-from sage.combinat.posets.posets import Poset
+from sage.all import *
 import yaml, six, operator as OP
 
 cell_layout = Layout(width='3em',height='2em', margin='0',padding='0')
@@ -113,13 +113,13 @@ def printed_attribute(obj, funcname):
     if not funcname in CONFIG_ATTRIBUTES.keys():
         return
     config = CONFIG_ATTRIBUTES[funcname]
-    if 'category' in config.keys():
-        """Test in category"""
-        if not obj in eval(config['category'] + '()'):
+    if 'in' in config.keys():
+        """Test in"""
+        if not obj in eval(config['in']):
             return
-    if 'ncategory' in config.keys():
-        """Test not in category"""
-        if obj in eval(config['category'] + '()'):
+    if 'not in' in config.keys():
+        """Test not in"""
+        if obj in eval(config['not in']):
             return
     def test_when(funcname, expected, operator=None, complement=None):
         res = getattr(obj, funcname)
@@ -148,22 +148,26 @@ def printed_attribute(obj, funcname):
             return
         for predicate in when:
             if not ' ' in predicate:
+                if not hasattr(obj, predicate):
+                    return
                 if not test_when(predicate, True):
                     return
             else:
                 funcname, operator, complement = split_when(predicate)
+                if not hasattr(obj, funcname):
+                    return
                 if operator == "not found":
                     return
                 if not test_when(funcname, True, operator, complement):
                     return
-    if 'nwhen' in config.keys():
+    if 'not when' in config.keys():
         """Test not when predicate(s)"""
-        if isinstance(config['nwhen'], six.string_types):
-            nwhen = [config['nwhen']]
-            if not test_when(config['nwhen'],False):
+        if isinstance(config['not when'], six.string_types):
+            nwhen = [config['not when']]
+            if not test_when(config['not when'],False):
                 return
-        elif isinstance(config['nwhen'], (list,)):
-            nwhen = config['nwhen']
+        elif isinstance(config['not when'], (list,)):
+            nwhen = config['not when']
         else:
             return
         for predicate in nwhen:

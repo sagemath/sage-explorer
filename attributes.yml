@@ -1,5 +1,5 @@
 parent:
-  label: is element of
+  label: Element of
 
 base_ring:
   label: Base Ring
@@ -18,28 +18,28 @@ super_categories:
   null
   
 cardinality:
-  category: FiniteEnumeratedSets
+  in: EnumeratedSets.Finite
 
 multiplication_table:
-  category: FiniteSemigroups
+  in: Semigroups.Finite
   when: cardinality < 21
 
 conjugate:
-  category: Partitions
+  in: Partitions()
 
 hook_lengths:
-  category: Partitions
+  in: Partitions()
 
 characteristic:
-  category: Fields
+  in: Fields
 
 polynomial:
-  category: FiniteFields
+  in: Fields.Finite
 
 evaluation:
-  category: Tableaux
-  nwhen: is_standard
+  in: Tableaux()
+  not when: is_standard
 
 is_standard:
-  category: Tableaux
-  ncategory: StandardTableaux
+  in: Tableaux()
+  not in: StandardTableaux()
