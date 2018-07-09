@@ -21,8 +21,7 @@ from sage.misc.sageinspect import sage_getargspec
 from sage.all import *
 import yaml, six, operator as OP
 
-cell_layout = Layout(width='3em',height='2em', margin='0',padding='0')
-box_layout = Layout()
+#hbox_justified_layout = Layout(justify_content = 'space-between')
 css_lines = []
 css_lines.append(".invisible {display: none; width: 0; height: 0}")
 css_lines.append(".visible {display: table}")
@@ -31,7 +30,7 @@ css_lines.append(".title {font-size: 150%}")
 css_lines.append(".visualbox {min-height: 100px; padding: 15px}")
 css_lines.append(".main {width: 100%}")
 css_lines.append(".tabs {width: 100%}")
-css_lines.append(".widget-text .widget-label {width: auto}")
+css_lines.append(".widget-text .widget-label, .widget-box .widget-button {width: auto}")
 css_lines.append("UL {list-style-type: none; padding-left:0;}")
 css = HTML("<style>%s</style>"% '\n'.join(css_lines))
 try:
@@ -216,10 +215,10 @@ class SageExplorer(VBox):
         super(SageExplorer, self).__init__()
         self.title = Label()
         self.title.add_class('title')
-        self.props = HTML()
+        self.propsbox = VBox() # Will be a VBox full of HBoxes, one for each attribute
         self.titlebox = VBox()
         self.titlebox.add_class('titlebox')
-        self.titlebox.children = [self.title, self.props]
+        self.titlebox.children = [self.title, self.propsbox]
         self.visualbox = Box()
         self.visualtext = Textarea('', rows=8)
         self.visualwidget = Label()
@@ -295,18 +294,33 @@ class SageExplorer(VBox):
             self.visualwidget.value = self.widgetname
             replace_widget(self.visualtext, self.visualwidget)
         else:
-            self.visual.value = repr(obj._ascii_art_())
+            self.visualtext.value = repr(obj._ascii_art_())
             replace_widget(self.visualwidget, self.visualtext)
         self.members = [x for x in getmembers(c0) if not x[0] in EXCLUDED_MEMBERS and (not x[0].startswith('_') or x[0].startswith('__')) and not 'deprecated' in str(type(x[1])).lower()]
         self.methods = [x for x in self.members if ismethod(x[1]) or ismethoddescriptor(x[1])]
-        methods_as_attributes = []
-        attribute_labels = {}
+        methods_as_attributes = [] # Keep track of these directly displayed methods, so you can excluded them from the menus
+        props = [] # a list of HBoxes, to become self.propsbox's children
         for x in self.methods:
             if attribute_label(obj, x[0]):
                 methods_as_attributes.append(x)
-                attribute_labels[x] = attribute_label(obj, x[0])
-        self.props.value = to_html('* ' + '\n* '.join([
-            display_attribute(attribute_labels[x], getattr(obj, x[0])()) for x in methods_as_attributes]))
+                value = getattr(obj, x[0])()
+                if isinstance(value, SageObject):
+                    props.append(HBox([
+                        Label(attribute_label(obj, x[0])+':'),
+                        Button(description=str(value), tooltip="Will close current explorer and open a new one", on_click=self.compute_new_value)
+                    ]#, layout=hbox_justified_layout
+                    ))
+                elif type(value) is type(True):
+                    props.append(HBox([
+                        Label(attribute_label(obj, x[0])+'?'),
+                        Label(str(value))
+                    ]))
+                else:
+                    props.append(HBox([
+                        Label(attribute_label(obj, x[0])+':'),
+                        Label(str(value))
+                    ]))
+        self.propsbox.children = props
         self.doc.value = to_html(obj.__doc__) # Initialize to object docstring
         self.selected_func = c0
         origins, overrides = method_origins(c0, [x[0] for x in self.methods if not x in methods_as_attributes])
@@ -362,6 +376,10 @@ class SageExplorer(VBox):
                 return
             self.output.value = to_html(out)
         self.gobutton.on_click(compute_selected_method)
+
+    def compute_new_value(b):
+        """A callback for the navigation button."""
+        pass
 
     def get_object(self):
         return self.obj
