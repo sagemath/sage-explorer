@@ -194,6 +194,13 @@ def attribute_label(obj, funcname):
 def display_attribute(label, res):
     return '%s: `%s <http://www.opendreamkit.org>`_' % (label, res)
 
+def replace_widget(w1, w2):
+    """Replace widget w1 with widget w2"""
+    w1.remove_class('visible')
+    w1.add_class('invisible')
+    w2.remove_class('invisible')
+    w2.add_class('visible')
+
 
 class SageExplorer(VBox):
     """Sage Explorer in Jupyter Notebook"""
@@ -214,9 +221,10 @@ class SageExplorer(VBox):
         self.titlebox.add_class('titlebox')
         self.titlebox.children = [self.title, self.props]
         self.visualbox = Box()
-        self.visual = Textarea('', rows=8)
+        self.visualtext = Textarea('', rows=8)
+        self.visualwidget = Label()
         self.visualbox.add_class('visualbox')
-        self.visualbox.children = [self.visual]
+        self.visualbox.children = [self.visualtext, self.visualwidget]
         self.top = HBox([self.titlebox, self.visualbox])
         self.menus = Accordion()
         self.inputs = HBox()
@@ -279,14 +287,16 @@ class SageExplorer(VBox):
         """Get some attributes, depending on the object
         Create links between menus and output tabs"""
         self.obj = obj
-        self.widgetname = widget_name(obj)
-        if self.widgetname:
-            self.visual.value = self.widgetname
-        else:
-            self.visual.value = repr(obj._ascii_art_())
         c0 = obj.__class__
         self.classname = extract_classname(c0, element_ok=False)
         self.title.value = self.classname
+        self.widgetname = widget_name(obj)
+        if self.widgetname:
+            self.visualwidget.value = self.widgetname
+            replace_widget(self.visualtext, self.visualwidget)
+        else:
+            self.visual.value = repr(obj._ascii_art_())
+            replace_widget(self.visualwidget, self.visualtext)
         self.members = [x for x in getmembers(c0) if not x[0] in EXCLUDED_MEMBERS and (not x[0].startswith('_') or x[0].startswith('__')) and not 'deprecated' in str(type(x[1])).lower()]
         self.methods = [x for x in self.members if ismethod(x[1]) or ismethoddescriptor(x[1])]
         methods_as_attributes = []
