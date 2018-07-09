@@ -106,6 +106,13 @@ def extract_classname(c, element_ok=False):
         return '.'.join(s.split('.')[-2:])
     return ret
 
+def widget_name(obj):
+    """Which is the specialized widget class name for viewing this object (if any)"""
+    for name in CONFIG_WIDGETS:
+        for c in obj.__class__.__mro__:
+            if extract_classname(c) in name:
+                return CONFIG_WIDGETS[name]
+
 def attribute_label(obj, funcname):
     """Test whether this method, for this object,
     will be calculated at opening and displayed on this widget
@@ -272,7 +279,11 @@ class SageExplorer(VBox):
         """Get some attributes, depending on the object
         Create links between menus and output tabs"""
         self.obj = obj
-        self.visual.value = repr(obj._ascii_art_())
+        self.widgetname = widget_name(obj)
+        if self.widgetname:
+            self.visual.value = self.widgetname
+        else:
+            self.visual.value = repr(obj._ascii_art_())
         c0 = obj.__class__
         self.classname = extract_classname(c0, element_ok=False)
         self.title.value = self.classname
