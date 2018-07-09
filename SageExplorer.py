@@ -43,6 +43,7 @@ TIMEOUT = 15 # in seconds
 EXCLUDED_MEMBERS = ['__init__', '__repr__', '__str__']
 EXPL_ROOT = '/home/odile/odk/sage/git/nthiery/odile/explorer'
 OPERATORS = {'==' : OP.eq, '<' : OP.lt, '<=' : OP.le, '>' : OP.gt, '>=' : OP.ge}
+CONFIG_WIDGETS = yaml.load(open(EXPL_ROOT + "/widgets.yml").read())
 CONFIG_ATTRIBUTES = yaml.load(open(EXPL_ROOT + "/attributes.yml").read())
 
 def to_html(s):
@@ -105,7 +106,7 @@ def extract_classname(c, element_ok=False):
         return '.'.join(s.split('.')[-2:])
     return ret
 
-def printed_attribute(obj, funcname):
+def attribute_label(obj, funcname):
     """Test whether this method, for this object,
     will be calculated at opening and displayed on this widget
     If True, return a label.
@@ -184,7 +185,7 @@ def printed_attribute(obj, funcname):
     return ' '.join([x.capitalize() for x in funcname.split('_')])
 
 def display_attribute(label, res):
-    return '%s: `%s <http://www.april.org>`_' % (label, res)
+    return '%s: `%s <http://www.opendreamkit.org>`_' % (label, res)
 
 
 class SageExplorer(VBox):
@@ -277,17 +278,17 @@ class SageExplorer(VBox):
         self.title.value = self.classname
         self.members = [x for x in getmembers(c0) if not x[0] in EXCLUDED_MEMBERS and (not x[0].startswith('_') or x[0].startswith('__')) and not 'deprecated' in str(type(x[1])).lower()]
         self.methods = [x for x in self.members if ismethod(x[1]) or ismethoddescriptor(x[1])]
-        self.printed_attributes = []
+        methods_as_attributes = []
         attribute_labels = {}
         for x in self.methods:
-            if printed_attribute(obj, x[0]):
-                self.printed_attributes.append(x)
-                attribute_labels[x] = printed_attribute(obj, x[0])
+            if attribute_label(obj, x[0]):
+                methods_as_attributes.append(x)
+                attribute_labels[x] = attribute_label(obj, x[0])
         self.props.value = to_html('* ' + '\n* '.join([
-            display_attribute(attribute_labels[x], getattr(obj, x[0])()) for x in self.printed_attributes]))
+            display_attribute(attribute_labels[x], getattr(obj, x[0])()) for x in methods_as_attributes]))
         self.doc.value = to_html(obj.__doc__) # Initialize to object docstring
         self.selected_func = c0
-        origins, overrides = method_origins(c0, [x[0] for x in self.methods if not x in self.printed_attributes])
+        origins, overrides = method_origins(c0, [x[0] for x in self.methods if not x in methods_as_attributes])
         self.overrides = overrides
         bases = []
         basemembers = {}
