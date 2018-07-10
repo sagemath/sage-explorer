@@ -193,7 +193,21 @@ def attribute_label(obj, funcname):
 def display_attribute(label, res):
     return '%s: `%s <http://www.opendreamkit.org>`_' % (label, res)
 
-def replace_widget(w1, w2):
+def append_widget(cont, w):
+    """Append widget w to container widget cont"""
+    children = copy(cont.children)
+    children.append(w)
+    cont.children = children
+
+def replace_widget_hard(cont, w1, w2):
+    """Within container widget cont, replace widget w1 with widget w2"""
+    children = copy(cont.children)
+    for i in range(len(children)):
+        if children[i] == w1:
+            children[i] = w2
+    cont.children = children
+
+def replace_widget_w_css(w1, w2):
     """Replace widget w1 with widget w2"""
     w1.remove_class('visible')
     w1.add_class('invisible')
@@ -221,9 +235,9 @@ class SageExplorer(VBox):
         self.titlebox.children = [self.title, self.propsbox]
         self.visualbox = Box()
         self.visualtext = Textarea('', rows=8)
-        self.visualwidget = Label()
+        self.visualwidget = None
         self.visualbox.add_class('visualbox')
-        self.visualbox.children = [self.visualtext, self.visualwidget]
+        self.visualbox.children = [self.visualtext]
         self.top = HBox([self.titlebox, self.visualbox])
         self.menus = Accordion()
         self.inputs = HBox()
@@ -291,11 +305,13 @@ class SageExplorer(VBox):
         self.title.value = self.classname
         self.widgetname = widget_name(obj)
         if self.widgetname:
-            self.visualwidget.value = self.widgetname
-            replace_widget(self.visualtext, self.visualwidget)
+            self.visualwidget = Label(self.widgetname)
+            replace_widget_hard(self.visualbox, self.visualtext, self.visualwidget)
         else:
             self.visualtext.value = repr(obj._ascii_art_())
-            replace_widget(self.visualwidget, self.visualtext)
+            if self.visualwidget:
+                replace_widget_hard(self.visualwidget, self.visualtext)
+                self.visualwidget = None
         self.members = [x for x in getmembers(c0) if not x[0] in EXCLUDED_MEMBERS and (not x[0].startswith('_') or x[0].startswith('__')) and not 'deprecated' in str(type(x[1])).lower()]
         self.methods = [x for x in self.members if ismethod(x[1]) or ismethoddescriptor(x[1])]
         methods_as_attributes = [] # Keep track of these directly displayed methods, so you can excluded them from the menus
