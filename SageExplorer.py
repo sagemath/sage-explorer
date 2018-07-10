@@ -19,6 +19,7 @@ from inspect import getdoc, getsource, getmembers, getmro, ismethod, isfunction,
 from cysignals.alarm import alarm, cancel_alarm, AlarmInterrupt
 from sage.misc.sageinspect import sage_getargspec
 from sage.all import *
+from sage.structure.element import Element
 import yaml, six, operator as OP
 from _catalogs import index_labels, index_catalogs
 from _widgets import *
@@ -124,16 +125,30 @@ def attribute_label(obj, funcname):
     if not funcname in CONFIG_ATTRIBUTES.keys():
         return
     config = CONFIG_ATTRIBUTES[funcname]
+    if 'isinstance' in config.keys():
+        """Test isinstance"""
+        if not isinstance(obj, eval(config['isinstance'])):
+            return
+    if 'not isinstance' in config.keys():
+        """Test not isinstance"""
+        if isinstance(obj, eval(config['not isinstance'])):
+            return
     if 'in' in config.keys():
         """Test in"""
-        if not obj in eval(config['in']):
-            return
+        try:
+            if not obj in eval(config['in']):
+                return
+        except:
+            return # The error is : descriptor 'category' of 'sage.structure.parent.Parent' object needs an argument
     if 'not in' in config.keys():
         """Test not in"""
         if obj in eval(config['not in']):
             return
     def test_when(funcname, expected, operator=None, complement=None):
-        res = getattr(obj, funcname)
+        if funcname == 'isclass': # FIXME Prendre les premières valeurs de obj.getmembers pour le test -> calculer cette liste avant ?
+            res = eval(funcname)(obj)
+        else:
+            res = getattr(obj, funcname)
         if operator and complement:
             res = operator(res, eval(complement))
         return (res == expected)
@@ -306,7 +321,10 @@ class SageExplorer(VBox):
         """Get some attributes, depending on the object
         Create links between menus and output tabs"""
         obj = self.obj
-        c0 = obj.__class__
+        if isclass(obj):
+            c0 = obj
+        else:
+            c0 = obj.__class__
         self.classname = extract_classname(c0, element_ok=False)
         self.title.value = self.classname
         visualwidget = get_widget(obj)
@@ -314,7 +332,10 @@ class SageExplorer(VBox):
             self.visualwidget = visualwidget
             replace_widget_hard(self.visualbox, self.visualtext, self.visualwidget)
         else:
-            self.visualtext.value = repr(obj._ascii_art_())
+            try:
+                self.visualtext.value = repr(obj._ascii_art_())
+            except:
+                self.visualtext.value = repr(obj)
             if self.visualwidget:
                 replace_widget_hard(self.visualwidget, self.visualtext)
                 self.visualwidget = None
@@ -323,9 +344,18 @@ class SageExplorer(VBox):
         methods_as_attributes = [] # Keep track of these directly displayed methods, so you can excluded them from the menus
         props = [] # a list of HBoxes, to become self.propsbox's children
         for x in self.methods:
-            if attribute_label(obj, x[0]):
+            try:
+                attr_label = attribute_label(obj, x[0])
+            except:
+                print "Warning: Error in calculating attribute_label for method %s" % x[0]
+                attr_label = None
+            if attr_label:
                 methods_as_attributes.append(x)
-                value = getattr(obj, x[0])()
+                try:
+                    value = getattr(obj, x[0])()
+                except:
+                    print "Warning: Error in finding method %s" % x[0]
+                    value = None
                 if isinstance(value, SageObject):
                     button = self.make_new_page_button(value)
                     props.append(HBox([
@@ -408,7 +438,7 @@ class SageExplorer(VBox):
 
     def display_new_value(self, obj):
         """A callback for the navigation button."""
-        self.visualtext.value = str(obj)
+        self.visualbox.children[0].value = str(obj)
 
     def get_object(self):
         return self.obj
@@ -421,7 +451,6 @@ class SageExplorer(VBox):
         self.selected_object = None
         self.title.value = "Sage Explorer"
         self.visualbox.children = [Label("Index Page")]
-        self.gobutton.on_click(lambda b:self.display_new_value(self.selected_object))
         self.tabs.remove_class('invisible')
         self.tabs.add_class('visible')
         menus = []
@@ -440,6 +469,9 @@ class SageExplorer(VBox):
             self.menus.set_title(i, label)
         def menu_on_change(change):
             self.selected_object = change.new
+            self.display_new_value(self.selected_object)
             self.doctab.value = to_html(change.new.__doc__)
+            #self.gobutton.on_click(lambda b:self.display_new_value(self.selected_object))
+            self.gobutton.on_click(lambda b:self.set_object(self.selected_object))
         for menu in self.menus.children:
             menu.observe(menu_on_change, names='value')
