@@ -429,10 +429,11 @@ class SageExplorer(VBox):
             label = index_labels[i]
             if label == "Fields":
                 catalog = [ZZ, QQ, RR]
+                options = [(str(x), x) for x in catalog if str(x)[0].isupper()]
             else:
-                catalog = dir(index_catalogs[i])
-            options = [(str(x), x) for x in catalog if (str(x))[0].isupper()]
-            menus.append(Select(rows=12, options = [('----', None)] + [(str(x), x) for x in catalog if (str(x))[0].isupper()]))
+                catalog = index_catalogs[i].__dict__.items()
+                options = [x for x in catalog if x[0][0].isupper()]
+            menus.append(Select(rows=12, options = [('----', None)] + options))
         self.menus.children = menus
         for i in range(len(index_labels)):
             label = index_labels[i]
