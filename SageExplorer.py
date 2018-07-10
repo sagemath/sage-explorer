@@ -20,6 +20,7 @@ from cysignals.alarm import alarm, cancel_alarm, AlarmInterrupt
 from sage.misc.sageinspect import sage_getargspec
 from sage.all import *
 import yaml, six, operator as OP
+from _catalogs import index_labels, index_catalogs
 from _widgets import *
 
 #hbox_justified_layout = Layout(justify_content = 'space-between')
@@ -197,7 +198,7 @@ def display_attribute(label, res):
 
 def append_widget(cont, w):
     """Append widget w to container widget cont"""
-    children = copy(cont.children)
+    children = list(cont.children)
     children.append(w)
     cont.children = children
 
@@ -220,7 +221,7 @@ def replace_widget_w_css(w1, w2):
 class SageExplorer(VBox):
     """Sage Explorer in Jupyter Notebook"""
 
-    def __init__(self, obj):
+    def __init__(self, obj=None):
         """
         TESTS::
 
@@ -257,7 +258,10 @@ class SageExplorer(VBox):
         self.tabs.add_class('invisible') # Hide tabs at first display
         self.bottom = HBox((self.menus, self.main))
         self.children = (self.top, self.bottom)
-        self.set_object(obj)
+        if obj:
+            self.set_object(obj)
+        else:
+            self.make_index()
 
     def init_selected_method(self):
         self.output.value = ''
@@ -324,8 +328,6 @@ class SageExplorer(VBox):
                 value = getattr(obj, x[0])()
                 if isinstance(value, SageObject):
                     button = self.make_new_page_button(value)
-                    #button = Button(description=str(value), tooltip="Will close current explorer and open a new one")
-                    #button.on_click(self.compute_new_value)
                     props.append(HBox([
                         Label(attribute_label(obj, x[0])+':'),
                         button
@@ -414,3 +416,29 @@ class SageExplorer(VBox):
     def set_object(self, obj):
         self.obj = obj
         self.compute()
+
+    def make_index(self):
+        self.selected_object = None
+        self.title.value = "Sage Explorer"
+        self.visualbox.children = [Label("Index Page")]
+        self.gobutton.on_click(lambda b:self.display_new_value(self.selected_object))
+        self.tabs.remove_class('invisible')
+        self.tabs.add_class('visible')
+        menus = []
+        for i in range(len(index_labels)):
+            label = index_labels[i]
+            if label == "Fields":
+                catalog = [ZZ, QQ, RR]
+            else:
+                catalog = dir(index_catalogs[i])
+            options = [(str(x), x) for x in catalog if (str(x))[0].isupper()]
+            menus.append(Select(rows=12, options = [('----', None)] + [(str(x), x) for x in catalog if (str(x))[0].isupper()]))
+        self.menus.children = menus
+        for i in range(len(index_labels)):
+            label = index_labels[i]
+            self.menus.set_title(i, label)
+        def menu_on_change(change):
+            self.selected_object = change.new
+            self.doctab.value = to_html(change.new.__doc__)
+        for menu in self.menus.children:
+            menu.observe(menu_on_change, names='value')
