@@ -4,13 +4,13 @@ ok premier jet d'une structure générale du widget (affichage)
 ok style : dimensionnement et plus
 [* affichage plein écran]
 ec changer l'objet
-* liens de navigation
+ec liens de navigation
 
 Objet
 -----
 ok affichage de l'objet brut dans un Textarea
-* intégration d'un widget dédié, si possible configurable (et en cascade)
-* affichage des attributs "principaux" de l'objet
+ec intégration d'un widget dédié, si possible configurable (et en cascade)
+ok affichage des attributs "principaux" de l'objet
 ok amélioration du titre
 ok affichage de la doc de l'objet
 * cas des catégories

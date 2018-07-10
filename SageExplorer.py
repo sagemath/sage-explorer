@@ -20,6 +20,7 @@ from cysignals.alarm import alarm, cancel_alarm, AlarmInterrupt
 from sage.misc.sageinspect import sage_getargspec
 from sage.all import *
 import yaml, six, operator as OP
+from _widgets import *
 
 #hbox_justified_layout = Layout(justify_content = 'space-between')
 css_lines = []
@@ -42,7 +43,6 @@ TIMEOUT = 15 # in seconds
 EXCLUDED_MEMBERS = ['__init__', '__repr__', '__str__']
 EXPL_ROOT = '/home/odile/odk/sage/git/nthiery/odile/explorer'
 OPERATORS = {'==' : OP.eq, '<' : OP.lt, '<=' : OP.le, '>' : OP.gt, '>=' : OP.ge}
-CONFIG_WIDGETS = yaml.load(open(EXPL_ROOT + "/widgets.yml").read())
 CONFIG_ATTRIBUTES = yaml.load(open(EXPL_ROOT + "/attributes.yml").read())
 
 def to_html(s):
@@ -105,12 +105,14 @@ def extract_classname(c, element_ok=False):
         return '.'.join(s.split('.')[-2:])
     return ret
 
-def widget_name(obj):
+def get_widget(obj):
     """Which is the specialized widget class name for viewing this object (if any)"""
-    for name in CONFIG_WIDGETS:
-        for c in obj.__class__.__mro__:
-            if extract_classname(c) in name:
-                return CONFIG_WIDGETS[name]
+    for c in obj.__class__.__mro__:
+        if hasattr(c, '_widget_'):
+            try:
+                return eval(c._widget_)(obj)
+            except:
+                return Label(c._widget_)
 
 def attribute_label(obj, funcname):
     """Test whether this method, for this object,
@@ -201,7 +203,7 @@ def append_widget(cont, w):
 
 def replace_widget_hard(cont, w1, w2):
     """Within container widget cont, replace widget w1 with widget w2"""
-    children = copy(cont.children)
+    children = list(cont.children)
     for i in range(len(children)):
         if children[i] == w1:
             children[i] = w2
@@ -303,9 +305,9 @@ class SageExplorer(VBox):
         c0 = obj.__class__
         self.classname = extract_classname(c0, element_ok=False)
         self.title.value = self.classname
-        self.widgetname = widget_name(obj)
-        if self.widgetname:
-            self.visualwidget = Label(self.widgetname)
+        visualwidget = get_widget(obj)
+        if visualwidget:
+            self.visualwidget = visualwidget
             replace_widget_hard(self.visualbox, self.visualtext, self.visualwidget)
         else:
             self.visualtext.value = repr(obj._ascii_art_())
