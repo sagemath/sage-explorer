@@ -257,7 +257,7 @@ class SageExplorer(VBox):
         self.tabs.add_class('invisible') # Hide tabs at first display
         self.bottom = HBox((self.menus, self.main))
         self.children = (self.top, self.bottom)
-        self.compute(obj)
+        self.set_object(obj)
 
     def init_selected_method(self):
         self.output.value = ''
@@ -298,10 +298,10 @@ class SageExplorer(VBox):
         self.tabs.remove_class('invisible')
         self.tabs.add_class('visible')
 
-    def compute(self, obj):
+    def compute(self):
         """Get some attributes, depending on the object
         Create links between menus and output tabs"""
-        self.obj = obj
+        obj = self.obj
         c0 = obj.__class__
         self.classname = extract_classname(c0, element_ok=False)
         self.title.value = self.classname
@@ -323,9 +323,12 @@ class SageExplorer(VBox):
                 methods_as_attributes.append(x)
                 value = getattr(obj, x[0])()
                 if isinstance(value, SageObject):
+                    button = self.make_new_page_button(value)
+                    #button = Button(description=str(value), tooltip="Will close current explorer and open a new one")
+                    #button.on_click(self.compute_new_value)
                     props.append(HBox([
                         Label(attribute_label(obj, x[0])+':'),
-                        Button(description=str(value), tooltip="Will close current explorer and open a new one", on_click=self.compute_new_value)
+                        button
                     ]#, layout=hbox_justified_layout
                     ))
                 elif type(value) is type(True):
@@ -395,9 +398,15 @@ class SageExplorer(VBox):
             self.output.value = to_html(out)
         self.gobutton.on_click(compute_selected_method)
 
-    def compute_new_value(b):
+    def make_new_page_button(self, obj):
+        button = Button(description=str(obj), tooltip="Will close current explorer and open a new one")
+        button.on_click(lambda b:self.display_new_value(obj))
+        #button.on_click(lambda b:self.set_object(obj))
+        return button
+
+    def display_new_value(self, obj):
         """A callback for the navigation button."""
-        pass
+        self.visualtext.value = str(obj)
 
     def get_object(self):
         return self.obj
