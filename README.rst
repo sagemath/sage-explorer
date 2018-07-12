@@ -36,5 +36,5 @@ shorthand::
 Usage
 -----
 
-See the `demo notebook <sage-explorer.ipynb>`_.
+See the `demo notebook <demo_sage_explorer.ipynb>`_.
 
