@@ -43,8 +43,8 @@ except:
 
 TIMEOUT = 15 # in seconds
 EXCLUDED_MEMBERS = ['__init__', '__repr__', '__str__']
-EXPL_ROOT = '/home/odile/odk/sage/git/nthiery/odile/explorer'
 OPERATORS = {'==' : OP.eq, '<' : OP.lt, '<=' : OP.le, '>' : OP.gt, '>=' : OP.ge}
+EXPL_ROOT = 'sage_explorer'
 CONFIG_ATTRIBUTES = yaml.load(open(EXPL_ROOT + "/attributes.yml").read())
 
 def to_html(s):
@@ -114,7 +114,7 @@ def get_widget(obj):
             try:
                 return eval(c._widget_)(obj)
             except:
-                return Label(c._widget_)
+                pass
 
 def attribute_label(obj, funcname):
     """Test whether this method, for this object,
@@ -337,7 +337,7 @@ class SageExplorer(VBox):
             except:
                 self.visualtext.value = repr(obj)
             if self.visualwidget:
-                replace_widget_hard(self.visualwidget, self.visualtext)
+                replace_widget_hard(self.visualbox, self.visualwidget, self.visualtext)
                 self.visualwidget = None
         self.members = [x for x in getmembers(c0) if not x[0] in EXCLUDED_MEMBERS and (not x[0].startswith('_') or x[0].startswith('__')) and not 'deprecated' in str(type(x[1])).lower()]
         self.methods = [x for x in self.members if ismethod(x[1]) or ismethoddescriptor(x[1])]
@@ -428,12 +428,13 @@ class SageExplorer(VBox):
                 self.output.value = to_html(e)
                 return
             self.output.value = to_html(out)
+        self.gobutton.description = 'Run!'
         self.gobutton.on_click(compute_selected_method)
 
     def make_new_page_button(self, obj):
         button = Button(description=str(obj), tooltip="Will close current explorer and open a new one")
-        button.on_click(lambda b:self.display_new_value(obj))
-        #button.on_click(lambda b:self.set_object(obj))
+        #button.on_click(lambda b:self.display_new_value(obj))
+        button.on_click(lambda b:self.set_object(obj))
         return button
 
     def display_new_value(self, obj):
@@ -453,6 +454,7 @@ class SageExplorer(VBox):
         self.visualbox.children = [Label("Index Page")]
         self.tabs.remove_class('invisible')
         self.tabs.add_class('visible')
+        self.gobutton.description = 'Go!'
         menus = []
         for i in range(len(index_labels)):
             label = index_labels[i]
