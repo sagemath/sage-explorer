@@ -1,6 +1,6 @@
-=====================
-Sage Explorer Package
-=====================
+=============
+Sage Explorer
+=============
 
 .. image:: https://mybinder.org/badge.svg
    :target: https://mybinder.org/v2/gh/sagemath/sage-explorer/master
