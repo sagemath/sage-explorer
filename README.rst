@@ -2,7 +2,8 @@
 Sage Explorer Package
 =====================
 
-.. image:: https://mybinder.org/badge.svg  :target: https://mybinder.org/v2/gh/sagemath/sage-explorer/master
+.. image:: https://mybinder.org/badge.svg
+   :target: https://mybinder.org/v2/gh/sagemath/sage-explorer/master
 
 A `Jupyter Notebook <http://jupyter.org>`_ widget for exploring `SageMath <http://www.sagemath.org>`_ objects.
 
