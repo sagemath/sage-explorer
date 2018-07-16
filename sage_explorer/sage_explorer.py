@@ -19,19 +19,17 @@ from inspect import getdoc, getsource, getmembers, getmro, ismethod, isfunction,
 from cysignals.alarm import alarm, cancel_alarm, AlarmInterrupt
 from sage.misc.sageinspect import sage_getargspec
 from sage.all import *
-from sage.structure.element import Element
 import yaml, six, operator as OP
 from os.path import join as path_join
 from _catalogs import index_labels, index_catalogs
 from _widgets import *
 
-#hbox_justified_layout = Layout(justify_content = 'space-between')
 css_lines = []
 css_lines.append(".invisible {display: none; width: 0; height: 0}")
 css_lines.append(".visible {display: table}")
 css_lines.append(".titlebox {width: 40%}")
 css_lines.append(".title {font-size: 150%}")
-css_lines.append(".visualbox {min-height: 100px; padding: 15px}")
+css_lines.append(".visualbox {min-height: 100px; max-height: 350px; padding: 15px}")
 css_lines.append(".main {width: 100%}")
 css_lines.append(".tabs {width: 100%}")
 css_lines.append(".widget-text .widget-label, .widget-box .widget-button {width: auto}")
