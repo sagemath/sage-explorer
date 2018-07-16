@@ -6,6 +6,7 @@ try:
 except:
     pass
 
+sage.schemes.curves.curve.Curve_generic._widget_ = 'PlotWidget'
 Tableau._widget_ = 'sage_combinat_widgets.TableauWidget'
 SemistandardTableau._widget_ = 'sage-combinat-widgets.SemistandardTableauWidget'
 StandardTableau._widget_ = 'sage-combinat-widgets.StandardTableauWidget'

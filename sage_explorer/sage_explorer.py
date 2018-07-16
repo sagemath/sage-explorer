@@ -21,6 +21,7 @@ from sage.misc.sageinspect import sage_getargspec
 from sage.all import *
 from sage.structure.element import Element
 import yaml, six, operator as OP
+from os.path import join as path_join
 from _catalogs import index_labels, index_catalogs
 from _widgets import *
 
@@ -231,6 +232,19 @@ def replace_widget_w_css(w1, w2):
     w1.add_class('invisible')
     w2.remove_class('invisible')
     w2.add_class('visible')
+
+
+class PlotWidget(Box):
+    def __init__(self, obj, name=None):
+        super(PlotWidget, self).__init__()
+        self.obj = obj
+        if not name:
+            name = repr(obj)
+        filename = path_join(SAGE_TMP, '%s.svg' % name)
+        plot(obj).save(filename)
+        self.name = name
+        self.value = open(filename, 'rb').read()
+        self.children = [HTML(self.value)]
 
 
 class SageExplorer(VBox):
