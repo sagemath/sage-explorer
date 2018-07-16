@@ -29,7 +29,7 @@ css_lines.append(".invisible {display: none; width: 0; height: 0}")
 css_lines.append(".visible {display: table}")
 css_lines.append(".titlebox {width: 40%}")
 css_lines.append(".title {font-size: 150%}")
-css_lines.append(".visualbox {min-height: 100px; max-height: 350px; padding: 15px}")
+css_lines.append(".visualbox {min-height: 100px; max-height: 400px; padding: 15px}")
 css_lines.append(".main {width: 100%}")
 css_lines.append(".tabs {width: 100%}")
 css_lines.append(".widget-text .widget-label, .widget-box .widget-button {width: auto}")
@@ -233,13 +233,13 @@ def replace_widget_w_css(w1, w2):
 
 
 class PlotWidget(Box):
-    def __init__(self, obj, name=None):
+    def __init__(self, obj, figsize=4, name=None):
         super(PlotWidget, self).__init__()
         self.obj = obj
         if not name:
             name = repr(obj)
         filename = path_join(SAGE_TMP, '%s.svg' % name)
-        plot(obj).save(filename)
+        plot(obj, figsize=figsize).save(filename)
         self.name = name
         self.value = open(filename, 'rb').read()
         self.children = [HTML(self.value)]
