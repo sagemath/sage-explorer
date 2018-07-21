@@ -355,6 +355,8 @@ class SageExplorer(VBox):
         self.title.value = self.classname
         visualwidget = get_widget(obj)
         if visualwidget:
+            # Reset if necessary, then replace with visualbox
+            self.visualbox.children = [self.visualtext]
             self.visualwidget = visualwidget
             replace_widget_hard(self.visualbox, self.visualtext, self.visualwidget)
         else:
