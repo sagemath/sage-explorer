@@ -108,6 +108,20 @@ def extract_classname(c, element_ok=False):
 
 def get_widget(obj):
     """Which is the specialized widget class name for viewing this object (if any)"""
+    categories = []
+    try:
+        categories.append(obj.categories())
+    except:
+        try:
+            categories.append(obj.category())
+        except:
+            pass
+    for c in categories:
+        if hasattr(c, '_widget_'):
+            try:
+                return eval(c._widget_)(obj)
+            except:
+                pass
     for c in obj.__class__.__mro__:
         if hasattr(c, '_widget_'):
             try:
