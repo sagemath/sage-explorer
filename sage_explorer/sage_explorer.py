@@ -21,7 +21,7 @@ from sage.misc.sageinspect import sage_getargspec
 from sage.all import *
 import yaml, six, operator as OP
 from os.path import join as path_join
-from _catalogs import index_labels, index_catalogs
+from _catalogs import catalogs
 
 back_button_layout = Layout(width='7em')
 css_lines = []
@@ -246,7 +246,12 @@ def make_catalog_menu_options(catalog):
     options = [('----', None)]
     if type(catalog) == type([]):
         return options + [(str(x), x) for x in catalog]
-    for key, value in catalog.__dict__.items():
+
+    # TODO: move this logic into menu_on_change to be more lazy and only
+    # actually construct an object if the user clicks on it. This makes
+    # the startup somewhat slow.
+    for key in sorted(dir(catalog)):
+        value = getattr(catalog, key)
         if not key[0].isupper():
             continue
         if isfunction(value):
@@ -523,16 +528,11 @@ class SageExplorer(VBox):
         self.tabs.add_class('visible')
         self.gobutton.description = 'Go!'
         menus = []
-        for i in range(len(index_labels)):
-            label = index_labels[i]
-            if label == "Fields":
-                options = make_catalog_menu_options([(str(x), x) for x in [ZZ, QQ, RR]])
-            else:
-                options = make_catalog_menu_options(index_catalogs[i])
-            menus.append(Select(rows=12, options=options))
+        for label, catalog in catalogs:
+            menu = Select(rows=12, options=make_catalog_menu_options(catalog))
+            menus.append(menu)
         self.menus.children = menus
-        for i in range(len(index_labels)):
-            label = index_labels[i]
+        for i, (label, _) in enumerate(catalogs):
             self.menus.set_title(i, label)
         def menu_on_change(change):
             self.selected_object = change.new
