@@ -41,5 +41,5 @@ setup(
     keywords = "SageMath widget explorer jupyter notebook",
     packages = ['sage_explorer'],
     cmdclass = {'test': SageTest}, # adding a special setup command for tests
-    install_requires = ['ipywidgets', 'pyyaml']
+    install_requires = ['ipywidgets', 'pyyaml'] # 'sage-combinat-widgets', 'recursive-monkey-patch'
 )
