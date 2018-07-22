@@ -15,7 +15,7 @@ AUTHORS:
 """
 from ipywidgets import Layout, Box, VBox, HBox, Text, Label, HTML, Select, Textarea, Accordion, Tab, Button
 import traitlets
-from inspect import getdoc, getsource, getmembers, getmro, ismethod, isfunction, ismethoddescriptor, isclass
+from inspect import getargspec, getdoc, getmembers, getmro, getsource, isclass, isfunction, ismethod, ismethoddescriptor
 from cysignals.alarm import alarm, cancel_alarm, AlarmInterrupt
 from sage.misc.sageinspect import sage_getargspec
 from sage.all import *
@@ -244,6 +244,40 @@ def replace_widget_w_css(w1, w2):
     w1.add_class('invisible')
     w2.remove_class('invisible')
     w2.add_class('visible')
+
+def make_catalog_menu_options(catalog):
+    r"""Turn catalog into usable menu options
+
+    Parse the list of names in the catalog module,
+    keep only real catalog objects,
+    try to apply those that are functions
+    and turn the list into menu option tuples.
+
+    INPUT:
+    - `catalog` -- a module
+
+    OUTPUT:
+    - `options` -- a list of tuples (name, value)
+    """
+    options = [('----', None)]
+    if type(catalog) == type([]):
+        return options + [(str(x), x) for x in catalog]
+    for key, value in catalog.__dict__.items():
+        if not key[0].isupper():
+            continue
+        if isfunction(value):
+            if not getargspec(value).args:
+                try:
+                    value = value()
+                except:
+                    pass
+            elif getargspec(value).defaults and len(getargspec(value).defaults) == len(getargspec(value).args):
+                try:
+                    value = value(*getargspec(value).defaults)
+                except:
+                    pass
+        options.append((key, value))
+    return options
 
 
 class PlotWidget(Box):
@@ -487,12 +521,10 @@ class SageExplorer(VBox):
         for i in range(len(index_labels)):
             label = index_labels[i]
             if label == "Fields":
-                catalog = [ZZ, QQ, RR]
-                options = [(str(x), x) for x in catalog if str(x)[0].isupper()]
+                options = make_catalog_menu_options([(str(x), x) for x in [ZZ, QQ, RR]])
             else:
-                catalog = index_catalogs[i].__dict__.items()
-                options = [x for x in catalog if x[0][0].isupper()]
-            menus.append(Select(rows=12, options = [('----', None)] + options))
+                options = make_catalog_menu_options(index_catalogs[i])
+            menus.append(Select(rows=12, options=options))
         self.menus.children = menus
         for i in range(len(index_labels)):
             label = index_labels[i]
