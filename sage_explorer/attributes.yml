@@ -44,6 +44,21 @@ characteristic:
 polynomial:
   in: Fields.Finite
 
+genus:
+  isinstance: sage.schemes.elliptic_curves.ell_generic.EllipticCurve_generic
+
+cremona_label:
+  isinstance: sage.schemes.elliptic_curves.ell_generic.EllipticCurve_generic
+
+a_invariants:
+  isinstance: sage.schemes.elliptic_curves.ell_generic.EllipticCurve_generic
+
+b_invariants:
+  isinstance: sage.schemes.elliptic_curves.ell_generic.EllipticCurve_generic
+
+conductor:
+  isinstance: sage.schemes.elliptic_curves.ell_generic.EllipticCurve_generic
+
 ##############################################################################
 # Methods for elements
 
@@ -66,6 +81,9 @@ evaluation:
 is_standard:
   in: Tableaux()
   not in: StandardTableaux()
+
+conjugate:
+  in: Tableaux()
 
 ##############################################################################
 # Methods for homsets
