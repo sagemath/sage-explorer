@@ -12,6 +12,3 @@ COPY --chown=sage:sage . ${HOME}
 
 # Install this package and dependencies
 RUN sage -pip install
-
-# Install this package and dependencies
-RUN sage -pip install .
