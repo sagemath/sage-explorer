@@ -6,3 +6,4 @@ from .sage_explorer import SageExplorer
 # import misc
 # import sage
 # monkey_patch(sage_explorer.misc, sage.misc, log_level=logging.INFO)
+import _widgets

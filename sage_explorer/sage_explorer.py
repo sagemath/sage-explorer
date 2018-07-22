@@ -22,7 +22,6 @@ from sage.all import *
 import yaml, six, operator as OP
 from os.path import join as path_join
 from _catalogs import index_labels, index_catalogs
-from _widgets import *
 
 back_button_layout = Layout(width='7em')
 css_lines = []
@@ -109,26 +108,10 @@ def extract_classname(c, element_ok=False):
 
 def get_widget(obj):
     """Which is the specialized widget class name for viewing this object (if any)"""
-    categories = []
-    try:
-        categories.append(obj.categories())
-    except:
-        try:
-            categories.append(obj.category())
-        except:
-            pass
-    for c in categories:
-        if hasattr(c, '_widget_'):
-            try:
-                return eval(c._widget_)(obj)
-            except:
-                pass
-    for c in obj.__class__.__mro__:
-        if hasattr(c, '_widget_'):
-            try:
-                return eval(c._widget_)(obj)
-            except:
-                pass
+    if hasattr(obj, "_widget_"):
+        return obj._widget_()
+    else:
+        return
 
 def attribute_label(obj, funcname):
     """Test whether this method, for this object,
@@ -280,8 +263,13 @@ def make_catalog_menu_options(catalog):
         options.append((key, value))
     return options
 
+import sage.misc.classcall_metaclass
+class MetaHasTraitsClasscallMetaclass (traitlets.traitlets.MetaHasTraits, sage.misc.classcall_metaclass.ClasscallMetaclass):
+    pass
+class BindableWidgetClass(BindableClass):
+    __metaclass__ = MetaHasTraitsClasscallMetaclass
 
-class PlotWidget(Box):
+class PlotWidget(Box, BindableWidgetClass):
     def __init__(self, obj, figsize=4, name=None):
         super(PlotWidget, self).__init__()
         self.obj = obj
