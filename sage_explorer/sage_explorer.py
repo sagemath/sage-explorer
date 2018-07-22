@@ -24,6 +24,7 @@ from os.path import join as path_join
 from _catalogs import index_labels, index_catalogs
 from _widgets import *
 
+back_button_layout = Layout(width='7em')
 css_lines = []
 css_lines.append(".invisible {display: none; width: 0; height: 0}")
 css_lines.append(".visible {display: table}")
@@ -334,9 +335,11 @@ class SageExplorer(VBox):
         self.bottom = HBox((self.menus, self.main))
         self.children = (self.top, self.bottom)
         if obj:
-            self.set_object(obj)
+            self.obj = obj
+            self.set_object(obj, nosetprevious=True)
         else:
             self.make_index()
+        self.previous = None # Will be use to compute history
 
     def init_selected_method(self):
         self.output.value = ''
@@ -435,7 +438,10 @@ class SageExplorer(VBox):
                         Label(attribute_label(obj, x[0])+':'),
                         Label(str(value))
                     ]))
-        self.propsbox.children = props
+        if self.previous:
+            self.propsbox.children = props + [self.make_back_button()]
+        else:
+            self.propsbox.children = props
         self.doc.value = to_html(obj.__doc__) # Initialize to object docstring
         self.selected_func = c0
         origins, overrides = method_origins(c0, [x[0] for x in self.methods if not x in methods_as_attributes])
@@ -493,9 +499,15 @@ class SageExplorer(VBox):
         self.gobutton.description = 'Run!'
         self.gobutton.on_click(compute_selected_method)
 
+    def make_back_button(self):
+        if not self.previous:
+            return
+        button = Button(description='Back', icon='history', tooltip="Go back to previous object page", layout=back_button_layout)
+        button.on_click(lambda b:self.set_object(self.previous, nosetprevious=True)) # No back button in this new (previous object) page
+        return button
+
     def make_new_page_button(self, obj):
         button = Button(description=str(obj), tooltip="Will close current explorer and open a new one")
-        #button.on_click(lambda b:self.display_new_value(obj))
         button.on_click(lambda b:self.set_object(obj))
         return button
 
@@ -506,7 +518,12 @@ class SageExplorer(VBox):
     def get_object(self):
         return self.obj
 
-    def set_object(self, obj):
+    def set_object(self, obj, nosetprevious=False):
+        if nosetprevious:
+            """No back button in this new page."""
+            self.previous = None
+        else:
+            self.previous = self.obj
         self.obj = obj
         self.compute()
 
