@@ -355,12 +355,8 @@ class SageExplorer(VBox):
         self.tabs.add_class('invisible') # Hide tabs at first display
         self.bottom = HBox((self.menus, self.main))
         self.children = (self.top, self.bottom)
-        if obj:
-            self.obj = obj
-            self.set_object(obj, nosetprevious=True)
-        else:
-            self.make_index()
-        self.previous = None # Will be use to compute history
+        self.history = []
+        self.set_object(obj)
 
     def init_selected_method(self):
         self.output.value = ''
@@ -405,6 +401,9 @@ class SageExplorer(VBox):
         """Get some attributes, depending on the object
         Create links between menus and output tabs"""
         obj = self.obj
+        if obj is None:
+            self.make_index()
+            return
         if isclass(obj):
             c0 = obj
         else:
@@ -459,7 +458,7 @@ class SageExplorer(VBox):
                         Label(attribute_label(obj, x[0])+':'),
                         Label(str(value))
                     ]))
-        if self.previous:
+        if len(self.history) > 1:
             self.propsbox.children = props + [self.make_back_button()]
         else:
             self.propsbox.children = props
@@ -521,10 +520,10 @@ class SageExplorer(VBox):
         self.gobutton.on_click(compute_selected_method)
 
     def make_back_button(self):
-        if not self.previous:
+        if len(self.history) <= 1:
             return
         button = Button(description='Back', icon='history', tooltip="Go back to previous object page", layout=back_button_layout)
-        button.on_click(lambda b:self.set_object(self.previous, nosetprevious=True)) # No back button in this new (previous object) page
+        button.on_click(lambda event: self.pop_object()) # No back button in this new (previous object) page
         return button
 
     def make_new_page_button(self, obj):
@@ -539,13 +538,18 @@ class SageExplorer(VBox):
     def get_object(self):
         return self.obj
 
-    def set_object(self, obj, nosetprevious=False):
-        if nosetprevious:
-            """No back button in this new page."""
-            self.previous = None
-        else:
-            self.previous = self.obj
+    def set_object(self, obj):
+        self.history.append(obj)
         self.obj = obj
+        self.compute()
+
+    def pop_object(self):
+        if self.history:
+            self.history.pop()
+        if self.history:
+            self.obj = self.history[-1]
+        else:
+            self.obj = None
         self.compute()
 
     def make_index(self):
