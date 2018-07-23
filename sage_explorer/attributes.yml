@@ -65,7 +65,7 @@ conductor:
 # - category of the parent?
 
 parent:
-  isinstance: Element
+  isinstance: sage.structure.element.Element
   label: Element of
 
 conjugate:

@@ -24,6 +24,7 @@ import yaml, six, operator as OP
 from os.path import join as path_join
 from _catalogs import catalogs
 from IPython.core import display
+import sage.all
 
 back_button_layout = Layout(width='7em')
 css_lines = []
@@ -41,6 +42,17 @@ try:
     display(css)
 except:
     pass # We are not in a notebook
+
+import __main__
+def eval_in_main(s):
+    """
+    Evaluate the expression `s` in the global scope
+
+        sage: from sage_explorer.sage_explorer import eval_in_main
+        sage: eval_in_main("Tableaux")
+        <class 'sage.combinat.tableau.Tableaux'>
+    """
+    return eval(s, sage.all.__dict__)
 
 TIMEOUT = 15 # in seconds
 EXCLUDED_MEMBERS = ['__init__', '__repr__', '__str__']
@@ -120,36 +132,49 @@ def attribute_label(obj, funcname):
     will be calculated at opening and displayed on this widget
     If True, return a label.
     INPUT: object obj, method name funcname
-    OUTPUT: String or None"""
+    OUTPUT: String or None
+
+    EXAMPLES::
+
+        sage: from sage.all import *
+        sage: from sage_explorer.sage_explorer import attribute_label
+        sage: st = StandardTableaux(3).an_element()
+        sage: sst = SemistandardTableaux(3).an_element()
+        sage: attribute_label(sst, "is_standard")
+        'Is Standard'
+        sage: attribute_label(st, "is_standard")
+        sage: attribute_label(st, "parent")
+        'Element of'
+    """
     if not funcname in CONFIG_ATTRIBUTES.keys():
         return
     config = CONFIG_ATTRIBUTES[funcname]
     if 'isinstance' in config.keys():
         """Test isinstance"""
-        if not isinstance(obj, eval(config['isinstance'])):
+        if not isinstance(obj, eval_in_main(config['isinstance'])):
             return
     if 'not isinstance' in config.keys():
         """Test not isinstance"""
-        if isinstance(obj, eval(config['not isinstance'])):
+        if isinstance(obj, eval_in_main(config['not isinstance'])):
             return
     if 'in' in config.keys():
         """Test in"""
         try:
-            if not obj in eval(config['in']):
+            if not obj in eval_in_main(config['in']):
                 return
         except:
             return # The error is : descriptor 'category' of 'sage.structure.parent.Parent' object needs an argument
     if 'not in' in config.keys():
         """Test not in"""
-        if obj in eval(config['not in']):
+        if obj in eval_in_main(config['not in']):
             return
     def test_when(funcname, expected, operator=None, complement=None):
         if funcname == 'isclass': # FIXME Prendre les premières valeurs de obj.getmembers pour le test -> calculer cette liste avant ?
-            res = eval(funcname)(obj)
+            res = eval_in_main(funcname)(obj)
         else:
             res = getattr(obj, funcname)
         if operator and complement:
-            res = operator(res, eval(complement))
+            res = operator(res, eval_in_main(complement))
         return (res == expected)
     def split_when(s):
         when_parts = config['when'].split()
