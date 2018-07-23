@@ -38,6 +38,7 @@ setup(
       'License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)',
       'Programming Language :: Python :: 2.7',
     ], # classifiers list: https://pypi.python.org/pypi?%3Aaction=list_classifiers
+    package_data = {'sage_explorer': ['*.yml']},
     keywords = "SageMath widget explorer jupyter notebook",
     packages = ['sage_explorer'],
     cmdclass = {'test': SageTest}, # adding a special setup command for tests

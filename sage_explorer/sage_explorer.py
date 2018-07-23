@@ -20,7 +20,7 @@ from cysignals.alarm import alarm, cancel_alarm, AlarmInterrupt
 from sage.misc.sageinspect import sage_getargspec
 from sage.misc.bindable_class import BindableClass
 from sage.all import SAGE_TMP, plot, SageObject
-import yaml, six, operator as OP
+import yaml, os, six, operator as OP
 from os.path import join as path_join
 from _catalogs import catalogs
 from IPython.core import display
@@ -57,8 +57,7 @@ def eval_in_main(s):
 TIMEOUT = 15 # in seconds
 EXCLUDED_MEMBERS = ['__init__', '__repr__', '__str__']
 OPERATORS = {'==' : OP.eq, '<' : OP.lt, '<=' : OP.le, '>' : OP.gt, '>=' : OP.ge}
-EXPL_ROOT = 'sage_explorer'
-CONFIG_ATTRIBUTES = yaml.load(open(EXPL_ROOT + "/attributes.yml").read())
+CONFIG_ATTRIBUTES = yaml.load(open(os.path.join(os.path.dirname(__file__),'attributes.yml')))
 
 def to_html(s):
     r"""Display nicely formatted HTML string
