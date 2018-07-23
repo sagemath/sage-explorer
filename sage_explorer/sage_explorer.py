@@ -321,9 +321,10 @@ class SageExplorer(VBox):
         """
         TESTS::
 
-        sage: S = StandardTableaux(15)
-        sage: t = S.random_element()
-        sage: widget = SageExplorer(t)
+            sage: from sage_explorer.sage_explorer import SageExplorer
+            sage: S = StandardTableaux(15)
+            sage: t = S.random_element()
+            sage: widget = SageExplorer(t)
         """
         super(SageExplorer, self).__init__()
         self.title = Label()
