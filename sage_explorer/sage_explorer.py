@@ -19,7 +19,7 @@ from inspect import getargspec, getmembers, getmro, isclass, isfunction, ismetho
 from cysignals.alarm import alarm, cancel_alarm, AlarmInterrupt
 from sage.misc.sageinspect import sage_getargspec
 from sage.misc.bindable_class import BindableClass
-from sage.all import SAGE_TMP, plot, SageObject
+from sage.all import SAGE_TMP, plot, SageObject, Graphics
 import yaml, os, six, operator as OP
 from os.path import join as path_join
 from _catalogs import catalogs
@@ -301,17 +301,20 @@ class BindableWidgetClass(BindableClass):
     __metaclass__ = MetaHasTraitsClasscallMetaclass
 
 class PlotWidget(Box, BindableWidgetClass):
+    value = traitlets.Instance(SageObject)
+    plot = traitlets.Instance(Graphics)
+    name = traitlets.Unicode()
+
     def __init__(self, obj, figsize=4, name=None):
         super(PlotWidget, self).__init__()
-        self.obj = obj
+        self.value = obj
         if not name:
             name = repr(obj)
-        filename = path_join(SAGE_TMP, '%s.svg' % name)
-        plot(obj, figsize=figsize).save(filename)
+        svgfilename = path_join(SAGE_TMP, '%s.svg' % name)
+        self.plot = plot(obj, figsize=figsize)
+        self.plot.save(svgfilename)
         self.name = name
-        self.value = open(filename, 'rb').read()
-        self.children = [HTML(self.value)]
-
+        self.children = [HTML(open(svgfilename, 'rb').read())]
 
 class SageExplorer(VBox):
     """Sage Explorer in Jupyter Notebook"""
