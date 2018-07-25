@@ -272,25 +272,10 @@ def make_catalog_menu_options(catalog):
     options = []
     if type(catalog) == type([]):
         return options + [(str(x), x) for x in catalog]
-
-    # TODO: move this logic into menu_on_change to be more lazy and only
-    # actually construct an object if the user clicks on it. This makes
-    # the startup somewhat slow.
     for key in sorted(dir(catalog)):
         value = getattr(catalog, key)
         if not key[0].isupper():
             continue
-        if isfunction(value):
-            if not getargspec(value).args:
-                try:
-                    value = value()
-                except:
-                    pass
-            elif getargspec(value).defaults and len(getargspec(value).defaults) == len(getargspec(value).args):
-                try:
-                    value = value(*getargspec(value).defaults)
-                except:
-                    pass
         options.append((key, value))
     return options
 
@@ -360,11 +345,25 @@ class SageExplorer(VBox):
         self.history = []
         self.set_object(obj)
 
-    def init_selected_method(self):
-        self.output.value = ''
-        func = self.selected_func
-        if isclass(func):
-            self.doc.value = to_html(func.__doc__)
+    def init_selected_menu_value(self):
+        if self.obj:
+            """If we are exploring an object (future ObjectExplorer class), all menu items are functions"""
+            self.init_selected_func()
+        """We are in catalog page (future SageExplorer)"""
+        selected_obj = self.selected_menu_value
+        if isfunction(selected_obj):
+            if not getargspec(selected_obj).args:
+                try:
+                    selected_obj = selected_obj()
+                except:
+                    pass
+            elif getargspec(selected_obj).defaults and len(getargspec(selected_obj).defaults) == len(getargspec(selected_obj).args):
+                try:
+                    selected_obj = selected_obj(*getargspec(selected_obj).defaults)
+                except:
+                    pass
+        if isclass(selected_obj):
+            self.doc.value = to_html(selected_obj.__doc__)
             self.doctab.value = ''
             self.inputs.children = []
             self.tabs.remove_class('visible')
@@ -372,6 +371,11 @@ class SageExplorer(VBox):
             self.doc.remove_class('invisible')
             self.doc.add_class('visible')
             return
+
+    def init_selected_func(self):
+        """If we are exploring an object, all menu items are functions"""
+        self.output.value = ''
+        func = self.selected_menu_value
         self.doctab.value = to_html(func.__doc__)
         if self.overrides[func.__name__]:
             self.doctab.value += to_html("Overrides:")
@@ -465,7 +469,7 @@ class SageExplorer(VBox):
         else:
             self.propsbox.children = props
         self.doc.value = to_html(obj.__doc__) # Initialize to object docstring
-        self.selected_func = c0
+        self.selected_menu_value = c0
         origins, overrides = method_origins(c0, [x[0] for x in self.methods if not x in methods_as_properties])
         self.overrides = overrides
         bases = []
@@ -491,8 +495,8 @@ class SageExplorer(VBox):
             c = bases[i]
             self.menus.set_title(i, extract_classname(c))
         def menu_on_change(change):
-            self.selected_func = change.new
-            self.init_selected_method()
+            self.selected_menu_value = change.new
+            self.init_selected_menu_value()
         for menu in self.menus.children:
             menu.observe(menu_on_change, names='value')
         def compute_selected_method(button):
@@ -509,7 +513,7 @@ class SageExplorer(VBox):
                     return
             try:
                 alarm(TIMEOUT)
-                out = self.selected_func(obj, *args)
+                out = self.selected_menu_value(obj, *args)
                 cancel_alarm()
             except AlarmInterrupt:
                 self.output.value = to_html("Timeout!")
