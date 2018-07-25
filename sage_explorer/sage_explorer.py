@@ -269,7 +269,7 @@ def make_catalog_menu_options(catalog):
     OUTPUT:
     - `options` -- a list of tuples (name, value)
     """
-    options = [('----', None)]
+    options = []
     if type(catalog) == type([]):
         return options + [(str(x), x) for x in catalog]
 
@@ -341,7 +341,7 @@ class SageExplorer(VBox):
         self.visualbox.add_class('visualbox')
         self.visualbox.children = [self.visualtext]
         self.top = HBox([self.titlebox, self.visualbox])
-        self.menus = Accordion()
+        self.menus = Accordion(selected_index=None)
         self.inputs = HBox()
         self.gobutton = Button(description='Run!', tooltip='Run the function or method, with specified arguments')
         self.output = HTML()
@@ -484,8 +484,7 @@ class SageExplorer(VBox):
         menus = []
         for i in range(len(bases)):
             c = bases[i]
-            menus.append(Select(rows=12,
-                                options = [('----', c)] + [x for x in self.methods if x[0] in basemembers[c]]
+            menus.append(Select(rows=12, options = [x for x in self.methods if x[0] in basemembers[c]]
             ))
         self.menus.children = menus
         for i in range(len(bases)):
