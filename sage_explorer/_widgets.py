@@ -34,10 +34,10 @@ else:
     # TODO: make the various widgets below into BindableClass as for
     # PlotWidget, to avoid the need for the wrapper method below
     from sage.combinat.tableau import Tableau, StandardTableau, SemistandardTableau
-    Tableau._widget_ = lambda self: sage_combinat_widgets.TableauWidget(self)
-    SemistandardTableau._widget_ = lambda self: sage_combinat_widgets.SemistandardTableauWidget(self)
-    StandardTableau._widget_ = lambda self: sage_combinat_widgets.StandardTableauWidget(self)
-    Partition._widget_ = lambda self: sage_combinat_widgets.PartitionWidget(self)
+    Tableau._widget_ = sage_combinat_widgets.TableauWidget
+    SemistandardTableau._widget_ = sage_combinat_widgets.SemistandardTableauWidget
+    StandardTableau._widget_ = sage_combinat_widgets.StandardTableauWidget
+    Partition._widget_ = sage_combinat_widgets.PartitionWidget
     # Not yet in sage-combinat-widgets
     #graphs.GridGraph._widget_ = sage_combinat_widgets.DominosWidget
     #graphs.AztecDiamondGraph._widget_ = sage_combinat_widgets.DominosWidget
