@@ -26,22 +26,27 @@ from _catalogs import catalogs
 from IPython.core import display
 import sage.all
 
+# CSS
 back_button_layout = Layout(width='7em')
+justified_h_layout = Layout(justify_content='space-between')
+main_h_layout = Layout(justify_content='flex-start')
 css_lines = []
 css_lines.append(".invisible {display: none; width: 0; height: 0}")
 css_lines.append(".visible {display: table}")
 css_lines.append(".titlebox {width: 40%}")
-css_lines.append(".title {font-size: 150%}")
+css_lines.append(".title-level1 {font-size: 180%;color: purple}")
+css_lines.append(".title-level2 {font-size: 120%;color: red}")
 css_lines.append(".visualbox {min-height: 100px; max-height: 400px; padding: 15px}")
 css_lines.append(".main {width: 100%}")
 css_lines.append(".tabs {width: 100%}")
 css_lines.append(".widget-text .widget-label, .widget-box .widget-button {width: auto}")
 css_lines.append("UL {list-style-type: none; padding-left:0;}")
-css = HTML("<style>%s</style>"% '\n'.join(css_lines))
-try:
-    display(css)
-except:
-    pass # We are not in a notebook
+css = HTML("<style>%s</style>" % '\n'.join(css_lines))
+ip = get_ipython()
+for base in getmro(ip.__class__):
+    """If we are in a notebook, we will find 'notebook' in those names"""
+    if 'otebook' in base.__name__:
+        ip.display_formatter.format(css)
 
 import __main__
 def eval_in_main(s):
@@ -279,6 +284,16 @@ def make_catalog_menu_options(catalog):
         options.append((key, value))
     return options
 
+class Title(Label):
+    r"""A title of various levels
+
+    For HTML display
+    """
+    def __init__(self, value='', level=1):
+        super(Title, self).__init__()
+        self.value = value
+        self.add_class('title-level%d' % level)
+
 import sage.misc.classcall_metaclass
 class MetaHasTraitsClasscallMetaclass (traitlets.traitlets.MetaHasTraits, sage.misc.classcall_metaclass.ClasscallMetaclass):
     pass
@@ -314,8 +329,7 @@ class SageExplorer(VBox):
             sage: widget = SageExplorer(t)
         """
         super(SageExplorer, self).__init__()
-        self.title = Label()
-        self.title.add_class('title')
+        self.title = Title()
         self.propsbox = VBox() # Will be a VBox full of HBoxes, one for each property
         self.titlebox = VBox()
         self.titlebox.add_class('titlebox')
@@ -325,8 +339,9 @@ class SageExplorer(VBox):
         self.visualwidget = None
         self.visualbox.add_class('visualbox')
         self.visualbox.children = [self.visualtext]
-        self.top = HBox([self.titlebox, self.visualbox])
+        self.top = HBox([self.titlebox, self.visualbox], layout=justified_h_layout)
         self.menus = Accordion(selected_index=None)
+        self.menusbox = VBox([Title("Menus", 2), self.menus])
         self.inputs = HBox()
         self.gobutton = Button(description='Run!', tooltip='Run the function or method, with specified arguments')
         self.output = HTML()
@@ -340,7 +355,7 @@ class SageExplorer(VBox):
         self.main = Box((self.doc, self.tabs))
         self.main.add_class('main')
         self.tabs.add_class('invisible') # Hide tabs at first display
-        self.bottom = HBox((self.menus, self.main))
+        self.bottom = HBox((self.menusbox, self.main), layout=main_h_layout)
         self.children = (self.top, self.bottom)
         self.history = []
         self.set_object(obj)
@@ -415,7 +430,7 @@ class SageExplorer(VBox):
         else:
             c0 = obj.__class__
         self.classname = extract_classname(c0, element_ok=False)
-        self.title.value = self.classname
+        self.title.value = "Exploring: %s" % repr(obj)
         visualwidget = get_widget(obj)
         if visualwidget:
             # Reset if necessary, then replace with visualbox
@@ -433,7 +448,7 @@ class SageExplorer(VBox):
         self.members = [x for x in getmembers(c0) if not x[0] in EXCLUDED_MEMBERS and (not x[0].startswith('_') or x[0].startswith('__')) and not 'deprecated' in str(type(x[1])).lower()]
         self.methods = [x for x in self.members if ismethod(x[1]) or ismethoddescriptor(x[1])]
         methods_as_properties = [] # Keep track of these directly displayed methods, so you can excluded them from the menus
-        props = [] # a list of HBoxes, to become self.propsbox's children
+        props = [Title('Properties', 2)] # a list of HBoxes, to become self.propsbox's children
         for x in self.methods:
             try:
                 attr_label = property_label(obj, x[0])
@@ -560,7 +575,7 @@ class SageExplorer(VBox):
     def make_index(self):
         self.selected_object = None
         self.title.value = "Sage Explorer"
-        self.visualbox.children = [Label("Index Page")]
+        self.visualbox.children = [Title("Index Page")]
         self.tabs.remove_class('invisible')
         self.tabs.add_class('visible')
         self.gobutton.description = 'Go!'
