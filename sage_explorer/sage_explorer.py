@@ -57,7 +57,7 @@ def eval_in_main(s):
 TIMEOUT = 15 # in seconds
 EXCLUDED_MEMBERS = ['__init__', '__repr__', '__str__']
 OPERATORS = {'==' : OP.eq, '<' : OP.lt, '<=' : OP.le, '>' : OP.gt, '>=' : OP.ge}
-CONFIG_ATTRIBUTES = yaml.load(open(os.path.join(os.path.dirname(__file__),'attributes.yml')))
+CONFIG_PROPERTIES = yaml.load(open(os.path.join(os.path.dirname(__file__),'properties.yml')))
 
 def to_html(s):
     r"""Display nicely formatted HTML string
@@ -126,7 +126,7 @@ def get_widget(obj):
     else:
         return
 
-def attribute_label(obj, funcname):
+def property_label(obj, funcname):
     """Test whether this method, for this object,
     will be calculated at opening and displayed on this widget
     If True, return a label.
@@ -136,18 +136,18 @@ def attribute_label(obj, funcname):
     EXAMPLES::
 
         sage: from sage.all import *
-        sage: from sage_explorer.sage_explorer import attribute_label
+        sage: from sage_explorer.sage_explorer import property_label
         sage: st = StandardTableaux(3).an_element()
         sage: sst = SemistandardTableaux(3).an_element()
-        sage: attribute_label(sst, "is_standard")
+        sage: property_label(sst, "is_standard")
         'Is Standard'
-        sage: attribute_label(st, "is_standard")
-        sage: attribute_label(st, "parent")
+        sage: property_label(st, "is_standard")
+        sage: property_label(st, "parent")
         'Element of'
     """
-    if not funcname in CONFIG_ATTRIBUTES.keys():
+    if not funcname in CONFIG_PROPERTIES.keys():
         return
-    config = CONFIG_ATTRIBUTES[funcname]
+    config = CONFIG_PROPERTIES[funcname]
     if 'isinstance' in config.keys():
         """Test isinstance"""
         if not isinstance(obj, eval_in_main(config['isinstance'])):
@@ -231,7 +231,7 @@ def attribute_label(obj, funcname):
         return config['label']
     return ' '.join([x.capitalize() for x in funcname.split('_')])
 
-def display_attribute(label, res):
+def display_property(label, res):
     return '%s: `%s <http://www.opendreamkit.org>`_' % (label, res)
 
 def append_widget(cont, w):
@@ -331,7 +331,7 @@ class SageExplorer(VBox):
         super(SageExplorer, self).__init__()
         self.title = Label()
         self.title.add_class('title')
-        self.propsbox = VBox() # Will be a VBox full of HBoxes, one for each attribute
+        self.propsbox = VBox() # Will be a VBox full of HBoxes, one for each property
         self.titlebox = VBox()
         self.titlebox.add_class('titlebox')
         self.titlebox.children = [self.title, self.propsbox]
@@ -400,7 +400,7 @@ class SageExplorer(VBox):
         self.tabs.add_class('visible')
 
     def compute(self):
-        """Get some attributes, depending on the object
+        """Get some properties, depending on the object
         Create links between menus and output tabs"""
         obj = self.obj
         if obj is None:
@@ -428,16 +428,16 @@ class SageExplorer(VBox):
                 self.visualwidget = None
         self.members = [x for x in getmembers(c0) if not x[0] in EXCLUDED_MEMBERS and (not x[0].startswith('_') or x[0].startswith('__')) and not 'deprecated' in str(type(x[1])).lower()]
         self.methods = [x for x in self.members if ismethod(x[1]) or ismethoddescriptor(x[1])]
-        methods_as_attributes = [] # Keep track of these directly displayed methods, so you can excluded them from the menus
+        methods_as_properties = [] # Keep track of these directly displayed methods, so you can excluded them from the menus
         props = [] # a list of HBoxes, to become self.propsbox's children
         for x in self.methods:
             try:
-                attr_label = attribute_label(obj, x[0])
+                attr_label = property_label(obj, x[0])
             except:
-                print "Warning: Error in calculating attribute_label for method %s" % x[0]
+                print "Warning: Error in calculating property_label for method %s" % x[0]
                 attr_label = None
             if attr_label:
-                methods_as_attributes.append(x)
+                methods_as_properties.append(x)
                 try:
                     value = getattr(obj, x[0])()
                 except:
@@ -446,18 +446,18 @@ class SageExplorer(VBox):
                 if isinstance(value, SageObject):
                     button = self.make_new_page_button(value)
                     props.append(HBox([
-                        Label(attribute_label(obj, x[0])+':'),
+                        Label(property_label(obj, x[0])+':'),
                         button
                     ]#, layout=hbox_justified_layout
                     ))
                 elif type(value) is type(True):
                     props.append(HBox([
-                        Label(attribute_label(obj, x[0])+'?'),
+                        Label(property_label(obj, x[0])+'?'),
                         Label(str(value))
                     ]))
                 else:
                     props.append(HBox([
-                        Label(attribute_label(obj, x[0])+':'),
+                        Label(property_label(obj, x[0])+':'),
                         Label(str(value))
                     ]))
         if len(self.history) > 1:
@@ -466,7 +466,7 @@ class SageExplorer(VBox):
             self.propsbox.children = props
         self.doc.value = to_html(obj.__doc__) # Initialize to object docstring
         self.selected_func = c0
-        origins, overrides = method_origins(c0, [x[0] for x in self.methods if not x in methods_as_attributes])
+        origins, overrides = method_origins(c0, [x[0] for x in self.methods if not x in methods_as_properties])
         self.overrides = overrides
         bases = []
         basemembers = {}
