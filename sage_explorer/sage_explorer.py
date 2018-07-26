@@ -431,6 +431,7 @@ class SageExplorer(VBox):
             c0 = obj.__class__
         self.classname = extract_classname(c0, element_ok=False)
         self.title.value = "Exploring: %s" % repr(obj)
+        replace_widget_w_css(self.tabs, self.doc)
         visualwidget = get_widget(obj)
         if visualwidget:
             # Reset if necessary, then replace with visualbox
