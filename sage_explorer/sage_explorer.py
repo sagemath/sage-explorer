@@ -351,7 +351,7 @@ class SageExplorer(VBox):
         self.doctab = HTML() # For the method docstring
         self.tabs = Tab((self.worktab, self.doctab)) # Will be used when a method is selected
         self.tabs.add_class('tabs')
-        self.tabs.set_title(0, 'Main')
+        self.tabs.set_title(0, 'Call')
         self.tabs.set_title(1, 'Help')
         self.main = Box((self.doc, self.tabs))
         self.tabs.add_class('invisible') # Hide tabs at first display
