@@ -33,16 +33,19 @@ css_lines.append(".visible {display: table}")
 css_lines.append(".title-level1 {font-size: 180%;color: purple}")
 css_lines.append(".title-level2 {font-size: 120%;color: red}")
 css_lines.append(".lightborder {width: 100%; border: 1px solid #CCC; margin: 3px; padding: 3px}")
-css_lines.append(".titlebox {max-width: 70%}")
+css_lines.append(".titlebox {max-width: 65%}")
 css_lines.append(".visualbox {min-height: 100px; max-height: 400px; min-width: 300px; padding: 15px}")
 css_lines.append(".tabs {width: 100%}")
 css_lines.append(".widget-text .widget-label, .widget-box .widget-button {width: auto}")
 css_lines.append("UL {list-style-type: none; padding-left:0;}")
-css = HTML("<style>%s</style>"% '\n'.join(css_lines))
-try:
-    display(css)
-except:
-    pass # We are not in a notebook
+
+css = HTML("<style>%s</style>" % '\n'.join(css_lines))
+ip = get_ipython()
+for base in getmro(ip.__class__):
+    """If we are in a notebook, we will find 'notebook' in those names"""
+    if 'otebook' in base.__name__:
+        ip.display_formatter.format(css)
+        break
 
 import __main__
 def eval_in_main(s):
