@@ -22,7 +22,7 @@ from sage.misc.bindable_class import BindableClass
 from sage.all import SAGE_TMP, plot, SageObject
 import yaml, os, six, operator as OP
 from os.path import join as path_join
-from _catalogs import catalogs
+from ._catalogs import catalogs
 from IPython.core import display
 import sage.all
 
@@ -30,7 +30,7 @@ back_button_layout = Layout(width='7em')
 css_lines = []
 css_lines.append(".invisible {display: none; width: 0; height: 0}")
 css_lines.append(".visible {display: table}")
-css_lines.append(".title-level1 {font-size: 180%;color: purple}")
+css_lines.append(".title-level1 {font-size: 150%;color: purple}")
 css_lines.append(".title-level2 {font-size: 120%;color: red}")
 css_lines.append(".lightborder {width: 100%; border: 1px solid #CCC; margin: 3px; padding: 3px}")
 css_lines.append(".titlebox {max-width: 65%}")
@@ -394,8 +394,8 @@ class SageExplorer(VBox):
                     default = argspec.defaults[i - shift]
                 inputs.append(Text(description=argname, placeholder=str(default)))
         except:
-            print func, "attr?"
-            print argspec
+            print (func, "attr?")
+            print (argspec)
         self.inputs.children = inputs
         self.doc.remove_class('visible')
         self.doc.add_class('invisible')
@@ -414,7 +414,7 @@ class SageExplorer(VBox):
         else:
             c0 = obj.__class__
         self.classname = extract_classname(c0, element_ok=False)
-        self.title.value = "Exploring: %s" % repr(obj)
+        self.title.value = repr(obj) #"Exploring: %s" % repr(obj)
         replace_widget_w_css(self.tabs, self.doc)
         visualwidget = get_widget(obj)
         if visualwidget:
@@ -438,14 +438,14 @@ class SageExplorer(VBox):
             try:
                 attr_label = attribute_label(obj, x[0])
             except:
-                print "Warning: Error in calculating attribute_label for method %s" % x[0]
+                print ("Warning: Error in calculating property_label for method %s" % x[0])
                 attr_label = None
             if attr_label:
                 methods_as_attributes.append(x)
                 try:
                     value = getattr(obj, x[0])()
                 except:
-                    print "Warning: Error in finding method %s" % x[0]
+                    print ("Warning: Error in finding method %s" % x[0])
                     value = None
                 if isinstance(value, SageObject):
                     button = self.make_new_page_button(value)
