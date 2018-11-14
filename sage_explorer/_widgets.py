@@ -32,7 +32,7 @@ except:
     pass
 else:
     sage.combinat.tableau.Tableau._widget_ = sage_combinat_widgets.GridViewWidget
-    #sage.combinat.partition.Partition._widget_ = sage_combinat_widgets.GridViewWidget # not yet ready
+    sage.combinat.partition.Partition._widget_ = sage_combinat_widgets.GridViewWidget
     #sage.graphs.graph.Graph._widget_ = sage_combinat_widgets.GridViewWidget # FIXME only GridGraph and AztecDiamondGraph
     #sage.graphs.AztecDiamondGraph._widget_ = sage_combinat_widgets.GridViewWidget
     sage.matrix.matrix2._widget_ = sage_combinat_widgets.GridViewWidget
