@@ -16,8 +16,11 @@ AUTHORS:
 from ipywidgets import Layout, Box, VBox, HBox, Text, Label, HTML, Select, Textarea, Accordion, Tab, Button
 import traitlets
 from inspect import getargspec, getmembers, getmro, isclass, isfunction, ismethod, ismethoddescriptor
+try: # avoid python3 deprecation warning
+    from inspect import getfullargspec as getargspec
+except:
+    pass
 from cysignals.alarm import alarm, cancel_alarm, AlarmInterrupt
-from sage.misc.sageinspect import sage_getargspec
 from sage.misc.bindable_class import BindableClass
 from sage.all import SAGE_TMP, plot, SageObject, Graphics
 import yaml, os, six, operator as OP
@@ -401,16 +404,15 @@ class SageExplorer(VBox):
             self.doctab.value += to_html(', '.join([extract_classname(x, element_ok=True) for x in self.overrides[func.__name__]]))
         inputs = []
         try:
-            argspec = sage_getargspec(func)
-            argnames, defaults = sage_getargspec(func).args, sage_getargspec(func).defaults
+            argspec = getargspec(func)
             shift = 0
             for i in range(len(argspec.args)):
-                argname = argnames[i]
+                argname = argspec.args[i]
                 if argname in ['self']:
                     shift = 1
                     continue
                 default = ''
-                if defaults and len(defaults) > i - shift and defaults[i - shift]:
+                if argspec.defaults and len(argspec.defaults) > i - shift and argspec.defaults[i - shift]:
                     default = argspec.defaults[i - shift]
                 inputs.append(Text(description=argname, placeholder=str(default)))
         except:
