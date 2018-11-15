@@ -14,7 +14,7 @@ AUTHORS:
 
 """
 from ipywidgets import Layout, Box, VBox, HBox, Text, Label, HTML, Select, Textarea, Accordion, Tab, Button
-import traitlets
+import re, traitlets
 from inspect import getargspec, getmembers, getmro, isclass, isfunction, ismethod, ismethoddescriptor
 try: # avoid python3 deprecation warning
     from inspect import getfullargspec as getargspec
@@ -46,12 +46,16 @@ css_lines.append(".tabs {width: 100%}")
 css_lines.append(".widget-text .widget-label, .widget-box .widget-button {width: auto}")
 css_lines.append("UL {list-style-type: none; padding-left:0;}")
 css = HTML("<style>%s</style>" % '\n'.join(css_lines))
-ip = get_ipython()
-for base in getmro(ip.__class__):
-    """If we are in a notebook, we will find 'notebook' in those names"""
-    if 'otebook' in base.__name__:
-        ip.display_formatter.format(css)
-        break
+
+try:
+    ip = get_ipython()
+    for base in getmro(ip.__class__):
+        """If we are in a notebook, we will find 'notebook' in those names"""
+        if 'otebook' in base.__name__:
+            ip.display_formatter.format(css)
+            break
+except:
+    pass # We are in the test environment
 
 import __main__
 def eval_in_main(s):
@@ -102,32 +106,57 @@ def method_origins(obj, names):
                         overrides[name].append(c)
     return origins, overrides
 
+def pretty_name(s):
+    r"""
+    Transform a name for lisibility on the interface.
+
+    TESTS::
+        sage: from sage_explorer.sage_explorer import pretty_name
+        sage: pretty_name("EnumeratedSet_all_with_category")
+        'Enumerated Set all with category'
+    """
+    initial, follow = s[0], s[1:].replace('_', ' ')
+    while 1:
+        m = re.search('(?<! )[A-Z]', follow)
+        if not m:
+            break
+        follow = follow.replace(m.group(), " " + m.group())
+    return initial + follow
+
 def extract_classname(c, element_ok=False):
     """Extract proper class name from class
     INPUT: class c
     OUTPUT: string
 
     TESTS::
-    >> s = <class 'sage.combinat.tableau.StandardTableau'>
-    >> extract_classname(s)
-    StandardTableau
-    >> s = <class 'sage.combinat.tableau.StandardTableaux_all_with_category.element_class'>
-    >> extract_classname(s)
-    StandardTableau
+    >> c = <class 'sage.combinat.tableau.StandardTableau'>
+    >> extract_classname(c)
+    Standard Tableau
+    >> c = <class 'sage.combinat.tableau.StandardTableaux_all_with_category.element_class'>
+    >> extract_classname(c)
+    Element of Standard Tableaux all with category
     """
     s = str(c.__name__)
-    if ('element_class' in s or 'parent_class' in s) and not element_ok:
-        s = str(c.__bases__[0])
+    #if ('element_class' in s or 'parent_class' in s) and not element_ok:
+    #    s = str(c.__bases__[0])
     if s.endswith('>'):
         s = s[:-1]
         s = s.strip()
     if s.endswith("'"):
         s = s [:-1]
         s = s.strip()
-    ret = s.split('.')[-1]
-    if ret == 'element_class':
-        return '.'.join(s.split('.')[-2:])
-    return ret
+    if not '.' in s:
+        return pretty_name(s)
+    parent, last = s.split('.')[-2], s.split('.')[-1]
+    if last == 'parent_class':
+        return pretty_name(parent)
+    if last == 'element_class':
+        parent = re.sub('s$|s ', '', parent)
+        parent = re.sub(' $', '', parent)
+        if re.match('^[AEIOUaeiou]', parent):
+            return 'Element of an ' + pretty_name(parent)
+        return 'Element of a ' + pretty_name(parent)
+    return pretty_name(last)
 
 def get_widget(obj):
     """Which is the specialized widget class name for viewing this object (if any)"""
@@ -436,7 +465,7 @@ class SageExplorer(VBox):
         else:
             c0 = obj.__class__
         self.classname = extract_classname(c0, element_ok=False)
-        self.title.value = repr(obj) #"Exploring: %s" % repr(obj)
+        self.title.value = "Exploring: %s" % repr(obj)
         replace_widget_w_css(self.tabs, self.doc)
         visualwidget = get_widget(obj)
         if visualwidget:
