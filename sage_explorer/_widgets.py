@@ -2,13 +2,37 @@
 Defining standard widgets for some Sage classes
 """
 
+import traitlets
+from ipywidgets import Box, HTML
+from sage.misc.bindable_class import BindableClass
 from sage.all import *
+from os.path import join as path_join
 
 # Workaround:
 # Tableau is lazy imported by default, and lazy import objects don't yet have a
 # __setattr__ method (see #25898). This forces a normal import.
 
-from .sage_explorer import PlotWidget
+import sage.misc.classcall_metaclass
+class MetaHasTraitsClasscallMetaclass (traitlets.traitlets.MetaHasTraits, sage.misc.classcall_metaclass.ClasscallMetaclass):
+    pass
+class BindableWidgetClass(BindableClass):
+    __metaclass__ = MetaHasTraitsClasscallMetaclass
+
+class PlotWidget(Box, BindableWidgetClass):
+    value = traitlets.Instance(SageObject)
+    plot = traitlets.Instance(Graphics)
+    name = traitlets.Unicode()
+
+    def __init__(self, obj, figsize=4, name=None):
+        super(PlotWidget, self).__init__()
+        self.value = obj
+        if not name:
+            name = repr(obj)
+        svgfilename = path_join(SAGE_TMP, '%s.svg' % name)
+        self.plot = plot(obj, figsize=figsize)
+        self.plot.save(svgfilename)
+        self.name = name
+        self.children = [HTML(open(svgfilename, 'rb').read())]
 
 sage.schemes.curves.curve.Curve_generic._widget_ = PlotWidget
 
@@ -31,21 +55,8 @@ try:
 except:
     pass
 else:
-<<<<<<< HEAD
-    # TODO: make the various widgets below into BindableClass as for
-    # PlotWidget, to avoid the need for the wrapper method below
-    from sage.combinat.tableau import Tableau, StandardTableau, SemistandardTableau
-    Tableau._widget_ = lambda self: sage_combinat_widgets.TableauWidget(self)
-    SemistandardTableau._widget_ = lambda self: sage_combinat_widgets.SemistandardTableauWidget(self)
-    StandardTableau._widget_ = lambda self: sage_combinat_widgets.StandardTableauWidget(self)
-    Partition._widget_ = lambda self: sage_combinat_widgets.PartitionWidget(self)
-    # Not yet in sage-combinat-widgets
-    #graphs.GridGraph._widget_ = sage_combinat_widgets.DominosWidget
-    #graphs.AztecDiamondGraph._widget_ = sage_combinat_widgets.DominosWidget
-=======
     sage.combinat.tableau.Tableau._widget_ = sage_combinat_widgets.GridViewWidget
-    sage.combinat.partition.Partition._widget_ = sage_combinat_widgets.GridViewWidget
+    sage.combinat.partition.Partition._widget_ = sage_combinat_widgets.grid_view_widget.PartitionGridViewWidget
     #sage.graphs.graph.Graph._widget_ = sage_combinat_widgets.GridViewWidget # FIXME only GridGraph and AztecDiamondGraph
     #sage.graphs.AztecDiamondGraph._widget_ = sage_combinat_widgets.GridViewWidget
     sage.matrix.matrix2._widget_ = sage_combinat_widgets.GridViewWidget
->>>>>>> 4d00021... Integrating version 0.5 of sage_combinat_widgets.
