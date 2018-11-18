@@ -13,21 +13,18 @@ AUTHORS:
 - Odile Bénassy, Nicolas Thiéry
 
 """
+import re
 from ipywidgets import Layout, Box, VBox, HBox, Text, Label, HTML, Select, Textarea, Accordion, Tab, Button
-import re, traitlets
 from inspect import getargspec, getmembers, getmro, isclass, isfunction, ismethod, ismethoddescriptor
+from sage.all import SageObject
 try: # avoid python3 deprecation warning
     from inspect import getfullargspec as getargspec
 except:
     pass
 from cysignals.alarm import alarm, cancel_alarm, AlarmInterrupt
-from sage.misc.bindable_class import BindableClass
-from sage.all import SAGE_TMP, plot, SageObject, Graphics
 import yaml, os, six, operator as OP
-from os.path import join as path_join
 from ._catalogs import catalogs
 from IPython.core import display
-import sage.all
 
 # CSS
 back_button_layout = Layout(width='7em')
@@ -66,7 +63,7 @@ def eval_in_main(s):
         sage: eval_in_main("Tableaux")
         <class 'sage.combinat.tableau.Tableaux'>
     """
-    return eval(s, sage.all.__dict__)
+    return eval(s, __main__.__dict__)
 
 TIMEOUT = 15 # in seconds
 EXCLUDED_MEMBERS = ['__init__', '__repr__', '__str__']
@@ -328,28 +325,6 @@ class Title(Label):
         self.value = value
         self.add_class('title-level%d' % level)
 
-import sage.misc.classcall_metaclass
-class MetaHasTraitsClasscallMetaclass (traitlets.traitlets.MetaHasTraits, sage.misc.classcall_metaclass.ClasscallMetaclass):
-    pass
-class BindableWidgetClass(BindableClass):
-    __metaclass__ = MetaHasTraitsClasscallMetaclass
-
-class PlotWidget(Box, BindableWidgetClass):
-    value = traitlets.Instance(SageObject)
-    plot = traitlets.Instance(Graphics)
-    name = traitlets.Unicode()
-
-    def __init__(self, obj, figsize=4, name=None):
-        super(PlotWidget, self).__init__()
-        self.value = obj
-        if not name:
-            name = repr(obj)
-        svgfilename = path_join(SAGE_TMP, '%s.svg' % name)
-        self.plot = plot(obj, figsize=figsize)
-        self.plot.save(svgfilename)
-        self.name = name
-        self.children = [HTML(open(svgfilename, 'rb').read())]
-
 class SageExplorer(VBox):
     """Sage Explorer in Jupyter Notebook"""
 
@@ -482,6 +457,7 @@ class SageExplorer(VBox):
                 replace_widget_hard(self.visualbox, self.visualwidget, self.visualtext)
                 self.visualwidget = None
         self.members = [x for x in getmembers(c0) if not x[0] in EXCLUDED_MEMBERS and (not x[0].startswith('_') or x[0].startswith('__')) and not 'deprecated' in str(type(x[1])).lower()]
+        #self.members = [x for x in getmembers(c0) if not x[0] in EXCLUDED_MEMBERS and not x[0].startswith('_') and not x[0].startswith('__') and not 'deprecated' in str(type(x[1])).lower()]
         self.methods = [x for x in self.members if ismethod(x[1]) or ismethoddescriptor(x[1])]
         methods_as_properties = [] # Keep track of these directly displayed methods, so you can excluded them from the menus
         props = [Title('Properties', 2)] # a list of HBoxes, to become self.propsbox's children

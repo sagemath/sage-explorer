@@ -6,5 +6,5 @@
 # import sage
 # monkey_patch(sage_explorer.misc, sage.misc, log_level=logging.INFO)
 
-from .sage_explorer import PlotWidget, SageExplorer, SageExplorer as explore
+from .sage_explorer import SageExplorer, SageExplorer as explore
 import _widgets
