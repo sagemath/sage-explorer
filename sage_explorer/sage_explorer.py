@@ -26,7 +26,10 @@ import yaml, os, six, operator as OP
 from ._catalogs import catalogs
 from IPython.core import display
 
+# CSS
 back_button_layout = Layout(width='7em')
+justified_h_layout = Layout(justify_content='space-between')
+main_h_layout = Layout(justify_content='flex-start')
 css_lines = []
 css_lines.append(".container {width:100% !important;}")
 css_lines.append(".invisible {display: none; width: 0; height: 0}")
@@ -39,7 +42,6 @@ css_lines.append(".visualbox {min-height: 100px; max-height: 400px; min-width: 3
 css_lines.append(".tabs {width: 100%}")
 css_lines.append(".widget-text .widget-label, .widget-box .widget-button {width: auto}")
 css_lines.append("UL {list-style-type: none; padding-left:0;}")
-
 css = HTML("<style>%s</style>" % '\n'.join(css_lines))
 
 try:
@@ -66,7 +68,7 @@ def eval_in_main(s):
 TIMEOUT = 15 # in seconds
 EXCLUDED_MEMBERS = ['__init__', '__repr__', '__str__']
 OPERATORS = {'==' : OP.eq, '<' : OP.lt, '<=' : OP.le, '>' : OP.gt, '>=' : OP.ge}
-CONFIG_ATTRIBUTES = yaml.load(open(os.path.join(os.path.dirname(__file__),'attributes.yml')))
+CONFIG_PROPERTIES = yaml.load(open(os.path.join(os.path.dirname(__file__),'properties.yml')))
 
 def to_html(s):
     r"""Display nicely formatted HTML string
@@ -160,7 +162,7 @@ def get_widget(obj):
     else:
         return
 
-def attribute_label(obj, funcname):
+def property_label(obj, funcname):
     """Test whether this method, for this object,
     will be calculated at opening and displayed on this widget
     If True, return a label.
@@ -170,18 +172,18 @@ def attribute_label(obj, funcname):
     EXAMPLES::
 
         sage: from sage.all import *
-        sage: from sage_explorer.sage_explorer import attribute_label
+        sage: from sage_explorer.sage_explorer import property_label
         sage: st = StandardTableaux(3).an_element()
         sage: sst = SemistandardTableaux(3).an_element()
-        sage: attribute_label(sst, "is_standard")
+        sage: property_label(sst, "is_standard")
         'Is Standard'
-        sage: attribute_label(st, "is_standard")
-        sage: attribute_label(st, "parent")
+        sage: property_label(st, "is_standard")
+        sage: property_label(st, "parent")
         'Element of'
     """
-    if not funcname in CONFIG_ATTRIBUTES.keys():
+    if not funcname in CONFIG_PROPERTIES.keys():
         return
-    config = CONFIG_ATTRIBUTES[funcname]
+    config = CONFIG_PROPERTIES[funcname]
     if 'isinstance' in config.keys():
         """Test isinstance"""
         if not isinstance(obj, eval_in_main(config['isinstance'])):
@@ -265,7 +267,7 @@ def attribute_label(obj, funcname):
         return config['label']
     return ' '.join([x.capitalize() for x in funcname.split('_')])
 
-def display_attribute(label, res):
+def display_property(label, res):
     return '%s: `%s <http://www.opendreamkit.org>`_' % (label, res)
 
 def append_widget(cont, w):
@@ -303,28 +305,13 @@ def make_catalog_menu_options(catalog):
     OUTPUT:
     - `options` -- a list of tuples (name, value)
     """
-    options = [('----', None)]
+    options = []
     if type(catalog) == type([]):
         return options + [(str(x), x) for x in catalog]
-
-    # TODO: move this logic into menu_on_change to be more lazy and only
-    # actually construct an object if the user clicks on it. This makes
-    # the startup somewhat slow.
     for key in sorted(dir(catalog)):
         value = getattr(catalog, key)
         if not key[0].isupper():
             continue
-        if isfunction(value):
-            if not getargspec(value).args:
-                try:
-                    value = value()
-                except:
-                    pass
-            elif getargspec(value).defaults and len(getargspec(value).defaults) == len(getargspec(value).args):
-                try:
-                    value = value(*getargspec(value).defaults)
-                except:
-                    pass
         options.append((key, value))
     return options
 
@@ -351,9 +338,8 @@ class SageExplorer(VBox):
             sage: widget = SageExplorer(t)
         """
         super(SageExplorer, self).__init__()
-        self.title = Label()
-        self.title.add_class('title')
-        self.propsbox = VBox() # Will be a VBox full of HBoxes, one for each attribute
+        self.title = Title()
+        self.propsbox = VBox() # Will be a VBox full of HBoxes, one for each property
         self.titlebox = VBox()
         self.titlebox.add_class('titlebox')
         self.titlebox.children = [self.title, self.propsbox]
@@ -362,8 +348,9 @@ class SageExplorer(VBox):
         self.visualwidget = None
         self.visualbox.add_class('visualbox')
         self.visualbox.children = [self.visualtext]
-        self.top = HBox([self.titlebox, self.visualbox])
-        self.menus = Accordion()
+        self.top = HBox([self.titlebox, self.visualbox], layout=justified_h_layout)
+        self.menus = Accordion(selected_index=None)
+        self.menusbox = VBox([Title("Menus", 2), self.menus])
         self.inputs = HBox()
         self.gobutton = Button(description='Run!', tooltip='Run the function or method, with specified arguments')
         self.output = HTML()
@@ -384,11 +371,25 @@ class SageExplorer(VBox):
         self.history = []
         self.set_object(obj)
 
-    def init_selected_method(self):
-        self.output.value = ''
-        func = self.selected_func
-        if isclass(func):
-            self.doc.value = to_html(func.__doc__)
+    def init_selected_menu_value(self):
+        if self.obj:
+            """If we are exploring an object (future ObjectExplorer class), all menu items are functions"""
+            self.init_selected_func()
+        """We are in catalog page (future SageExplorer)"""
+        selected_obj = self.selected_menu_value
+        if isfunction(selected_obj):
+            if not getargspec(selected_obj).args:
+                try:
+                    selected_obj = selected_obj()
+                except:
+                    pass
+            elif getargspec(selected_obj).defaults and len(getargspec(selected_obj).defaults) == len(getargspec(selected_obj).args):
+                try:
+                    selected_obj = selected_obj(*getargspec(selected_obj).defaults)
+                except:
+                    pass
+        if isclass(selected_obj):
+            self.doc.value = to_html(selected_obj.__doc__)
             self.doctab.value = ''
             self.inputs.children = []
             self.tabs.remove_class('visible')
@@ -396,6 +397,11 @@ class SageExplorer(VBox):
             self.doc.remove_class('invisible')
             self.doc.add_class('visible')
             return
+
+    def init_selected_func(self):
+        """If we are exploring an object, all menu items are functions"""
+        self.output.value = ''
+        func = self.selected_menu_value
         self.doctab.value = to_html(func.__doc__)
         if self.overrides[func.__name__]:
             self.doctab.value += to_html("Overrides:")
@@ -423,7 +429,7 @@ class SageExplorer(VBox):
         self.tabs.add_class('visible')
 
     def compute(self):
-        """Get some attributes, depending on the object
+        """Get some properties, depending on the object
         Create links between menus and output tabs"""
         obj = self.obj
         if obj is None:
@@ -453,16 +459,16 @@ class SageExplorer(VBox):
         self.members = [x for x in getmembers(c0) if not x[0] in EXCLUDED_MEMBERS and (not x[0].startswith('_') or x[0].startswith('__')) and not 'deprecated' in str(type(x[1])).lower()]
         #self.members = [x for x in getmembers(c0) if not x[0] in EXCLUDED_MEMBERS and not x[0].startswith('_') and not x[0].startswith('__') and not 'deprecated' in str(type(x[1])).lower()]
         self.methods = [x for x in self.members if ismethod(x[1]) or ismethoddescriptor(x[1])]
-        methods_as_attributes = [] # Keep track of these directly displayed methods, so you can excluded them from the menus
-        props = [] # a list of HBoxes, to become self.propsbox's children
+        methods_as_properties = [] # Keep track of these directly displayed methods, so you can excluded them from the menus
+        props = [Title('Properties', 2)] # a list of HBoxes, to become self.propsbox's children
         for x in self.methods:
             try:
-                attr_label = attribute_label(obj, x[0])
+                attr_label = property_label(obj, x[0])
             except:
                 print ("Warning: Error in calculating property_label for method %s" % x[0])
                 attr_label = None
             if attr_label:
-                methods_as_attributes.append(x)
+                methods_as_properties.append(x)
                 try:
                     value = getattr(obj, x[0])()
                 except:
@@ -471,18 +477,18 @@ class SageExplorer(VBox):
                 if isinstance(value, SageObject):
                     button = self.make_new_page_button(value)
                     props.append(HBox([
-                        Label(attribute_label(obj, x[0])+':'),
+                        Label(property_label(obj, x[0])+':'),
                         button
                     ]#, layout=hbox_justified_layout
                     ))
                 elif type(value) is type(True):
                     props.append(HBox([
-                        Label(attribute_label(obj, x[0])+'?'),
+                        Label(property_label(obj, x[0])+'?'),
                         Label(str(value))
                     ]))
                 else:
                     props.append(HBox([
-                        Label(attribute_label(obj, x[0])+':'),
+                        Label(property_label(obj, x[0])+':'),
                         Label(str(value))
                     ]))
         if len(self.history) > 1:
@@ -490,8 +496,8 @@ class SageExplorer(VBox):
         else:
             self.propsbox.children = props
         self.doc.value = to_html(obj.__doc__) # Initialize to object docstring
-        self.selected_func = c0
-        origins, overrides = method_origins(c0, [x[0] for x in self.methods if not x in methods_as_attributes])
+        self.selected_menu_value = c0
+        origins, overrides = method_origins(c0, [x[0] for x in self.methods if not x in methods_as_properties])
         self.overrides = overrides
         bases = []
         basemembers = {}
@@ -509,16 +515,15 @@ class SageExplorer(VBox):
         menus = []
         for i in range(len(bases)):
             c = bases[i]
-            menus.append(Select(rows=12,
-                                options = [('----', c)] + [x for x in self.methods if x[0] in basemembers[c]]
+            menus.append(Select(rows=12, options = [x for x in self.methods if x[0] in basemembers[c]]
             ))
         self.menus.children = menus
         for i in range(len(bases)):
             c = bases[i]
             self.menus.set_title(i, extract_classname(c))
         def menu_on_change(change):
-            self.selected_func = change.new
-            self.init_selected_method()
+            self.selected_menu_value = change.new
+            self.init_selected_menu_value()
         for menu in self.menus.children:
             menu.observe(menu_on_change, names='value')
         def compute_selected_method(button):
@@ -535,7 +540,7 @@ class SageExplorer(VBox):
                     return
             try:
                 alarm(TIMEOUT)
-                out = self.selected_func(obj, *args)
+                out = self.selected_menu_value(obj, *args)
                 cancel_alarm()
             except AlarmInterrupt:
                 self.output.value = to_html("Timeout!")
@@ -582,7 +587,7 @@ class SageExplorer(VBox):
     def make_index(self):
         self.selected_object = None
         self.title.value = "Sage Explorer"
-        self.visualbox.children = [Label("Index Page")]
+        self.visualbox.children = [Title("Index Page")]
         self.tabs.remove_class('invisible')
         self.tabs.add_class('visible')
         self.gobutton.description = 'Go!'
