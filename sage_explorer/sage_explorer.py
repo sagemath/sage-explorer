@@ -598,7 +598,8 @@ class SageExplorer(VBox):
         try:
             from ._catalogs import catalogs
         except:
-            raise IOError("To build the index page, we need some catalogs.")
+            print("To build the index page, we need some catalogs.")
+            catalogs = []
         self.selected_object = None
         self.title.value = "Sage Explorer"
         self.visualbox.children = [Title("Index Page")]
