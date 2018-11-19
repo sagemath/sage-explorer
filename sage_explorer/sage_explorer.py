@@ -3,9 +3,9 @@ r"""
 Sage Explorer in Jupyter Notebook
 
 EXAMPLES ::
+from sage.combinat.tableau import StandardTableaux
 from SageExplorer import *
-S = StandardTableaux(15)
-t = S.random_element()
+t = StandardTableaux(15).random_element()
 widget = SageExplorer(t)
 display(t)
 
@@ -16,8 +16,13 @@ AUTHORS:
 import re
 from ipywidgets import Layout, Box, VBox, HBox, Text, Label, HTML, Select, Textarea, Accordion, Tab, Button
 from inspect import getargspec, getmembers, getmro, isclass, isfunction, ismethod, ismethoddescriptor
-from sage.all import SageObject
-try: # avoid python3 deprecation warning
+try: # Are we in a Sage environment?
+    import sage.all
+    from sage.all import SageObject
+    from sage.misc.sphinxify import sphinxify
+except:
+    pass
+try: # Avoid python3 deprecation warning.
     from inspect import getfullargspec as getargspec
 except:
     pass
@@ -60,10 +65,14 @@ def eval_in_main(s):
     Evaluate the expression `s` in the global scope
 
         sage: from sage_explorer.sage_explorer import eval_in_main
+        sage: from sage.combinat.tableau import Tableaux
         sage: eval_in_main("Tableaux")
         <class 'sage.combinat.tableau.Tableaux'>
     """
-    return eval(s, __main__.__dict__)
+    try:
+        return eval(s, sage.all.__dict__)
+    except:
+        return eval(s, __main__.__dict__)
 
 TIMEOUT = 15 # in seconds
 EXCLUDED_MEMBERS = ['__init__', '__repr__', '__str__']
@@ -76,8 +85,10 @@ def to_html(s):
     OUPUT: string
     """
     s = str(s)
-    from sage.misc.sphinxify import sphinxify
-    return sphinxify(s)
+    try:
+        return sphinxify(s)
+    except:
+        return s
 
 def method_origins(obj, names):
     """Return class where methods in list 'names' are actually defined

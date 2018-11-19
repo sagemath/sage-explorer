@@ -5,7 +5,8 @@ Defining standard widgets for some Sage classes
 import traitlets
 from ipywidgets import Box, HTML
 from sage.misc.bindable_class import BindableClass
-from sage.all import *
+from sage.all import SAGE_TMP, SageObject, Graphics, plot
+import sage.all
 from os.path import join as path_join
 
 # Workaround:
@@ -40,8 +41,8 @@ sage.schemes.curves.curve.Curve_generic._widget_ = PlotWidget
 # crystal on its first 10/20 elements.
 # For now it would be best to only set this for Crystals.Finite, but it does
 # not yet have a ParentMethods
-Crystals.ParentMethods._widget_ = PlotWidget
-Posets().Finite().ParentMethods._widget_ = PlotWidget
+sage.categories.crystals.Crystals.ParentMethods._widget_ = PlotWidget
+sage.combinat.posets.poset_examples.Posets().Finite().ParentMethods._widget_ = PlotWidget
 sage.graphs.generic_graph.GenericGraph._widget_ = PlotWidget
 
 # The decision for whether to display the graph or not is duplicating what's
