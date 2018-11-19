@@ -31,6 +31,7 @@ try:
 except:
     pass
 else:
+<<<<<<< HEAD
     # TODO: make the various widgets below into BindableClass as for
     # PlotWidget, to avoid the need for the wrapper method below
     from sage.combinat.tableau import Tableau, StandardTableau, SemistandardTableau
@@ -41,3 +42,10 @@ else:
     # Not yet in sage-combinat-widgets
     #graphs.GridGraph._widget_ = sage_combinat_widgets.DominosWidget
     #graphs.AztecDiamondGraph._widget_ = sage_combinat_widgets.DominosWidget
+=======
+    sage.combinat.tableau.Tableau._widget_ = sage_combinat_widgets.GridViewWidget
+    #sage.combinat.partition.Partition._widget_ = sage_combinat_widgets.GridViewWidget # not yet ready
+    #sage.graphs.graph.Graph._widget_ = sage_combinat_widgets.GridViewWidget # FIXME only GridGraph and AztecDiamondGraph
+    #sage.graphs.AztecDiamondGraph._widget_ = sage_combinat_widgets.GridViewWidget
+    sage.matrix.matrix2._widget_ = sage_combinat_widgets.GridViewWidget
+>>>>>>> 4d00021... Integrating version 0.5 of sage_combinat_widgets.
