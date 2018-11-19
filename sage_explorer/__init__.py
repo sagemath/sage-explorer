@@ -7,4 +7,7 @@
 # monkey_patch(sage_explorer.misc, sage.misc, log_level=logging.INFO)
 
 from .sage_explorer import SageExplorer, SageExplorer as explore
-import _widgets
+try:
+    import _widgets
+except:
+    pass

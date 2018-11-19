@@ -28,7 +28,6 @@ except:
     pass
 from cysignals.alarm import alarm, cancel_alarm, AlarmInterrupt
 import yaml, os, six, operator as OP
-from ._catalogs import catalogs
 from IPython.core import display
 
 # CSS
@@ -596,6 +595,10 @@ class SageExplorer(VBox):
         self.compute()
 
     def make_index(self):
+        try:
+            from ._catalogs import catalogs
+        except:
+            raise IOError("To build the index page, we need some catalogs.")
         self.selected_object = None
         self.title.value = "Sage Explorer"
         self.visualbox.children = [Title("Index Page")]
