@@ -167,7 +167,7 @@ def extract_classname(c, element_ok=False):
 
 def get_widget(obj):
     """Which is the specialized widget class name for viewing this object (if any)"""
-    if hasattr(obj, "_widget_"):
+    if hasattr(obj, "_widget_") and callable(obj._widget_):
         return obj._widget_()
     else:
         return
