@@ -541,10 +541,11 @@ class SageExplorer(VBox):
             for i in self.inputs.children:
                 try:
                     arg = i.value or i.placeholder
+                    evaled_arg = eval_in_main(arg)
                     if not arg:
                         self.output.value = to_html("Argument '%s' is empty!" % i.description)
                         return
-                    args.append(arg)
+                    args.append(evaled_arg)
                 except:
                     self.output.value = to_html("Could not evaluate argument '%s'" % i.description)
                     return
