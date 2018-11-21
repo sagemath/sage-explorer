@@ -18,7 +18,6 @@ from ipywidgets import Layout, Box, VBox, HBox, Text, Label, HTML, Select, Texta
 from inspect import getargspec, getmembers, getmro, isclass, isfunction, ismethod, ismethoddescriptor
 try: # Are we in a Sage environment?
     import sage.all
-    from sage.all import SageObject
     from sage.misc.sphinxify import sphinxify
 except:
     pass
@@ -484,22 +483,15 @@ class SageExplorer(VBox):
                 except:
                     print ("Warning: Error in finding method %s" % x[0])
                     value = None
-                if isinstance(value, SageObject):
-                    button = self.make_new_page_button(value)
-                    props.append(HBox([
-                        Label(property_label(obj, x[0])+':'),
-                        button
-                    ]#, layout=hbox_justified_layout
-                    ))
-                elif type(value) is type(True):
-                    props.append(HBox([
-                        Label(property_label(obj, x[0])+'?'),
-                        Label(str(value))
-                    ]))
+                button = self.make_new_page_button(value)
+                b_label = property_label(obj, x[0])
+                if type(value) is type(True):
+                    b_label += '?'
                 else:
-                    props.append(HBox([
-                        Label(property_label(obj, x[0])+':'),
-                        Label(str(value))
+                    b_label += ':'
+                props.append(HBox([
+                    Label(b_label),
+                    button
                     ]))
         if len(self.history) > 1:
             self.propsbox.children = props + [self.make_back_button()]
