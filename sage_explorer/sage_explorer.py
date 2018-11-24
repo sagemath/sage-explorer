@@ -447,21 +447,23 @@ class SageExplorer(VBox):
         """
         return "Exploring: %s" % repr(self.obj)
 
-    def get_attributes(self):
+    def get_members(self):
         r"""
-        Get all attributes for object self.obj.
+        Get all members for object self.obj.
+
+        OUTPUT: List of `Member` named tuples.
 
         TESTS::
             sage: from sage_explorer import SageExplorer
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
             sage: e = SageExplorer(p)
-            sage: e.get_attributes()
-            sage: e.attributes[0].name, e.attributes[0].private
-            ('__class__', 'python_private')
-            sage: e.attributes[10].name, e.attributes[10].origin, e.attributes[10].private
-            ('_doccls', <class 'sage.combinat.partition.Partitions_all_with_category.element_class'>, 'sage_private')
-            sage: e.attributes[12].name, e.attributes[12].overrides, e.attributes[12].prop_label
+            sage: e.get_members()
+            sage: e.members[3].name, e.members[3].private
+            ('__class__', 'python_special')
+            sage: e.members[69].name, e.members[69].origin, e.members[69].private
+            ('_doccls', <class 'sage.combinat.partition.Partitions_all_with_category.element_class'>, 'private')
+            sage: e.members[113].name, e.members[113].overrides, e.members[113].prop_label
             ('_reduction',
              [<class 'sage.categories.infinite_enumerated_sets.InfiniteEnumeratedSets.element_class'>,
               <class 'sage.categories.enumerated_sets.EnumeratedSets.element_class'>,
@@ -471,28 +473,72 @@ class SageExplorer(VBox):
               <class 'sage.categories.objects.Objects.element_class'>],
              None)
             sage: e = SageExplorer(Partition)
-            sage: e.get_attributes()
+            sage: e.get_members()
         """
         if isclass(self.obj):
             c0 = self.obj
         else:
             c0 = self.obj.__class__
-        attributes = []
-        Attribute = namedtuple('Attribute', ['name', 'attribute', 'origin', 'overrides', 'private', 'prop_label'])
+        members = []
+        Member = namedtuple('Member', ['name', 'member', 'member_type', 'origin', 'overrides', 'private', 'prop_label'])
         origins, overrides = member_origins(c0, [x[0] for x in getmembers(c0)])
-        for name, attribute in getmembers(c0):
-            if ismethod(attribute) or ismethoddescriptor(attribute):
+        for name, member in getmembers(c0):
+            if isabstract(member):
                 continue
+            m = re.match("<(type|class) '([.\w]+)'>", str(type(member)))
+            if m and ('method' in m.group(2)):
+                member_type = m.group(2)
+            else:
+                member_type = "attribute (%s)" % str(type(member))
             origin = origins[name]
             overs = overrides[name]
             private = None
-            if name.startswith('__'):
-                private = 'python_private'
-            elif name.startswith('_'):
-                private = 'sage_private'
+            if name.startswith('_'):
+                if name.startswith('__') and name.endswith('__'):
+                    private = 'python_special'
+                elif name.startswith('_') and name.endswith('_'):
+                    private = 'sage_special'
+                else:
+                    private = 'private'
             prop_label =  property_label(self.obj, name)
-            attributes.append(Attribute(name, attribute, origin, overs, private, prop_label))
-        self.attributes = attributes
+            members.append(Member(name, member, member_type, origin, overs, private, prop_label))
+        self.members = members
+
+    def get_attributes(self):
+        r"""
+        Get all attributes for object self.obj.
+
+        OUTPUT: List of `Attribute` named tuples.
+
+        TESTS::
+            sage: from sage_explorer import SageExplorer
+            sage: from sage.combinat.partition import Partition
+            sage: p = Partition([3,3,2,1])
+            sage: e = SageExplorer(p)
+            sage: e.get_attributes()
+            sage: e.attributes[1].name, e.attributes[1].private
+            ('__class__', 'python_special')
+            sage: e.attributes[31].name, e.attributes[31].origin, e.attributes[31].private
+            ('_doccls', <class 'sage.combinat.partition.Partitions_all_with_category.element_class'>, 'private')
+            sage: e.attributes[34].name, e.attributes[34].overrides, e.attributes[34].prop_label
+            ('_reduction',
+             [<class 'sage.categories.infinite_enumerated_sets.InfiniteEnumeratedSets.element_class'>,
+              <class 'sage.categories.enumerated_sets.EnumeratedSets.element_class'>,
+              <class 'sage.categories.sets_cat.Sets.Infinite.element_class'>,
+              <class 'sage.categories.sets_cat.Sets.element_class'>,
+              <class 'sage.categories.sets_with_partial_maps.SetsWithPartialMaps.element_class'>,
+              <class 'sage.categories.objects.Objects.element_class'>],
+             None)
+            sage: e.attributes[36].name, e.attributes[36].overrides, e.attributes[36].prop_label
+            ('young_subgroup', [<class 'sage.combinat.partition.Partition'>], None)
+        """
+        if not hasattr(self, 'members'):
+            self.get_members()
+        Attribute = namedtuple('Attribute', ['name', 'member', 'member_type', 'origin', 'overrides', 'private', 'prop_label'])
+        self.attributes = []
+        for m in self.members:
+            if m.member_type.startswith('attribute'):
+                self.attributes.append(Attribute(m.name, m.member, m.member_type, m.origin, m.overrides, m.private, m.prop_label))
 
     def get_methods(self):
         r"""
@@ -504,54 +550,33 @@ class SageExplorer(VBox):
             sage: p = Partition([3,3,2,1])
             sage: e = SageExplorer(p)
             sage: e.get_methods()
-            sage: e.methods[76].name, e.methods[76].special, e.methods[76].private
-            ('_latex_coeff_repr', "<type 'method_descriptor'>", 'sage_private')
-            sage: e.methods[121].name, e.methods[121].args, e.methods[121].origin
+            sage: e.methods[54].name, e.methods[54].member_type, e.methods[54].private
+            ('_latex_coeff_repr', 'method_descriptor', 'private')
+            sage: e.methods[98].name, e.methods[98].args, e.methods[98].origin
             ('add_cell', ['self', 'i', 'j'], <class 'sage.combinat.partition.Partition'>)
-            sage: e.methods[128].name, e.methods[128].args, e.methods[128].defaults
+            sage: e.methods[105].name, e.methods[105].args, e.methods[105].defaults
             ('arm_lengths', ['self', 'flat'], (False,))
             sage: e = SageExplorer(Partition)
             sage: e.get_methods()
         """
-        if isclass(self.obj):
-            c0 = self.obj
-        else:
-            c0 = self.obj.__class__
-        methods = []
-        Method = namedtuple('Method', ['name', 'method', 'args', 'defaults', 'origin', 'overrides', 'special', 'private', 'prop_label'])
-        origins, overrides = member_origins(c0, [x[0] for x in getmembers(c0)])
-        for name, method in getmembers(c0):
-            if not (ismethod(method) or ismethoddescriptor(method)):
-                continue
-            if isabstract(method):
+        if not hasattr(self, 'members'):
+            self.get_members()
+        Method = namedtuple('Method', ['name', 'member', 'member_type', 'origin', 'overrides', 'private', 'prop_label', 'args', 'defaults'])
+        self.methods = []
+        for m in self.members:
+            if not 'method' in m.member_type:
                 continue
             args = None
             defaults = None
             try:
-                argspec = getargspec(method)
+                argspec = getargspec(m.member)
                 if hasattr(argspec, 'args'):
                     args = argspec.args
                 if hasattr(argspec, 'args'):
                     defaults = argspec.defaults
             except:
                 pass
-            special = None
-            if 'static' in str(type(method)):
-                special = 'staticmethod'
-            elif 'classmethod' in str(type(method)):
-                special = 'classmethod'
-            elif not 'instance' in str(type(method)):
-                special = str(type(method))
-            origin = origins[name]
-            overs = overrides[name]
-            prop_label =  property_label(self.obj, name)
-            private = None
-            if name.startswith('__'):
-                private = 'python_private'
-            elif name.startswith('_'):
-                private = 'sage_private'
-            methods.append(Method(name, method, args, defaults, origin, overs, special, private, prop_label))
-        self.methods = methods
+            self.methods.append(Method(m.name, m.member, m.member_type, m.origin, m.overrides, m.private, m.prop_label, args, defaults))
 
     def compute(self):
         """Get some properties, depending on the object
@@ -581,9 +606,9 @@ class SageExplorer(VBox):
             if self.visualwidget:
                 replace_widget_hard(self.visualbox, self.visualwidget, self.visualtext)
                 self.visualwidget = None
-        self.members = [x for x in getmembers(c0) if not x[0] in EXCLUDED_MEMBERS and (not x[0].startswith('_') or x[0].startswith('__')) and not 'deprecated' in str(type(x[1])).lower()]
+        members = [x for x in getmembers(c0) if not x[0] in EXCLUDED_MEMBERS and (not x[0].startswith('_') or x[0].startswith('__')) and not 'deprecated' in str(type(x[1])).lower()]
         #self.members = [x for x in getmembers(c0) if not x[0] in EXCLUDED_MEMBERS and not x[0].startswith('_') and not x[0].startswith('__') and not 'deprecated' in str(type(x[1])).lower()]
-        self.methods = [x for x in self.members if ismethod(x[1]) or ismethoddescriptor(x[1])]
+        self.methods = [x for x in members if ismethod(x[1]) or ismethoddescriptor(x[1])]
         methods_as_properties = [] # Keep track of these directly displayed methods, so you can excluded them from the menus
         props = [Title('Properties', 2)] # a list of HBoxes, to become self.propsbox's children
         for x in self.methods:
