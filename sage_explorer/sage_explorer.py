@@ -93,6 +93,21 @@ def to_html(s):
 def member_origins(obj, names):
     """Return class where methods in list 'names' are actually defined
     INPUT: object 'obj', list of method names
+
+    TESTS::
+        sage: from sage_explorer.sage_explorer import member_origins
+        sage: from sage.combinat.partition import Partition
+        sage: p = Partition([3,3,2,1])
+        sage: member_origins(p, ['add_cell', '_reduction'])
+        ({'_reduction': <class 'sage.combinat.partition.Partitions_all_with_category.element_class'>,
+          'add_cell': <class 'sage.combinat.partition.Partition'>},
+         {'_reduction': [<class 'sage.categories.infinite_enumerated_sets.InfiniteEnumeratedSets.element_class'>,
+           <class 'sage.categories.enumerated_sets.EnumeratedSets.element_class'>,
+           <class 'sage.categories.sets_cat.Sets.Infinite.element_class'>,
+           <class 'sage.categories.sets_cat.Sets.element_class'>,
+           <class 'sage.categories.sets_with_partial_maps.SetsWithPartialMaps.element_class'>,
+           <class 'sage.categories.objects.Objects.element_class'>],
+          'add_cell': []})
     """
     c0 = obj
     if not isclass(c0):
@@ -167,7 +182,16 @@ def extract_classname(c, element_ok=False):
     return pretty_name(last)
 
 def get_widget(obj):
-    """Which is the specialized widget class name for viewing this object (if any)"""
+    r"""
+    Which is the specialized widget class name for viewing this object (if any)
+
+    TESTS::
+        sage: from sage.all import *
+        sage: from sage_explorer.sage_explorer import get_widget
+        sage: p = Partition([3,3,2,1])
+        sage: get_widget(p).__class__
+        <class 'sage_combinat_widgets.grid_view_widget.GridViewWidget'>
+    """
     if isclass(obj):
         return
     if hasattr(obj, "_widget_"):
@@ -176,14 +200,15 @@ def get_widget(obj):
         return
 
 def property_label(obj, funcname):
-    """Test whether this method, for this object,
+    r"""
+    Test whether this method, for this object,
     will be calculated at opening and displayed on this widget
     If True, return a label.
+
     INPUT: object obj, method name funcname
     OUTPUT: String or None
 
-    EXAMPLES::
-
+    TESTS::
         sage: from sage.all import *
         sage: from sage_explorer.sage_explorer import property_label
         sage: st = StandardTableaux(3).an_element()
@@ -552,9 +577,9 @@ class SageExplorer(VBox):
             sage: e.get_methods()
             sage: e.methods[54].name, e.methods[54].member_type, e.methods[54].private
             ('_latex_coeff_repr', 'method_descriptor', 'private')
-            sage: e.methods[98].name, e.methods[98].args, e.methods[98].origin
+            sage: e.methods[99].name, e.methods[99].args, e.methods[99].origin
             ('add_cell', ['self', 'i', 'j'], <class 'sage.combinat.partition.Partition'>)
-            sage: e.methods[105].name, e.methods[105].args, e.methods[105].defaults
+            sage: e.methods[106].name, e.methods[106].args, e.methods[106].defaults
             ('arm_lengths', ['self', 'flat'], (False,))
             sage: e = SageExplorer(Partition)
             sage: e.get_methods()
@@ -712,14 +737,58 @@ class SageExplorer(VBox):
         self.visualbox.children[0].value = str(obj)
 
     def get_object(self):
+        r"""
+        Return math object currently explored.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import SageExplorer
+            sage: from sage.combinat.partition import Partition
+            sage: p = Partition([3,3,2,1])
+            sage: e = SageExplorer(p)
+            sage: e.get_object()
+            [3, 3, 2, 1]
+        """
         return self.obj
 
     def set_object(self, obj):
+        r"""
+        Set new math object `obj` to the explorer.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import SageExplorer
+            sage: from sage.combinat.partition import Partition
+            sage: p = Partition([3,3,2,1])
+            sage: e = SageExplorer(p)
+            sage: e.get_object()
+            [3, 3, 2, 1]
+            sage: from sage.combinat.tableau import Tableau
+            sage: t = Tableau([[1,2,3,4], [5,6]])
+            sage: e.set_object(t)
+            sage: e.get_object()
+            [[1, 2, 3, 4], [5, 6]]
+        """
         self.history.append(obj)
         self.obj = obj
         self.compute()
 
     def pop_object(self):
+        r"""
+        Set again previous math object to the explorer.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import SageExplorer
+            sage: from sage.combinat.partition import Partition
+            sage: p = Partition([3,3,2,1])
+            sage: e = SageExplorer(p)
+            sage: from sage.combinat.tableau import Tableau
+            sage: t = Tableau([[1,2,3,4], [5,6]])
+            sage: e.set_object(t)
+            sage: e.get_object()
+            [[1, 2, 3, 4], [5, 6]]
+            sage: e.pop_object()
+            sage: e.get_object()
+            [3, 3, 2, 1]
+        """
         if self.history:
             self.history.pop()
         if self.history:
