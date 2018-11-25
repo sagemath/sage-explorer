@@ -484,11 +484,11 @@ class SageExplorer(VBox):
             sage: p = Partition([3,3,2,1])
             sage: e = SageExplorer(p)
             sage: e.get_members()
-            sage: e.members[3].name, e.members[3].private
+            sage: e.members[2].name, e.members[2].private
             ('__class__', 'python_special')
-            sage: e.members[69].name, e.members[69].origin, e.members[69].private
+            sage: e.members[68].name, e.members[68].origin, e.members[68].private
             ('_doccls', <class 'sage.combinat.partition.Partitions_all_with_category.element_class'>, 'private')
-            sage: e.members[113].name, e.members[113].overrides, e.members[113].prop_label
+            sage: e.members[112].name, e.members[112].overrides, e.members[112].prop_label
             ('_reduction',
              [<class 'sage.categories.infinite_enumerated_sets.InfiniteEnumeratedSets.element_class'>,
               <class 'sage.categories.enumerated_sets.EnumeratedSets.element_class'>,
@@ -504,19 +504,20 @@ class SageExplorer(VBox):
             c0 = self.obj
         else:
             c0 = self.obj.__class__
+        self.objclass = c0
         members = []
         Member = namedtuple('Member', ['name', 'member', 'member_type', 'origin', 'overrides', 'private', 'prop_label'])
-        origins, overrides = member_origins(c0, [x[0] for x in getmembers(c0)])
+        self.origins, self.overrides = member_origins(c0, [x[0] for x in getmembers(c0)])
         for name, member in getmembers(c0):
-            if isabstract(member):
+            if isabstract(member) or 'deprecated' in str(type(member)).lower():
                 continue
             m = re.match("<(type|class) '([.\w]+)'>", str(type(member)))
             if m and ('method' in m.group(2)):
                 member_type = m.group(2)
             else:
                 member_type = "attribute (%s)" % str(type(member))
-            origin = origins[name]
-            overs = overrides[name]
+            origin = self.origins[name]
+            overs = self.overrides[name]
             private = None
             if name.startswith('_'):
                 if name.startswith('__') and name.endswith('__'):
@@ -541,11 +542,11 @@ class SageExplorer(VBox):
             sage: p = Partition([3,3,2,1])
             sage: e = SageExplorer(p)
             sage: e.get_attributes()
-            sage: e.attributes[1].name, e.attributes[1].private
+            sage: e.attributes[0].name, e.attributes[0].private
             ('__class__', 'python_special')
-            sage: e.attributes[31].name, e.attributes[31].origin, e.attributes[31].private
+            sage: e.attributes[30].name, e.attributes[30].origin, e.attributes[30].private
             ('_doccls', <class 'sage.combinat.partition.Partitions_all_with_category.element_class'>, 'private')
-            sage: e.attributes[34].name, e.attributes[34].overrides, e.attributes[34].prop_label
+            sage: e.attributes[33].name, e.attributes[33].overrides, e.attributes[33].prop_label
             ('_reduction',
              [<class 'sage.categories.infinite_enumerated_sets.InfiniteEnumeratedSets.element_class'>,
               <class 'sage.categories.enumerated_sets.EnumeratedSets.element_class'>,
@@ -554,7 +555,7 @@ class SageExplorer(VBox):
               <class 'sage.categories.sets_with_partial_maps.SetsWithPartialMaps.element_class'>,
               <class 'sage.categories.objects.Objects.element_class'>],
              None)
-            sage: e.attributes[36].name, e.attributes[36].overrides, e.attributes[36].prop_label
+            sage: e.attributes[34].name, e.attributes[34].overrides, e.attributes[34].prop_label
             ('young_subgroup', [<class 'sage.combinat.partition.Partition'>], None)
         """
         if not hasattr(self, 'members'):
@@ -614,6 +615,11 @@ class SageExplorer(VBox):
             c0 = obj
         else:
             c0 = obj.__class__
+        if not hasattr(self, 'objclass') or c0 != self.objclass:
+            self.objclass = c0
+            self.get_members()
+            self.get_attributes()
+            self.get_methods()
         self.classname = extract_classname(c0, element_ok=False)
         self.title.value = self.get_title()
         replace_widget_w_css(self.tabs, self.doc)
@@ -631,59 +637,51 @@ class SageExplorer(VBox):
             if self.visualwidget:
                 replace_widget_hard(self.visualbox, self.visualwidget, self.visualtext)
                 self.visualwidget = None
-        members = [x for x in getmembers(c0) if not x[0] in EXCLUDED_MEMBERS and (not x[0].startswith('_') or x[0].startswith('__')) and not 'deprecated' in str(type(x[1])).lower()]
-        #self.members = [x for x in getmembers(c0) if not x[0] in EXCLUDED_MEMBERS and not x[0].startswith('_') and not x[0].startswith('__') and not 'deprecated' in str(type(x[1])).lower()]
-        self.methods = [x for x in members if ismethod(x[1]) or ismethoddescriptor(x[1])]
-        methods_as_properties = [] # Keep track of these directly displayed methods, so you can excluded them from the menus
+        attributes_as_properties = [m for m in self.attributes if m.prop_label]
+        methods_as_properties = [m for m in self.methods if m.prop_label]
+        attributes = [m for m in self.attributes if not m in attributes_as_properties and not m.name in EXCLUDED_MEMBERS and not m.private in ['private', 'sage_special']]
+        methods = [m for m in self.methods if not m in methods_as_properties and not m.name in EXCLUDED_MEMBERS and not m.private in ['private', 'sage_special']]
         props = [Title('Properties', 2)] # a list of HBoxes, to become self.propsbox's children
-        for x in self.methods:
-            try:
-                attr_label = property_label(obj, x[0])
-            except:
-                print ("Warning: Error in calculating property_label for method %s" % x[0])
-                attr_label = None
-            if attr_label:
-                methods_as_properties.append(x)
+        for p in attributes_as_properties + methods_as_properties:
+            result = p.member
+            success = True
+            if p in methods_as_properties:
                 try:
-                    value = getattr(obj, x[0])()
+                    result = result()
                 except:
-                    print ("Warning: Error in finding method %s" % x[0])
-                    value = None
-                button = self.make_new_page_button(value)
-                b_label = property_label(obj, x[0])
-                if type(value) is type(True):
-                    b_label += '?'
-                else:
-                    b_label += ':'
-                props.append(HBox([
-                    Label(b_label),
-                    button
-                    ]))
+                    success = False
+                    msg = "Could not evaluate '%s'" % p.name
+                    continue
+            button = self.make_new_page_button(result)
+            b_label = p.prop_label
+            if type(result) is type(True):
+                b_label += '?'
+            else:
+                b_label += ':'
+            if success:
+                props.append(HBox([Label(b_label), button]))
+            else:
+                props.append(HBox([Label(b_label), Label(msg)]))
         if len(self.history) > 1:
             self.propsbox.children = props + [self.make_back_button()]
         else:
             self.propsbox.children = props
         self.doc.value = to_html(obj.__doc__) # Initialize to object docstring
         self.selected_menu_value = c0
-        origins, overrides = member_origins(c0, [x[0] for x in self.methods if not x in methods_as_properties])
-        self.overrides = overrides
         bases = []
         basemembers = {}
         for c in getmro(c0):
             bases.append(c)
             basemembers[c] = []
-        for name in origins:
-            basemembers[origins[name]].append(name)
+        for m in methods:
+            basemembers[m.origin].append(m.name)
         for c in basemembers:
             if not basemembers[c]:
                 bases.remove(c)
-            else:
-                pass
-                #print c, len(basemembers[c])
         menus = []
         for i in range(len(bases)):
             c = bases[i]
-            menus.append(Select(rows=12, options = [x for x in self.methods if x[0] in basemembers[c]]
+            menus.append(Select(rows=12, options = [(m.name, m.member) for m in methods if m.name in basemembers[c]]
             ))
         self.menus.children = menus
         for i in range(len(bases)):
