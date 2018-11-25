@@ -57,7 +57,9 @@ except:
     pass
 else:
     sage.combinat.tableau.Tableau._widget_ = sage_combinat_widgets.GridViewWidget
+    sage.combinat.skew_tableau.SkewTableau._widget_ = sage_combinat_widgets.GridViewWidget
     sage.combinat.partition.Partition._widget_ = sage_combinat_widgets.grid_view_widget.PartitionGridViewWidget
+    sage.combinat.skew_partition.SkewPartition._widget_ = sage_combinat_widgets.grid_view_widget.PartitionGridViewWidget
     #sage.graphs.graph.Graph._widget_ = sage_combinat_widgets.GridViewWidget # FIXME only GridGraph and AztecDiamondGraph
     #sage.graphs.AztecDiamondGraph._widget_ = sage_combinat_widgets.GridViewWidget
     sage.matrix.matrix2._widget_ = sage_combinat_widgets.GridViewWidget

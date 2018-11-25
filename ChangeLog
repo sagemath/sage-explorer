@@ -1,0 +1,5 @@
+0.4.0
+	* Avoided all direct Sagemath dependencies
+	* Restructured introspection methods
+	* Support for 2 combinatorial objects
+	* Widget interactivity is now reflected in the underlying math object
