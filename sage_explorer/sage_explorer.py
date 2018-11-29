@@ -407,10 +407,10 @@ class SageExplorer(VBox):
         self.titlebox.add_class('lightborder')
         self.children = (self.top, self.bottom)
         self.history = []
-        self.set_object(obj)
+        self.set_value(obj)
 
     def init_selected_menu_value(self):
-        if self.obj:
+        if self.value:
             """If we are exploring an object (future ObjectExplorer class), all menu items are functions"""
             self.init_selected_func()
         """We are in catalog page (future SageExplorer)"""
@@ -470,11 +470,11 @@ class SageExplorer(VBox):
         r"""
         Get explorer general title.
         """
-        return "Exploring: %s" % repr(self.obj)
+        return "Exploring: %s" % repr(self.value)
 
     def get_members(self):
         r"""
-        Get all members for object self.obj.
+        Get all members for object self.value.
 
         OUTPUT: List of `Member` named tuples.
 
@@ -500,11 +500,11 @@ class SageExplorer(VBox):
             sage: e = SageExplorer(Partition)
             sage: e.get_members()
         """
-        if isclass(self.obj):
-            c0 = self.obj
+        if isclass(self.value):
+            c0 = self.value
         else:
-            c0 = self.obj.__class__
-        self.objclass = c0
+            c0 = self.value.__class__
+        self.valueclass = c0
         members = []
         Member = namedtuple('Member', ['name', 'member', 'member_type', 'origin', 'overrides', 'private', 'prop_label'])
         self.origins, self.overrides = member_origins(c0, [x[0] for x in getmembers(c0)])
@@ -526,13 +526,13 @@ class SageExplorer(VBox):
                     private = 'sage_special'
                 else:
                     private = 'private'
-            prop_label =  property_label(self.obj, name)
+            prop_label =  property_label(self.value, name)
             members.append(Member(name, member, member_type, origin, overs, private, prop_label))
         self.members = members
 
     def get_attributes(self):
         r"""
-        Get all attributes for object self.obj.
+        Get all attributes for object self.value.
 
         OUTPUT: List of `Attribute` named tuples.
 
@@ -568,7 +568,7 @@ class SageExplorer(VBox):
 
     def get_methods(self):
         r"""
-        Get all methods specifications for object self.obj.
+        Get all methods specifications for object self.value.
 
         TESTS::
             sage: from sage_explorer import SageExplorer
@@ -607,7 +607,7 @@ class SageExplorer(VBox):
     def compute(self):
         """Get some properties, depending on the object
         Create links between menus and output tabs"""
-        obj = self.obj
+        obj = self.value
         if obj is None:
             self.make_index()
             return
@@ -727,7 +727,7 @@ class SageExplorer(VBox):
 
     def make_new_page_button(self, obj):
         button = Button(description=str(obj), tooltip="Will close current explorer and open a new one")
-        button.on_click(lambda b:self.set_object(obj))
+        button.on_click(lambda b:self.set_value(obj))
         return button
 
     def display_new_value(self, obj):
@@ -746,9 +746,9 @@ class SageExplorer(VBox):
             sage: e.get_object()
             [3, 3, 2, 1]
         """
-        return self.obj
+        return self.value
 
-    def set_object(self, obj):
+    def set_value(self, obj):
         r"""
         Set new math object `obj` to the explorer.
 
@@ -761,12 +761,12 @@ class SageExplorer(VBox):
             [3, 3, 2, 1]
             sage: from sage.combinat.tableau import Tableau
             sage: t = Tableau([[1,2,3,4], [5,6]])
-            sage: e.set_object(t)
+            sage: e.set_value(t)
             sage: e.get_object()
             [[1, 2, 3, 4], [5, 6]]
         """
         self.history.append(obj)
-        self.obj = obj
+        self.value = obj
         self.compute()
 
     def pop_object(self):
@@ -780,7 +780,7 @@ class SageExplorer(VBox):
             sage: e = SageExplorer(p)
             sage: from sage.combinat.tableau import Tableau
             sage: t = Tableau([[1,2,3,4], [5,6]])
-            sage: e.set_object(t)
+            sage: e.set_value(t)
             sage: e.get_object()
             [[1, 2, 3, 4], [5, 6]]
             sage: e.pop_object()
@@ -790,9 +790,9 @@ class SageExplorer(VBox):
         if self.history:
             self.history.pop()
         if self.history:
-            self.obj = self.history[-1]
+            self.value = self.history[-1]
         else:
-            self.obj = None
+            self.value = None
         self.compute()
 
     def make_index(self):
@@ -819,6 +819,6 @@ class SageExplorer(VBox):
             self.display_new_value(self.selected_object)
             self.doctab.value = to_html(change.new.__doc__)
             #self.gobutton.on_click(lambda b:self.display_new_value(self.selected_object))
-            self.gobutton.on_click(lambda b:self.set_object(self.selected_object))
+            self.gobutton.on_click(lambda b:self.set_value(self.selected_object))
         for menu in self.menus.children:
             menu.observe(menu_on_change, names='value')
