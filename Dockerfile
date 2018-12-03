@@ -11,6 +11,6 @@ FROM sagemath/sagemath@sha256:e933509b105f36b9b7de892af847ade7753e058c5d9e0c0f28
 COPY --chown=sage:sage . ${HOME}
 
 # Not yet an official dependency
-RUN sage -pip install git+https://github.com/sagemath/sage-combinat-widgets.git
+RUN sage -pip install sage_combinat_widgets
 # Install this package and dependencies
 RUN sage -pip install .
