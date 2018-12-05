@@ -497,6 +497,21 @@ class ExploredMember(object):
                         overrides.append(c)
         self.origin, self.overrides = origin, overrides
 
+    def compute_argspec(self, parent=None):
+        r"""
+        If this member is a method: compute its args and defaults.
+        """
+        args = None
+        defaults = None
+        try:
+            argspec = getargspec(self.member)
+            if hasattr(argspec, 'args'):
+                self.args = argspec.args
+            if hasattr(argspec, 'defaults'):
+                self.defaults = argspec.defaults
+        except:
+            pass
+
     def compute_property_label(self, config):
         r"""
         Retrieve the property label, if any, from configuration 'config'.
@@ -732,9 +747,9 @@ class SageExplorer(VBox):
             sage: p = Partition([3,3,2,1])
             sage: e = SageExplorer(p)
             sage: e.get_members()
-            sage: e.members[2].name, e.members[2].private
+            sage: e.members[2].name, e.members[2].privacy
             ('__class__', 'python_special')
-            sage: e.members[68].name, e.members[68].origin, e.members[68].private
+            sage: e.members[68].name, e.members[68].origin, e.members[68].privacy
             ('_doccls', <class 'sage.combinat.partition.Partitions_all_with_category.element_class'>, 'private')
             sage: e.members[112].name, e.members[112].overrides, e.members[112].prop_label
             ('_reduction',
@@ -754,28 +769,15 @@ class SageExplorer(VBox):
             c0 = self.value.__class__
         self.valueclass = c0
         members = []
-        Member = namedtuple('Member', ['name', 'member', 'member_type', 'origin', 'overrides', 'private', 'prop_label'])
-        self.origins, self.overrides = member_origins(c0, [x[0] for x in getmembers(c0)])
         for name, member in getmembers(c0):
             if isabstract(member) or 'deprecated' in str(type(member)).lower():
                 continue
-            m = re.match("<(type|class) '([.\w]+)'>", str(type(member)))
-            if m and ('method' in m.group(2)):
-                member_type = m.group(2)
-            else:
-                member_type = "attribute (%s)" % str(type(member))
-            origin = self.origins[name]
-            overs = self.overrides[name]
-            private = None
-            if name.startswith('_'):
-                if name.startswith('__') and name.endswith('__'):
-                    private = 'python_special'
-                elif name.startswith('_') and name.endswith('_'):
-                    private = 'sage_special'
-                else:
-                    private = 'private'
-            prop_label =  property_label(self.value, name)
-            members.append(Member(name, member, member_type, origin, overs, private, prop_label))
+            m = ExploredMember(name=name, member=member, parent=self.value)
+            m.compute_member_type()
+            m.compute_origin()
+            m.compute_privacy()
+            m.compute_property_label(CONFIG_PROPERTIES)
+            members.append(m)
         self.members = members
 
     def get_attributes(self):
@@ -790,9 +792,9 @@ class SageExplorer(VBox):
             sage: p = Partition([3,3,2,1])
             sage: e = SageExplorer(p)
             sage: e.get_attributes()
-            sage: e.attributes[0].name, e.attributes[0].private
+            sage: e.attributes[0].name, e.attributes[0].privacy
             ('__class__', 'python_special')
-            sage: e.attributes[30].name, e.attributes[30].origin, e.attributes[30].private
+            sage: e.attributes[30].name, e.attributes[30].origin, e.attributes[30].privacy
             ('_doccls', <class 'sage.combinat.partition.Partitions_all_with_category.element_class'>, 'private')
             sage: e.attributes[33].name, e.attributes[33].overrides, e.attributes[33].prop_label
             ('_reduction',
@@ -808,11 +810,11 @@ class SageExplorer(VBox):
         """
         if not hasattr(self, 'members'):
             self.get_members()
-        Attribute = namedtuple('Attribute', ['name', 'member', 'member_type', 'origin', 'overrides', 'private', 'prop_label'])
-        self.attributes = []
+        attributes = []
         for m in self.members:
             if m.member_type.startswith('attribute'):
-                self.attributes.append(Attribute(m.name, m.member, m.member_type, m.origin, m.overrides, m.private, m.prop_label))
+                attributes.append(m)
+        self.attributes = attributes
 
     def get_methods(self):
         r"""
@@ -824,7 +826,7 @@ class SageExplorer(VBox):
             sage: p = Partition([3,3,2,1])
             sage: e = SageExplorer(p)
             sage: e.get_methods()
-            sage: e.methods[54].name, e.methods[54].member_type, e.methods[54].private
+            sage: e.methods[54].name, e.methods[54].member_type, e.methods[54].privacy
             ('_latex_coeff_repr', 'method_descriptor', 'private')
             sage: e.methods[99].name, e.methods[99].args, e.methods[99].origin
             ('add_cell', ['self', 'i', 'j'], <class 'sage.combinat.partition.Partition'>)
@@ -835,22 +837,13 @@ class SageExplorer(VBox):
         """
         if not hasattr(self, 'members'):
             self.get_members()
-        Method = namedtuple('Method', ['name', 'member', 'member_type', 'origin', 'overrides', 'private', 'prop_label', 'args', 'defaults'])
-        self.methods = []
+        methods = []
         for m in self.members:
             if not 'method' in m.member_type:
                 continue
-            args = None
-            defaults = None
-            try:
-                argspec = getargspec(m.member)
-                if hasattr(argspec, 'args'):
-                    args = argspec.args
-                if hasattr(argspec, 'args'):
-                    defaults = argspec.defaults
-            except:
-                pass
-            self.methods.append(Method(m.name, m.member, m.member_type, m.origin, m.overrides, m.private, m.prop_label, args, defaults))
+            m.compute_argspec()
+            methods.append(m)
+        self.methods = methods
 
     def compute(self):
         """Get some properties, depending on the object
@@ -887,8 +880,8 @@ class SageExplorer(VBox):
                 self.visualwidget = None
         attributes_as_properties = [m for m in self.attributes if m.prop_label]
         methods_as_properties = [m for m in self.methods if m.prop_label]
-        attributes = [m for m in self.attributes if not m in attributes_as_properties and not m.name in EXCLUDED_MEMBERS and not m.private in ['private', 'sage_special']]
-        methods = [m for m in self.methods if not m in methods_as_properties and not m.name in EXCLUDED_MEMBERS and not m.private in ['private', 'sage_special']]
+        attributes = [m for m in self.attributes if not m in attributes_as_properties and not m.name in EXCLUDED_MEMBERS and not m.privacy in ['private', 'sage_special']]
+        methods = [m for m in self.methods if not m in methods_as_properties and not m.name in EXCLUDED_MEMBERS and not m.privacy in ['private', 'sage_special']]
         props = [Title('Properties', 2)] # a list of HBoxes, to become self.propsbox's children
         for p in attributes_as_properties + methods_as_properties:
             result = p.member
