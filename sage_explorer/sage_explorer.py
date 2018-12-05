@@ -15,9 +15,11 @@ AUTHORS:
 """
 import re
 from ipywidgets import Layout, Box, VBox, HBox, Text, Label, HTML, Select, Textarea, Accordion, Tab, Button
-from inspect import getargspec, getmembers, getmro, isclass, isfunction, ismethod, ismethoddescriptor
+from inspect import getargspec, getmembers, getmro, isclass, isfunction, ismethod, ismethoddescriptor, isabstract
+from collections import namedtuple
 try: # Are we in a Sage environment?
     import sage.all
+    from sage.misc.sageinspect import sage_getargspec as getargspec
     from sage.misc.sphinxify import sphinxify
 except:
     pass
@@ -88,9 +90,24 @@ def to_html(s):
     except:
         return s
 
-def method_origins(obj, names):
+def member_origins(obj, names):
     """Return class where methods in list 'names' are actually defined
     INPUT: object 'obj', list of method names
+
+    TESTS::
+        sage: from sage_explorer.sage_explorer import member_origins
+        sage: from sage.combinat.partition import Partition
+        sage: p = Partition([3,3,2,1])
+        sage: member_origins(p, ['add_cell', '_reduction'])
+        ({'_reduction': <class 'sage.combinat.partition.Partitions_all_with_category.element_class'>,
+          'add_cell': <class 'sage.combinat.partition.Partition'>},
+         {'_reduction': [<class 'sage.categories.infinite_enumerated_sets.InfiniteEnumeratedSets.element_class'>,
+           <class 'sage.categories.enumerated_sets.EnumeratedSets.element_class'>,
+           <class 'sage.categories.sets_cat.Sets.Infinite.element_class'>,
+           <class 'sage.categories.sets_cat.Sets.element_class'>,
+           <class 'sage.categories.sets_with_partial_maps.SetsWithPartialMaps.element_class'>,
+           <class 'sage.categories.objects.Objects.element_class'>],
+          'add_cell': []})
     """
     c0 = obj
     if not isclass(c0):
@@ -165,21 +182,33 @@ def extract_classname(c, element_ok=False):
     return pretty_name(last)
 
 def get_widget(obj):
-    """Which is the specialized widget class name for viewing this object (if any)"""
+    r"""
+    Which is the specialized widget class name for viewing this object (if any)
+
+    TESTS::
+        sage: from sage.all import *
+        sage: from sage_explorer.sage_explorer import get_widget
+        sage: p = Partition([3,3,2,1])
+        sage: get_widget(p).__class__
+        <class 'sage_combinat_widgets.grid_view_widget.GridViewWidget'>
+    """
+    if isclass(obj):
+        return
     if hasattr(obj, "_widget_"):
         return obj._widget_()
     else:
         return
 
 def property_label(obj, funcname):
-    """Test whether this method, for this object,
+    r"""
+    Test whether this method, for this object,
     will be calculated at opening and displayed on this widget
     If True, return a label.
+
     INPUT: object obj, method name funcname
     OUTPUT: String or None
 
-    EXAMPLES::
-
+    TESTS::
         sage: from sage.all import *
         sage: from sage_explorer.sage_explorer import property_label
         sage: st = StandardTableaux(3).an_element()
@@ -378,10 +407,10 @@ class SageExplorer(VBox):
         self.titlebox.add_class('lightborder')
         self.children = (self.top, self.bottom)
         self.history = []
-        self.set_object(obj)
+        self.set_value(obj)
 
     def init_selected_menu_value(self):
-        if self.obj:
+        if self.value:
             """If we are exploring an object (future ObjectExplorer class), all menu items are functions"""
             self.init_selected_func()
         """We are in catalog page (future SageExplorer)"""
@@ -437,10 +466,148 @@ class SageExplorer(VBox):
         self.tabs.remove_class('invisible')
         self.tabs.add_class('visible')
 
+    def get_title(self):
+        r"""
+        Get explorer general title.
+        """
+        return "Exploring: %s" % repr(self.value)
+
+    def get_members(self):
+        r"""
+        Get all members for object self.value.
+
+        OUTPUT: List of `Member` named tuples.
+
+        TESTS::
+            sage: from sage_explorer import SageExplorer
+            sage: from sage.combinat.partition import Partition
+            sage: p = Partition([3,3,2,1])
+            sage: e = SageExplorer(p)
+            sage: e.get_members()
+            sage: e.members[2].name, e.members[2].private
+            ('__class__', 'python_special')
+            sage: e.members[68].name, e.members[68].origin, e.members[68].private
+            ('_doccls', <class 'sage.combinat.partition.Partitions_all_with_category.element_class'>, 'private')
+            sage: e.members[112].name, e.members[112].overrides, e.members[112].prop_label
+            ('_reduction',
+             [<class 'sage.categories.infinite_enumerated_sets.InfiniteEnumeratedSets.element_class'>,
+              <class 'sage.categories.enumerated_sets.EnumeratedSets.element_class'>,
+              <class 'sage.categories.sets_cat.Sets.Infinite.element_class'>,
+              <class 'sage.categories.sets_cat.Sets.element_class'>,
+              <class 'sage.categories.sets_with_partial_maps.SetsWithPartialMaps.element_class'>,
+              <class 'sage.categories.objects.Objects.element_class'>],
+             None)
+            sage: e = SageExplorer(Partition)
+            sage: e.get_members()
+        """
+        if isclass(self.value):
+            c0 = self.value
+        else:
+            c0 = self.value.__class__
+        self.valueclass = c0
+        members = []
+        Member = namedtuple('Member', ['name', 'member', 'member_type', 'origin', 'overrides', 'private', 'prop_label'])
+        self.origins, self.overrides = member_origins(c0, [x[0] for x in getmembers(c0)])
+        for name, member in getmembers(c0):
+            if isabstract(member) or 'deprecated' in str(type(member)).lower():
+                continue
+            m = re.match("<(type|class) '([.\w]+)'>", str(type(member)))
+            if m and ('method' in m.group(2)):
+                member_type = m.group(2)
+            else:
+                member_type = "attribute (%s)" % str(type(member))
+            origin = self.origins[name]
+            overs = self.overrides[name]
+            private = None
+            if name.startswith('_'):
+                if name.startswith('__') and name.endswith('__'):
+                    private = 'python_special'
+                elif name.startswith('_') and name.endswith('_'):
+                    private = 'sage_special'
+                else:
+                    private = 'private'
+            prop_label =  property_label(self.value, name)
+            members.append(Member(name, member, member_type, origin, overs, private, prop_label))
+        self.members = members
+
+    def get_attributes(self):
+        r"""
+        Get all attributes for object self.value.
+
+        OUTPUT: List of `Attribute` named tuples.
+
+        TESTS::
+            sage: from sage_explorer import SageExplorer
+            sage: from sage.combinat.partition import Partition
+            sage: p = Partition([3,3,2,1])
+            sage: e = SageExplorer(p)
+            sage: e.get_attributes()
+            sage: e.attributes[0].name, e.attributes[0].private
+            ('__class__', 'python_special')
+            sage: e.attributes[30].name, e.attributes[30].origin, e.attributes[30].private
+            ('_doccls', <class 'sage.combinat.partition.Partitions_all_with_category.element_class'>, 'private')
+            sage: e.attributes[33].name, e.attributes[33].overrides, e.attributes[33].prop_label
+            ('_reduction',
+             [<class 'sage.categories.infinite_enumerated_sets.InfiniteEnumeratedSets.element_class'>,
+              <class 'sage.categories.enumerated_sets.EnumeratedSets.element_class'>,
+              <class 'sage.categories.sets_cat.Sets.Infinite.element_class'>,
+              <class 'sage.categories.sets_cat.Sets.element_class'>,
+              <class 'sage.categories.sets_with_partial_maps.SetsWithPartialMaps.element_class'>,
+              <class 'sage.categories.objects.Objects.element_class'>],
+             None)
+            sage: e.attributes[34].name, e.attributes[34].overrides, e.attributes[34].prop_label
+            ('young_subgroup', [<class 'sage.combinat.partition.Partition'>], None)
+        """
+        if not hasattr(self, 'members'):
+            self.get_members()
+        Attribute = namedtuple('Attribute', ['name', 'member', 'member_type', 'origin', 'overrides', 'private', 'prop_label'])
+        self.attributes = []
+        for m in self.members:
+            if m.member_type.startswith('attribute'):
+                self.attributes.append(Attribute(m.name, m.member, m.member_type, m.origin, m.overrides, m.private, m.prop_label))
+
+    def get_methods(self):
+        r"""
+        Get all methods specifications for object self.value.
+
+        TESTS::
+            sage: from sage_explorer import SageExplorer
+            sage: from sage.combinat.partition import Partition
+            sage: p = Partition([3,3,2,1])
+            sage: e = SageExplorer(p)
+            sage: e.get_methods()
+            sage: e.methods[54].name, e.methods[54].member_type, e.methods[54].private
+            ('_latex_coeff_repr', 'method_descriptor', 'private')
+            sage: e.methods[99].name, e.methods[99].args, e.methods[99].origin
+            ('add_cell', ['self', 'i', 'j'], <class 'sage.combinat.partition.Partition'>)
+            sage: e.methods[106].name, e.methods[106].args, e.methods[106].defaults
+            ('arm_lengths', ['self', 'flat'], (False,))
+            sage: e = SageExplorer(Partition)
+            sage: e.get_methods()
+        """
+        if not hasattr(self, 'members'):
+            self.get_members()
+        Method = namedtuple('Method', ['name', 'member', 'member_type', 'origin', 'overrides', 'private', 'prop_label', 'args', 'defaults'])
+        self.methods = []
+        for m in self.members:
+            if not 'method' in m.member_type:
+                continue
+            args = None
+            defaults = None
+            try:
+                argspec = getargspec(m.member)
+                if hasattr(argspec, 'args'):
+                    args = argspec.args
+                if hasattr(argspec, 'args'):
+                    defaults = argspec.defaults
+            except:
+                pass
+            self.methods.append(Method(m.name, m.member, m.member_type, m.origin, m.overrides, m.private, m.prop_label, args, defaults))
+
     def compute(self):
         """Get some properties, depending on the object
         Create links between menus and output tabs"""
-        obj = self.obj
+        obj = self.value
         if obj is None:
             self.make_index()
             return
@@ -448,8 +615,13 @@ class SageExplorer(VBox):
             c0 = obj
         else:
             c0 = obj.__class__
+        if not hasattr(self, 'objclass') or c0 != self.objclass:
+            self.objclass = c0
+            self.get_members()
+            self.get_attributes()
+            self.get_methods()
         self.classname = extract_classname(c0, element_ok=False)
-        self.title.value = "Exploring: %s" % repr(obj)
+        self.title.value = self.get_title()
         replace_widget_w_css(self.tabs, self.doc)
         visualwidget = get_widget(obj)
         if visualwidget:
@@ -465,59 +637,51 @@ class SageExplorer(VBox):
             if self.visualwidget:
                 replace_widget_hard(self.visualbox, self.visualwidget, self.visualtext)
                 self.visualwidget = None
-        self.members = [x for x in getmembers(c0) if not x[0] in EXCLUDED_MEMBERS and (not x[0].startswith('_') or x[0].startswith('__')) and not 'deprecated' in str(type(x[1])).lower()]
-        #self.members = [x for x in getmembers(c0) if not x[0] in EXCLUDED_MEMBERS and not x[0].startswith('_') and not x[0].startswith('__') and not 'deprecated' in str(type(x[1])).lower()]
-        self.methods = [x for x in self.members if ismethod(x[1]) or ismethoddescriptor(x[1])]
-        methods_as_properties = [] # Keep track of these directly displayed methods, so you can excluded them from the menus
+        attributes_as_properties = [m for m in self.attributes if m.prop_label]
+        methods_as_properties = [m for m in self.methods if m.prop_label]
+        attributes = [m for m in self.attributes if not m in attributes_as_properties and not m.name in EXCLUDED_MEMBERS and not m.private in ['private', 'sage_special']]
+        methods = [m for m in self.methods if not m in methods_as_properties and not m.name in EXCLUDED_MEMBERS and not m.private in ['private', 'sage_special']]
         props = [Title('Properties', 2)] # a list of HBoxes, to become self.propsbox's children
-        for x in self.methods:
-            try:
-                attr_label = property_label(obj, x[0])
-            except:
-                print ("Warning: Error in calculating property_label for method %s" % x[0])
-                attr_label = None
-            if attr_label:
-                methods_as_properties.append(x)
+        for p in attributes_as_properties + methods_as_properties:
+            result = p.member
+            success = True
+            if p in methods_as_properties:
                 try:
-                    value = getattr(obj, x[0])()
+                    result = result()
                 except:
-                    print ("Warning: Error in finding method %s" % x[0])
-                    value = None
-                button = self.make_new_page_button(value)
-                b_label = property_label(obj, x[0])
-                if type(value) is type(True):
-                    b_label += '?'
-                else:
-                    b_label += ':'
-                props.append(HBox([
-                    Label(b_label),
-                    button
-                    ]))
+                    success = False
+                    msg = "Could not evaluate '%s'" % p.name
+                    continue
+            button = self.make_new_page_button(result)
+            b_label = p.prop_label
+            if type(result) is type(True):
+                b_label += '?'
+            else:
+                b_label += ':'
+            if success:
+                props.append(HBox([Label(b_label), button]))
+            else:
+                props.append(HBox([Label(b_label), Label(msg)]))
         if len(self.history) > 1:
             self.propsbox.children = props + [self.make_back_button()]
         else:
             self.propsbox.children = props
         self.doc.value = to_html(obj.__doc__) # Initialize to object docstring
         self.selected_menu_value = c0
-        origins, overrides = method_origins(c0, [x[0] for x in self.methods if not x in methods_as_properties])
-        self.overrides = overrides
         bases = []
         basemembers = {}
         for c in getmro(c0):
             bases.append(c)
             basemembers[c] = []
-        for name in origins:
-            basemembers[origins[name]].append(name)
+        for m in methods:
+            basemembers[m.origin].append(m.name)
         for c in basemembers:
             if not basemembers[c]:
                 bases.remove(c)
-            else:
-                pass
-                #print c, len(basemembers[c])
         menus = []
         for i in range(len(bases)):
             c = bases[i]
-            menus.append(Select(rows=12, options = [x for x in self.methods if x[0] in basemembers[c]]
+            menus.append(Select(rows=12, options = [(m.name, m.member) for m in methods if m.name in basemembers[c]]
             ))
         self.menus.children = menus
         for i in range(len(bases)):
@@ -563,7 +727,7 @@ class SageExplorer(VBox):
 
     def make_new_page_button(self, obj):
         button = Button(description=str(obj), tooltip="Will close current explorer and open a new one")
-        button.on_click(lambda b:self.set_object(obj))
+        button.on_click(lambda b:self.set_value(obj))
         return button
 
     def display_new_value(self, obj):
@@ -571,20 +735,64 @@ class SageExplorer(VBox):
         self.visualbox.children[0].value = str(obj)
 
     def get_object(self):
-        return self.obj
+        r"""
+        Return math object currently explored.
 
-    def set_object(self, obj):
+        TESTS::
+            sage: from sage_explorer.sage_explorer import SageExplorer
+            sage: from sage.combinat.partition import Partition
+            sage: p = Partition([3,3,2,1])
+            sage: e = SageExplorer(p)
+            sage: e.get_object()
+            [3, 3, 2, 1]
+        """
+        return self.value
+
+    def set_value(self, obj):
+        r"""
+        Set new math object `obj` to the explorer.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import SageExplorer
+            sage: from sage.combinat.partition import Partition
+            sage: p = Partition([3,3,2,1])
+            sage: e = SageExplorer(p)
+            sage: e.get_object()
+            [3, 3, 2, 1]
+            sage: from sage.combinat.tableau import Tableau
+            sage: t = Tableau([[1,2,3,4], [5,6]])
+            sage: e.set_value(t)
+            sage: e.get_object()
+            [[1, 2, 3, 4], [5, 6]]
+        """
         self.history.append(obj)
-        self.obj = obj
+        self.value = obj
         self.compute()
 
     def pop_object(self):
+        r"""
+        Set again previous math object to the explorer.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import SageExplorer
+            sage: from sage.combinat.partition import Partition
+            sage: p = Partition([3,3,2,1])
+            sage: e = SageExplorer(p)
+            sage: from sage.combinat.tableau import Tableau
+            sage: t = Tableau([[1,2,3,4], [5,6]])
+            sage: e.set_value(t)
+            sage: e.get_object()
+            [[1, 2, 3, 4], [5, 6]]
+            sage: e.pop_object()
+            sage: e.get_object()
+            [3, 3, 2, 1]
+        """
         if self.history:
             self.history.pop()
         if self.history:
-            self.obj = self.history[-1]
+            self.value = self.history[-1]
         else:
-            self.obj = None
+            self.value = None
         self.compute()
 
     def make_index(self):
@@ -611,6 +819,6 @@ class SageExplorer(VBox):
             self.display_new_value(self.selected_object)
             self.doctab.value = to_html(change.new.__doc__)
             #self.gobutton.on_click(lambda b:self.display_new_value(self.selected_object))
-            self.gobutton.on_click(lambda b:self.set_object(self.selected_object))
+            self.gobutton.on_click(lambda b:self.set_value(self.selected_object))
         for menu in self.menus.children:
             menu.observe(menu_on_change, names='value')
