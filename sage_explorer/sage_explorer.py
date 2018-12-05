@@ -353,6 +353,254 @@ def make_catalog_menu_options(catalog):
         options.append((key, value))
     return options
 
+class ExploredMember(object):
+    r"""
+    A member of the explored object: method, attribute ..
+    """
+    vocabulary = ['name', 'member', 'parent', 'member_type', 'origin', 'overrides', 'privacy', 'prop_label', 'args', 'defaults']
+
+    def __init__(self, **kws):
+        r"""
+        A method or attribute.
+        Must have a name.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExploredMember
+            sage: from sage.combinat.partition import Partition
+            sage: p = Partition([3,3,2,1])
+            sage: m = ExploredMember(name='conjugate', parent=p)
+            sage: m = ExploredMember(parent=p)
+            Traceback (most recent call last):
+            ...
+            ValueError: An explored member must have a name.
+        """
+        try:
+            assert 'name' in kws
+        except:
+            raise ValueError("An explored member must have a name.")
+        for arg in kws:
+            try:
+                assert arg in self.vocabulary
+            except:
+                raise ValueError("Argument '%s' not in vocabulary." % arg)
+            setattr(self, arg, kws[arg])
+
+    def compute_member(self, parent=None):
+        r"""
+        Get method or attribute value, given the name.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExploredMember
+            sage: from sage.combinat.partition import Partition
+            sage: p = Partition([3,3,2,1])
+            sage: m = ExploredMember(name='conjugate', parent=p)
+            sage: m.compute_member()
+            sage: m.member
+            <bound method Partitions_all_with_category.element_class.conjugate of [3, 3, 2, 1]>
+        """
+        if hasattr(self, 'member') and not parent:
+            return
+        if not parent and hasattr(self, 'parent'):
+            parent = self.parent
+        if not parent:
+            return
+        self.member = getattr(parent, self.name)
+
+    def compute_member_type(self, parent=None):
+        r"""
+        Get method or attribute value, given the name.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExploredMember
+            sage: from sage.combinat.partition import Partition
+            sage: p = Partition([3,3,2,1])
+            sage: m = ExploredMember(name='conjugate', parent=p)
+            sage: m.compute_member_type()
+            sage: m.member_type
+            'instancemethod'
+        """
+        if not hasattr(self, 'member'):
+            self.compute_member(parent)
+        if not hasattr(self, 'member'):
+            raise ValueError("Cannot determine the type of a non existent member.")
+        m = re.match("<(type|class) '([.\w]+)'>", str(type(self.member)))
+        if m and ('method' in m.group(2)):
+            self.member_type = m.group(2)
+        else:
+            self.member_type = "attribute (%s)" % str(type(self.member))
+
+    def compute_privacy(self):
+        r"""
+        Compute member privacy, if any.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExploredMember
+            sage: from sage.combinat.partition import Partition
+            sage: p = Partition([3,3,2,1])
+            sage: m = ExploredMember(name='__class__', parent=p)
+            sage: m.compute_privacy()
+            sage: m.privacy
+            'python_special'
+            sage: m = ExploredMember(name='_doccls', parent=p)
+            sage: m.compute_privacy()
+            sage: m.privacy
+            'private'
+        """
+        if not self.name.startswith('_'):
+            self.privacy = None
+            return
+        if self.name.startswith('__') and self.name.endswith('__'):
+            self.privacy = 'python_special'
+        elif self.name.startswith('_') and self.name.endswith('_'):
+            self.privacy = 'sage_special'
+        else:
+            self.privacy = 'private'
+
+    def compute_origin(self, parent=None):
+        r"""
+        Determine in which base class 'origin' of class 'parent'
+        this member is actually defined, and also return the list
+        of overrides if any.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExploredMember
+            sage: from sage.combinat.partition import Partition
+            sage: p = Partition([3,3,2,1])
+            sage: m = ExploredMember(name='_reduction', parent=p)
+            sage: m.compute_origin()
+            sage: m.origin, m.overrides
+            (<class 'sage.combinat.partition.Partitions_all_with_category.element_class'>,
+             [<class 'sage.categories.infinite_enumerated_sets.InfiniteEnumeratedSets.element_class'>,
+              <class 'sage.categories.enumerated_sets.EnumeratedSets.element_class'>,
+              <class 'sage.categories.sets_cat.Sets.Infinite.element_class'>,
+              <class 'sage.categories.sets_cat.Sets.element_class'>,
+              <class 'sage.categories.sets_with_partial_maps.SetsWithPartialMaps.element_class'>,
+              <class 'sage.categories.objects.Objects.element_class'>])
+        """
+        if not parent:
+            if not hasattr(self, 'parent'):
+                raise ValueError("Cannot compute origin without a parent.")
+            parent = self.parent
+        if isclass(parent):
+            parentclass = parent
+        else:
+            parentclass = parent.__class__
+        origin, overrides = parentclass, []
+        for c in parentclass.__mro__[1:]:
+            if not self.name in [x[0] for x in getmembers(c)]:
+                continue
+            for x in getmembers(c):
+                if x[0] == self.name:
+                    if x[1] == getattr(parentclass, self.name):
+                        origins = c
+                    else:
+                        overrides.append(c)
+        self.origin, self.overrides = origin, overrides
+
+    def compute_property_label(self, config):
+        r"""
+        Retrieve the property label, if any, from configuration 'config'.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExploredMember
+            sage: from sage.combinat.partition import Partition
+            sage: F = GF(7)
+            sage: m = ExploredMember(name='polynomial', parent=F)
+            sage: m.compute_property_label({'polynomial': {'in': 'Fields.Finite'}})
+            sage: m.prop_label
+            'Polynomial'
+        """
+        self.prop_label = None
+        if not self.name in config.keys():
+            self.prop_label = self.name
+            return
+        if not hasattr(self, 'parent'):
+            raise ValueError("Cannot compute property label without a parent.")
+        myconfig = config[self.name]
+        if 'isinstance' in myconfig.keys():
+            """Test isinstance"""
+            if not isinstance(self.parent, eval_in_main(myconfig['isinstance'])):
+                return
+        if 'not isinstance' in myconfig.keys():
+            """Test not isinstance"""
+            if isinstance(self.parent, eval_in_main(myconfig['not isinstance'])):
+                return
+        if 'in' in myconfig.keys():
+            """Test in"""
+            try:
+                if not self.parent in eval_in_main(myconfig['in']):
+                    return
+            except:
+                return # The error is : descriptor 'category' of 'sage.structure.parent.Parent' object needs an argument
+        if 'not in' in myconfig.keys():
+            """Test not in"""
+            if self.parent in eval_in_main(myconfig['not in']):
+                return
+        def test_when(funcname, expected, operator=None, complement=None):
+            if funcname == 'isclass': # FIXME Prendre les premières valeurs de obj.getmembers pour le test -> calculer cette liste avant ?
+                res = eval_in_main(funcname)(self.parent)
+            else:
+                res = getattr(self.parent, funcname)
+            if operator and complement:
+                res = operator(res, eval_in_main(complement))
+            return (res == expected)
+        def split_when(s):
+            when_parts = myconfig['when'].split()
+            funcname = when_parts[0]
+            if len(when_parts) > 2:
+                operatorsign, complement = when_parts[1], when_parts[2]
+            elif len(when_parts) > 1:
+                operatorsign, complement = when_parts[1][0], when_parts[1][1:]
+            if operatorsign in OPERATORS.keys():
+                operator = OPERATORS[operatorsign]
+            else:
+                operator = "not found"
+            return funcname, operator, complement
+        if 'when' in myconfig.keys():
+            """Test when predicate(s)"""
+            if isinstance(myconfig['when'], six.string_types):
+                when = [myconfig['when']]
+            elif isinstance(myconfig['when'], (list,)):
+                when = myconfig['when']
+            else:
+                return
+            for predicate in when:
+                if not ' ' in predicate:
+                    if not hasattr(self.parent, predicate):
+                        return
+                    if not test_when(predicate, True):
+                        return
+                else:
+                    funcname, operator, complement = split_when(predicate)
+                    if not hasattr(self.parent, funcname):
+                        return
+                    if operator == "not found":
+                        return
+                    if not test_when(funcname, True, operator, complement):
+                        return
+        if 'not when' in myconfig.keys():
+            """Test not when predicate(s)"""
+            if isinstance(myconfig['not when'], six.string_types):
+                nwhen = [myconfig['not when']]
+            if not test_when(myconfig['not when'],False):
+                return
+            elif isinstance(myconfig['not when'], (list,)):
+                nwhen = myconfig['not when']
+            else:
+                return
+            for predicate in nwhen:
+                if not ' ' in predicate:
+                    if not test_when(predicate, False):
+                        return
+                else:
+                    funcname, operator, complement = split_when(predicate)
+                    if not test_when(funcname, False, operator, complement):
+                        return
+        if 'label' in myconfig.keys():
+            self.prop_label = myconfig['label']
+        else:
+            self.prop_label = ' '.join([x.capitalize() for x in self.name.split('_')])
+
 class Title(Label):
     r"""A title of various levels
 
@@ -719,6 +967,7 @@ class SageExplorer(VBox):
         self.gobutton.on_click(compute_selected_method)
 
     def make_back_button(self):
+        """A button to go back to previous page."""
         if len(self.history) <= 1:
             return
         button = Button(description='Back', icon='history', tooltip="Go back to previous object page", layout=back_button_layout)
@@ -726,6 +975,7 @@ class SageExplorer(VBox):
         return button
 
     def make_new_page_button(self, obj):
+        """A button to open a new explorer on object 'obj'."""
         button = Button(description=str(obj), tooltip="Will close current explorer and open a new one")
         button.on_click(lambda b:self.set_value(obj))
         return button
