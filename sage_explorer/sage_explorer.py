@@ -359,7 +359,7 @@ class ExploredMember(object):
     """
     vocabulary = ['name', 'member', 'parent', 'member_type', 'origin', 'overrides', 'privacy', 'prop_label', 'args', 'defaults']
 
-    def __init__(self, **kws):
+    def __init__(self, name, **kws):
         r"""
         A method or attribute.
         Must have a name.
@@ -368,16 +368,11 @@ class ExploredMember(object):
             sage: from sage_explorer.sage_explorer import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
-            sage: m = ExploredMember(name='conjugate', parent=p)
-            sage: m = ExploredMember(parent=p)
-            Traceback (most recent call last):
-            ...
-            ValueError: An explored member must have a name.
+            sage: m = ExploredMember('conjugate', parent=p)
+            sage: m.name
+            'conjugate'
         """
-        try:
-            assert 'name' in kws
-        except:
-            raise ValueError("An explored member must have a name.")
+        self.name = name
         for arg in kws:
             try:
                 assert arg in self.vocabulary
@@ -393,7 +388,7 @@ class ExploredMember(object):
             sage: from sage_explorer.sage_explorer import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
-            sage: m = ExploredMember(name='conjugate', parent=p)
+            sage: m = ExploredMember('conjugate', parent=p)
             sage: m.compute_member()
             sage: m.member
             <bound method Partitions_all_with_category.element_class.conjugate of [3, 3, 2, 1]>
@@ -404,6 +399,7 @@ class ExploredMember(object):
             parent = self.parent
         if not parent:
             return
+        self.parent = parent
         self.member = getattr(parent, self.name)
 
     def compute_member_type(self, parent=None):
@@ -414,7 +410,7 @@ class ExploredMember(object):
             sage: from sage_explorer.sage_explorer import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
-            sage: m = ExploredMember(name='conjugate', parent=p)
+            sage: m = ExploredMember('conjugate', parent=p)
             sage: m.compute_member_type()
             sage: m.member_type
             'instancemethod'
@@ -437,11 +433,11 @@ class ExploredMember(object):
             sage: from sage_explorer.sage_explorer import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
-            sage: m = ExploredMember(name='__class__', parent=p)
+            sage: m = ExploredMember('__class__', parent=p)
             sage: m.compute_privacy()
             sage: m.privacy
             'python_special'
-            sage: m = ExploredMember(name='_doccls', parent=p)
+            sage: m = ExploredMember('_doccls', parent=p)
             sage: m.compute_privacy()
             sage: m.privacy
             'private'
@@ -466,7 +462,7 @@ class ExploredMember(object):
             sage: from sage_explorer.sage_explorer import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
-            sage: m = ExploredMember(name='_reduction', parent=p)
+            sage: m = ExploredMember('_reduction', parent=p)
             sage: m.compute_origin()
             sage: m.origin, m.overrides
             (<class 'sage.combinat.partition.Partitions_all_with_category.element_class'>,
@@ -481,6 +477,7 @@ class ExploredMember(object):
             if not hasattr(self, 'parent'):
                 raise ValueError("Cannot compute origin without a parent.")
             parent = self.parent
+        self.parent = parent
         if isclass(parent):
             parentclass = parent
         else:
@@ -492,7 +489,7 @@ class ExploredMember(object):
             for x in getmembers(c):
                 if x[0] == self.name:
                     if x[1] == getattr(parentclass, self.name):
-                        origins = c
+                        origin = c
                     else:
                         overrides.append(c)
         self.origin, self.overrides = origin, overrides
@@ -520,14 +517,13 @@ class ExploredMember(object):
             sage: from sage_explorer.sage_explorer import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: F = GF(7)
-            sage: m = ExploredMember(name='polynomial', parent=F)
+            sage: m = ExploredMember('polynomial', parent=F)
             sage: m.compute_property_label({'polynomial': {'in': 'Fields.Finite'}})
             sage: m.prop_label
             'Polynomial'
         """
         self.prop_label = None
         if not self.name in config.keys():
-            self.prop_label = self.name
             return
         if not hasattr(self, 'parent'):
             raise ValueError("Cannot compute property label without a parent.")
@@ -772,7 +768,7 @@ class SageExplorer(VBox):
         for name, member in getmembers(c0):
             if isabstract(member) or 'deprecated' in str(type(member)).lower():
                 continue
-            m = ExploredMember(name=name, member=member, parent=self.value)
+            m = ExploredMember(name, member=member, parent=self.value)
             m.compute_member_type()
             m.compute_origin()
             m.compute_privacy()
@@ -805,7 +801,7 @@ class SageExplorer(VBox):
               <class 'sage.categories.sets_with_partial_maps.SetsWithPartialMaps.element_class'>,
               <class 'sage.categories.objects.Objects.element_class'>],
              None)
-            sage: e.attributes[34].name, e.attributes[34].overrides, e.attributes[34].prop_label
+            sage: e.attributes[35].name, e.attributes[35].overrides, e.attributes[34].prop_label
             ('young_subgroup', [<class 'sage.combinat.partition.Partition'>], None)
         """
         if not hasattr(self, 'members'):
