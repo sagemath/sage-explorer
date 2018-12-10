@@ -899,24 +899,21 @@ class SageExplorer(VBox):
         props = [Title('Properties', 2)] # a list of HBoxes, to become self.propsbox's children
         # Properties
         for p in attributes_as_properties + methods_as_properties:
-            result = p.member
-            success = True
-            if p in methods_as_properties:
-                try:
-                    result = result()
-                except:
-                    print ("Warning: Error in finding method %s" % p.name)
-                    value = None
-                button = self.make_new_page_button(value)
-                b_label = p.prop_label
-                if type(value) is type(True):
-                    b_label += '?'
-                else:
-                    b_label += ':'
-                props.append(HBox([
-                    Label(b_label),
-                    button
-                    ]))
+            try:
+                value = p.member(obj)
+            except:
+                print ("Warning: Error in finding method %s" % p.name)
+                value = None
+            button = self.make_new_page_button(value)
+            b_label = p.prop_label
+            if type(value) is type(True):
+                b_label += '?'
+            else:
+                b_label += ':'
+            props.append(HBox([
+                Label(b_label),
+                button
+            ]))
         if len(self.history) > 1:
             self.propsbox.children = props + [self.make_back_button()]
         else:
