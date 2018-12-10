@@ -14,10 +14,12 @@ from os.path import join as path_join
 # __setattr__ method (see #25898). This forces a normal import.
 
 import sage.misc.classcall_metaclass
+from six import add_metaclass
 class MetaHasTraitsClasscallMetaclass (traitlets.traitlets.MetaHasTraits, sage.misc.classcall_metaclass.ClasscallMetaclass):
     pass
+@add_metaclass(MetaHasTraitsClasscallMetaclass)
 class BindableWidgetClass(BindableClass):
-    __metaclass__ = MetaHasTraitsClasscallMetaclass
+    pass
 
 class PlotWidget(Box, BindableWidgetClass):
     value = traitlets.Instance(SageObject)

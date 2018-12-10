@@ -67,6 +67,7 @@ def eval_in_main(s):
     """
     Evaluate the expression `s` in the global scope
 
+    TESTS::
         sage: from sage_explorer.sage_explorer import eval_in_main
         sage: from sage.combinat.tableau import Tableaux
         sage: eval_in_main("Tableaux")
@@ -86,6 +87,14 @@ def to_html(s):
     r"""Display nicely formatted HTML string
     INPUT: string s
     OUPUT: string
+
+    TESTS::
+        sage: from sage_explorer.sage_explorer import to_html
+        sage: from sage.combinat.partition import Partition
+        sage: Partition.cells.__doc__[:100]
+        '\n        Return the coordinates of the cells of ``self``.\n\n        EXAMPLES::\n\n            sage: Par'
+        sage: to_html(Partition.cells.__doc__)[:100]
+        '<div class="docstring">\n    \n  <blockquote>\n<div><p>Return the coordinates of the cells of <code cla'
     """
     s = str(s)
     try:
@@ -190,6 +199,7 @@ def get_widget(obj):
 
     TESTS::
         sage: from sage.all import *
+        sage: from sage_explorer._widgets import *
         sage: from sage_explorer.sage_explorer import get_widget
         sage: p = Partition([3,3,2,1])
         sage: get_widget(p).__class__
@@ -393,6 +403,18 @@ class ExploredMember(object):
         self.doc = self.member.__doc__
 
     def compute_doc(self, parent=None):
+        r"""
+        Get method or attribute documentation, given the name.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExploredMember
+            sage: from sage.combinat.partition import Partition
+            sage: p = Partition([3,3,2,1])
+            sage: m = ExploredMember('conjugate', parent=p)
+            sage: m.compute_doc()
+            sage: m.doc[:100]
+            '\n        Return the conjugate partition of the partition ``self``. This\n        is also called the a'
+        """
         if hasattr(self, 'member'):
             self.doc = self.member.__doc__
         else:
@@ -408,8 +430,7 @@ class ExploredMember(object):
             sage: p = Partition([3,3,2,1])
             sage: m = ExploredMember('conjugate', parent=p)
             sage: m.compute_member_type()
-            sage: m.member_type
-            'instancemethod'
+            sage: assert 'method' in m.member_type
         """
         if not hasattr(self, 'member'):
             self.compute_member(parent)
@@ -493,6 +514,16 @@ class ExploredMember(object):
     def compute_argspec(self, parent=None):
         r"""
         If this member is a method: compute its args and defaults.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExploredMember
+            sage: from sage.combinat.partition import Partition
+            sage: p = Partition([3,3,2,1])
+            sage: m = ExploredMember('add_cell', parent=p)
+            sage: m.compute_member()
+            sage: m.compute_argspec()
+            sage: m.args, m.defaults
+            (['self', 'i', 'j'], (None,))
         """
         args = None
         defaults = None
@@ -691,22 +722,42 @@ class SageExplorer(VBox):
         self.set_value(obj)
 
     def init_selected_menu_value(self):
+        r"""
+        From a menu selection, compute display elements for the widgets.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import SageExplorer, ExploredMember
+            sage: from sage.monoids.string_monoid import AlphabeticStrings
+            sage: e = SageExplorer()
+            sage: m = ExploredMember('AlphabeticStrings', member=AlphabeticStrings)
+            sage: e.selected_menu_value = m
+            sage: e.init_selected_menu_value()
+            sage: str(e.doctab.value[:100])
+            '<div class="docstring">\n    \n  <blockquote>\n<div><p>Returns the string monoid on generators A-Z:\n<sp'
+        """
         if self.value:
-            """If we are exploring an object (future ObjectExplorer class), all menu items are functions"""
+            """If we are exploring an object, all menu items are functions"""
             self.init_selected_func()
-        """We are in catalog page (future SageExplorer)"""
+            return
+        """We are on the catalogs page"""
         selected_obj = self.selected_menu_value # An ExplorerMember
+        if not hasattr(selected_obj, 'member_type'):
+            selected_obj.compute_member_type()
+        if not hasattr(selected_obj, 'doc'):
+            selected_obj.compute_doc()
         if 'function' in selected_obj.member_type or 'method' in selected_obj.member_type:
-            if not selected_obj.args:
+            self.doctab.value = to_html(selected_obj.doc)
+            if not hasattr(selected_obj, 'args'):
                 try:
                     selected_obj.member = selected_obj.member()
                 except:
                     pass
-            elif selected_obj.defaults and len(selected_obj.defaults) == len(selected_obj.args):
+            elif hasattr(selected_obj, 'defaults') and len(selected_obj.defaults) == len(selected_obj.args):
                 try:
                     selected_obj.member = selected_obj.member(selected_obj.defaults)
                 except:
                     pass
+            return
         if 'class' in selected_obj.member_type:
             self.doc.value = to_html(selected_obj.doc)
             self.doctab.value = ''
@@ -718,16 +769,33 @@ class SageExplorer(VBox):
             return
 
     def init_selected_func(self):
-        """If we are exploring an object, all menu items are functions"""
+        r"""
+        From a menu selection, compute display elements for the widgets.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import SageExplorer, ExploredMember
+            sage: from sage.combinat.partition import Partition
+            sage: p = Partition([3,3,2,1])
+            sage: e = SageExplorer(p)
+            sage: m = ExploredMember('conjugate', parent=p)
+            sage: e.selected_menu_value = m
+            sage: e.init_selected_func()
+            sage: str(e.doctab.value[:100]) # For Python3 compatibility
+            '<div class="docstring">\n    \n  <blockquote>\n<div><p>Return the conjugate partition of the partition '
+        """
         self.output.value = ''
-        func = self.selected_menu_value
+        func = self.selected_menu_value # An ExplorerMember
         if not hasattr(func, 'doc'):
             func.compute_doc()
+        if not hasattr(func, 'origin'):
+            func.compute_origin()
         self.doctab.value = to_html(func.doc)
         if func.overrides:
             self.doctab.value += to_html("Overrides:")
             self.doctab.value += to_html(', '.join([extract_classname(x, element_ok=True) for x in func.overrides]))
         inputs = []
+        if not hasattr(func, 'args'):
+            func.compute_argspec()
         try:
             shift = 0
             for i in range(len(func.args)):
@@ -751,6 +819,14 @@ class SageExplorer(VBox):
     def get_title(self):
         r"""
         Get explorer general title.
+
+        TESTS:
+            sage: from sage_explorer import SageExplorer
+            sage: from sage.combinat.partition import Partition
+            sage: p = Partition([3,3,2,1])
+            sage: e = SageExplorer(p)
+            sage: e.get_title()
+            'Exploring: [3, 3, 2, 1]'
         """
         return "Exploring: %s" % repr(self.value)
 
@@ -985,6 +1061,17 @@ class SageExplorer(VBox):
     def make_back_button(self):
         r"""
         Make a button for getting back to the previous object.
+
+        TESTS::
+            sage: from sage_explorer import SageExplorer
+            sage: from sage.combinat.partition import Partition
+            sage: p1 = Partition([3,3,2,1])
+            sage: p2 = Partition([5,3,2])
+            sage: e = SageExplorer(p1)
+            sage: e.make_back_button()
+            sage: e.set_value(p2)
+            sage: e.make_back_button()
+            Button(description=u'Back', icon=u'history', layout=Layout(width=u'7em'), style=ButtonStyle(), tooltip=u'Go back to previous object page')
         """
         if len(self.history) <= 1:
             return
@@ -995,6 +1082,15 @@ class SageExplorer(VBox):
     def make_new_page_button(self, obj):
         r"""
         Make a button for fetching a new explorer with value `obj`.
+
+        TESTS::
+            sage: from sage_explorer import SageExplorer
+            sage: from sage.combinat.partition import Partition
+            sage: p1 = Partition([3,3,2,1])
+            sage: p2 = Partition([5,3,2])
+            sage: e = SageExplorer(p1)
+            sage: e.make_new_page_button(p2)
+            Button(description=u'[5, 3, 2]', style=ButtonStyle(), tooltip=u'Will close current explorer and open a new one')
         """
         button = Button(description=str(obj), tooltip="Will close current explorer and open a new one")
         button.on_click(lambda b:self.set_value(obj))
