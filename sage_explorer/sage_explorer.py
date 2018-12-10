@@ -332,29 +332,15 @@ def replace_widget_w_css(w1, w2):
     w2.remove_class('invisible')
     w2.add_class('visible')
 
-def make_catalog_menu_options(catalog):
-    r"""Turn catalog into usable menu options
+class Title(Label):
+    r"""A title of various levels
 
-    Parse the list of names in the catalog module,
-    keep only real catalog objects,
-    try to apply those that are functions
-    and turn the list into menu option tuples.
-
-    INPUT:
-    - `catalog` -- a module
-
-    OUTPUT:
-    - `options` -- a list of tuples (name, value)
+    For HTML display
     """
-    options = []
-    if type(catalog) == type([]):
-        return options + [(str(x), x) for x in catalog]
-    for key in sorted(dir(catalog)):
-        value = getattr(catalog, key)
-        if not key[0].isupper():
-            continue
-        options.append((key, value))
-    return options
+    def __init__(self, value='', level=1):
+        super(Title, self).__init__()
+        self.value = value
+        self.add_class('title-level%d' % level)
 
 class ExploredMember(object):
     r"""
@@ -622,15 +608,39 @@ class ExploredMember(object):
         else:
             self.prop_label = ' '.join([x.capitalize() for x in self.name.split('_')])
 
-class Title(Label):
-    r"""A title of various levels
+def make_catalog_menu_options(catalog):
+    r"""Turn catalog into usable menu options
 
-    For HTML display
+    Parse the list of names in the catalog module,
+    keep only real catalog objects,
+    try to apply those that are functions
+    and turn the list into menu option tuples.
+
+    INPUT:
+    - `catalog` -- a module
+
+    OUTPUT:
+    - `options` -- a list of tuples (name, value)
+
+    TESTS::
+        sage: from sage_explorer.sage_explorer import make_catalog_menu_options
+        sage: from sage.monoids import all as monoids_catalog
+        sage: members = make_catalog_menu_options(monoids_catalog)
+        sage: members[0].name, members[0].member_type
+        ('AlphabeticStrings', "attribute (<type 'function'>)")
     """
-    def __init__(self, value='', level=1):
-        super(Title, self).__init__()
-        self.value = value
-        self.add_class('title-level%d' % level)
+    members = []
+    if type(catalog) == type([]):
+        members += [(str(x), x) for x in catalog]
+    for name in sorted(dir(catalog)):
+        member = getattr(catalog, name)
+        if not name[0].isupper():
+            continue
+        members.append(ExploredMember(name, member=member))
+    for m in members:
+        m.compute_member_type()
+        m.compute_doc()
+    return [(m.name, m) for m in members]
 
 class SageExplorer(VBox):
     """Sage Explorer in Jupyter Notebook"""
@@ -678,9 +688,7 @@ class SageExplorer(VBox):
         self.titlebox.add_class('lightborder')
         self.children = (self.top, self.bottom)
         self.history = []
-        self.value = None
-        if obj:
-            self.set_value(obj)
+        self.set_value(obj)
 
     def init_selected_menu_value(self):
         if self.value:
@@ -1080,9 +1088,8 @@ class SageExplorer(VBox):
             self.menus.set_title(i, label)
         def menu_on_change(change):
             self.selected_object = change.new
-            self.display_new_value(self.selected_object)
-            self.doctab.value = to_html(change.new.__doc__)
-            #self.gobutton.on_click(lambda b:self.display_new_value(self.selected_object))
-            self.gobutton.on_click(lambda b:self.set_value(self.selected_object))
+            self.display_new_value(self.selected_object.name)
+            self.doctab.value = to_html(change.new.doc)
+            self.gobutton.on_click(lambda b:self.set_value(self.selected_object.member))
         for menu in self.menus.children:
             menu.observe(menu_on_change, names='value')
