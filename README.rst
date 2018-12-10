@@ -34,8 +34,14 @@ shorthand::
 
     $ make install
 
+Install from PyPI
+^^^^^^^^^^^^^^^^^^
+
+Sage Explorer is distributed on PyPI.
+
+    $ sage -pip install sage_explorer
+
 Usage
 -----
 
 See the `demo notebook <demo_sage_explorer.ipynb>`_.
-
