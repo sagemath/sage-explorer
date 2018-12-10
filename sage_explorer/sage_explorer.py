@@ -678,7 +678,9 @@ class SageExplorer(VBox):
         self.titlebox.add_class('lightborder')
         self.children = (self.top, self.bottom)
         self.history = []
-        self.set_value(obj)
+        self.value = None
+        if obj:
+            self.set_value(obj)
 
     def init_selected_menu_value(self):
         if self.value:
@@ -976,24 +978,30 @@ class SageExplorer(VBox):
         self.gobutton.on_click(compute_selected_method)
 
     def make_back_button(self):
-        """A button to go back to previous page."""
+        r"""
+        Make a button for getting back to the previous object.
+        """
         if len(self.history) <= 1:
             return
         button = Button(description='Back', icon='history', tooltip="Go back to previous object page", layout=back_button_layout)
-        button.on_click(lambda event: self.pop_object()) # No back button in this new (previous object) page
+        button.on_click(lambda event: self.pop_value()) # No back button in this new (previous object) page
         return button
 
     def make_new_page_button(self, obj):
-        """A button to open a new explorer on object 'obj'."""
+        r"""
+        Make a button for fetching a new explorer with value `obj`.
+        """
         button = Button(description=str(obj), tooltip="Will close current explorer and open a new one")
         button.on_click(lambda b:self.set_value(obj))
         return button
 
     def display_new_value(self, obj):
-        """A callback for the navigation button."""
+        r"""
+        A callback for the navigation button.
+        """
         self.visualbox.children[0].value = str(obj)
 
-    def get_object(self):
+    def get_value(self):
         r"""
         Return math object currently explored.
 
@@ -1002,7 +1010,7 @@ class SageExplorer(VBox):
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
             sage: e = SageExplorer(p)
-            sage: e.get_object()
+            sage: e.get_value()
             [3, 3, 2, 1]
         """
         return self.value
@@ -1016,19 +1024,19 @@ class SageExplorer(VBox):
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
             sage: e = SageExplorer(p)
-            sage: e.get_object()
+            sage: e.get_value()
             [3, 3, 2, 1]
             sage: from sage.combinat.tableau import Tableau
             sage: t = Tableau([[1,2,3,4], [5,6]])
             sage: e.set_value(t)
-            sage: e.get_object()
+            sage: e.get_value()
             [[1, 2, 3, 4], [5, 6]]
         """
         self.history.append(obj)
         self.value = obj
         self.compute()
 
-    def pop_object(self):
+    def pop_value(self):
         r"""
         Set again previous math object to the explorer.
 
@@ -1040,10 +1048,10 @@ class SageExplorer(VBox):
             sage: from sage.combinat.tableau import Tableau
             sage: t = Tableau([[1,2,3,4], [5,6]])
             sage: e.set_value(t)
-            sage: e.get_object()
+            sage: e.get_value()
             [[1, 2, 3, 4], [5, 6]]
-            sage: e.pop_object()
-            sage: e.get_object()
+            sage: e.pop_value()
+            sage: e.get_value()
             [3, 3, 2, 1]
         """
         if self.history:
