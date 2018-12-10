@@ -27,7 +27,10 @@ try: # Avoid python3 deprecation warning.
     from inspect import getfullargspec as getargspec
 except:
     pass
-from cysignals.alarm import alarm, cancel_alarm, AlarmInterrupt
+try:
+    from cysignals.alarm import alarm, cancel_alarm, AlarmInterrupt
+except:
+    AlarmInterrupt = None
 import yaml, os, six, operator as OP
 from IPython.core import display
 
@@ -958,9 +961,11 @@ class SageExplorer(VBox):
                     self.output.value = to_html("Could not evaluate argument '%s'" % i.description)
                     return
             try:
-                alarm(TIMEOUT)
+                if AlarmInterrupt:
+                    alarm(TIMEOUT)
                 out = self.selected_menu_value.member(obj, *args)
-                cancel_alarm()
+                if AlarmInterrupt:
+                    cancel_alarm()
             except AlarmInterrupt:
                 self.output.value = to_html("Timeout!")
             except Exception as e:
