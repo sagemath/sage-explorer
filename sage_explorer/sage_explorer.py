@@ -353,6 +353,272 @@ def make_catalog_menu_options(catalog):
         options.append((key, value))
     return options
 
+class ExploredMember(object):
+    r"""
+    A member of the explored object: method, attribute ..
+    """
+    vocabulary = ['name', 'member', 'parent', 'member_type', 'doc', 'origin', 'overrides', 'privacy', 'prop_label', 'args', 'defaults']
+
+    def __init__(self, name, **kws):
+        r"""
+        A method or attribute.
+        Must have a name.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExploredMember
+            sage: from sage.combinat.partition import Partition
+            sage: p = Partition([3,3,2,1])
+            sage: m = ExploredMember('conjugate', parent=p)
+            sage: m.name
+            'conjugate'
+        """
+        self.name = name
+        for arg in kws:
+            try:
+                assert arg in self.vocabulary
+            except:
+                raise ValueError("Argument '%s' not in vocabulary." % arg)
+            setattr(self, arg, kws[arg])
+
+    def compute_member(self, parent=None):
+        r"""
+        Get method or attribute value, given the name.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExploredMember
+            sage: from sage.combinat.partition import Partition
+            sage: p = Partition([3,3,2,1])
+            sage: m = ExploredMember('conjugate', parent=p)
+            sage: m.compute_member()
+            sage: m.member
+            <bound method Partitions_all_with_category.element_class.conjugate of [3, 3, 2, 1]>
+        """
+        if hasattr(self, 'member') and not parent:
+            return
+        if not parent and hasattr(self, 'parent'):
+            parent = self.parent
+        if not parent:
+            return
+        self.parent = parent
+        self.member = getattr(parent, self.name)
+        self.doc = self.member.__doc__
+
+    def compute_doc(self, parent=None):
+        if hasattr(self, 'member'):
+            self.doc = self.member.__doc__
+        else:
+            self.compute_member(parent)
+
+    def compute_member_type(self, parent=None):
+        r"""
+        Get method or attribute value, given the name.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExploredMember
+            sage: from sage.combinat.partition import Partition
+            sage: p = Partition([3,3,2,1])
+            sage: m = ExploredMember('conjugate', parent=p)
+            sage: m.compute_member_type()
+            sage: m.member_type
+            'instancemethod'
+        """
+        if not hasattr(self, 'member'):
+            self.compute_member(parent)
+        if not hasattr(self, 'member'):
+            raise ValueError("Cannot determine the type of a non existent member.")
+        m = re.match("<(type|class) '([.\w]+)'>", str(type(self.member)))
+        if m and ('method' in m.group(2)):
+            self.member_type = m.group(2)
+        else:
+            self.member_type = "attribute (%s)" % str(type(self.member))
+
+    def compute_privacy(self):
+        r"""
+        Compute member privacy, if any.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExploredMember
+            sage: from sage.combinat.partition import Partition
+            sage: p = Partition([3,3,2,1])
+            sage: m = ExploredMember('__class__', parent=p)
+            sage: m.compute_privacy()
+            sage: m.privacy
+            'python_special'
+            sage: m = ExploredMember('_doccls', parent=p)
+            sage: m.compute_privacy()
+            sage: m.privacy
+            'private'
+        """
+        if not self.name.startswith('_'):
+            self.privacy = None
+            return
+        if self.name.startswith('__') and self.name.endswith('__'):
+            self.privacy = 'python_special'
+        elif self.name.startswith('_') and self.name.endswith('_'):
+            self.privacy = 'sage_special'
+        else:
+            self.privacy = 'private'
+
+    def compute_origin(self, parent=None):
+        r"""
+        Determine in which base class 'origin' of class 'parent'
+        this member is actually defined, and also return the list
+        of overrides if any.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExploredMember
+            sage: from sage.combinat.partition import Partition
+            sage: p = Partition([3,3,2,1])
+            sage: m = ExploredMember('_reduction', parent=p)
+            sage: m.compute_origin()
+            sage: m.origin, m.overrides
+            (<class 'sage.combinat.partition.Partitions_all_with_category.element_class'>,
+             [<class 'sage.categories.infinite_enumerated_sets.InfiniteEnumeratedSets.element_class'>,
+              <class 'sage.categories.enumerated_sets.EnumeratedSets.element_class'>,
+              <class 'sage.categories.sets_cat.Sets.Infinite.element_class'>,
+              <class 'sage.categories.sets_cat.Sets.element_class'>,
+              <class 'sage.categories.sets_with_partial_maps.SetsWithPartialMaps.element_class'>,
+              <class 'sage.categories.objects.Objects.element_class'>])
+        """
+        if not parent:
+            if not hasattr(self, 'parent'):
+                raise ValueError("Cannot compute origin without a parent.")
+            parent = self.parent
+        self.parent = parent
+        if isclass(parent):
+            parentclass = parent
+        else:
+            parentclass = parent.__class__
+        origin, overrides = parentclass, []
+        for c in parentclass.__mro__[1:]:
+            if not self.name in [x[0] for x in getmembers(c)]:
+                continue
+            for x in getmembers(c):
+                if x[0] == self.name:
+                    if x[1] == getattr(parentclass, self.name):
+                        origin = c
+                    else:
+                        overrides.append(c)
+        self.origin, self.overrides = origin, overrides
+
+    def compute_argspec(self, parent=None):
+        r"""
+        If this member is a method: compute its args and defaults.
+        """
+        args = None
+        defaults = None
+        try:
+            argspec = getargspec(self.member)
+            if hasattr(argspec, 'args'):
+                self.args = argspec.args
+            if hasattr(argspec, 'defaults'):
+                self.defaults = argspec.defaults
+        except:
+            pass
+
+    def compute_property_label(self, config):
+        r"""
+        Retrieve the property label, if any, from configuration 'config'.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExploredMember
+            sage: from sage.combinat.partition import Partition
+            sage: F = GF(7)
+            sage: m = ExploredMember('polynomial', parent=F)
+            sage: m.compute_property_label({'polynomial': {'in': 'Fields.Finite'}})
+            sage: m.prop_label
+            'Polynomial'
+        """
+        self.prop_label = None
+        if not self.name in config.keys():
+            return
+        if not hasattr(self, 'parent'):
+            raise ValueError("Cannot compute property label without a parent.")
+        myconfig = config[self.name]
+        if 'isinstance' in myconfig.keys():
+            """Test isinstance"""
+            if not isinstance(self.parent, eval_in_main(myconfig['isinstance'])):
+                return
+        if 'not isinstance' in myconfig.keys():
+            """Test not isinstance"""
+            if isinstance(self.parent, eval_in_main(myconfig['not isinstance'])):
+                return
+        if 'in' in myconfig.keys():
+            """Test in"""
+            try:
+                if not self.parent in eval_in_main(myconfig['in']):
+                    return
+            except:
+                return # The error is : descriptor 'category' of 'sage.structure.parent.Parent' object needs an argument
+        if 'not in' in myconfig.keys():
+            """Test not in"""
+            if self.parent in eval_in_main(myconfig['not in']):
+                return
+        def test_when(funcname, expected, operator=None, complement=None):
+            if funcname == 'isclass': # FIXME Prendre les premières valeurs de obj.getmembers pour le test -> calculer cette liste avant ?
+                res = eval_in_main(funcname)(self.parent)
+            else:
+                res = getattr(self.parent, funcname)
+            if operator and complement:
+                res = operator(res, eval_in_main(complement))
+            return (res == expected)
+        def split_when(s):
+            when_parts = myconfig['when'].split()
+            funcname = when_parts[0]
+            if len(when_parts) > 2:
+                operatorsign, complement = when_parts[1], when_parts[2]
+            elif len(when_parts) > 1:
+                operatorsign, complement = when_parts[1][0], when_parts[1][1:]
+            if operatorsign in OPERATORS.keys():
+                operator = OPERATORS[operatorsign]
+            else:
+                operator = "not found"
+            return funcname, operator, complement
+        if 'when' in myconfig.keys():
+            """Test when predicate(s)"""
+            if isinstance(myconfig['when'], six.string_types):
+                when = [myconfig['when']]
+            elif isinstance(myconfig['when'], (list,)):
+                when = myconfig['when']
+            else:
+                return
+            for predicate in when:
+                if not ' ' in predicate:
+                    if not hasattr(self.parent, predicate):
+                        return
+                    if not test_when(predicate, True):
+                        return
+                else:
+                    funcname, operator, complement = split_when(predicate)
+                    if not hasattr(self.parent, funcname):
+                        return
+                    if operator == "not found":
+                        return
+                    if not test_when(funcname, True, operator, complement):
+                        return
+        if 'not when' in myconfig.keys():
+            """Test not when predicate(s)"""
+            if isinstance(myconfig['not when'], six.string_types):
+                nwhen = [myconfig['not when']]
+            if not test_when(myconfig['not when'],False):
+                return
+            elif isinstance(myconfig['not when'], (list,)):
+                nwhen = myconfig['not when']
+            else:
+                return
+            for predicate in nwhen:
+                if not ' ' in predicate:
+                    if not test_when(predicate, False):
+                        return
+                else:
+                    funcname, operator, complement = split_when(predicate)
+                    if not test_when(funcname, False, operator, complement):
+                        return
+        if 'label' in myconfig.keys():
+            self.prop_label = myconfig['label']
+        else:
+            self.prop_label = ' '.join([x.capitalize() for x in self.name.split('_')])
+
 class Title(Label):
     r"""A title of various levels
 
@@ -414,20 +680,20 @@ class SageExplorer(VBox):
             """If we are exploring an object (future ObjectExplorer class), all menu items are functions"""
             self.init_selected_func()
         """We are in catalog page (future SageExplorer)"""
-        selected_obj = self.selected_menu_value
-        if isfunction(selected_obj):
-            if not getargspec(selected_obj).args:
+        selected_obj = self.selected_menu_value # An ExplorerMember
+        if 'function' in selected_obj.member_type or 'method' in selected_obj.member_type:
+            if not selected_obj.args:
                 try:
-                    selected_obj = selected_obj()
+                    selected_obj.member = selected_obj.member()
                 except:
                     pass
-            elif getargspec(selected_obj).defaults and len(getargspec(selected_obj).defaults) == len(getargspec(selected_obj).args):
+            elif selected_obj.defaults and len(selected_obj.defaults) == len(selected_obj.args):
                 try:
-                    selected_obj = selected_obj(*getargspec(selected_obj).defaults)
+                    selected_obj.member = selected_obj.member(selected_obj.defaults)
                 except:
                     pass
-        if isclass(selected_obj):
-            self.doc.value = to_html(selected_obj.__doc__)
+        if 'class' in selected_obj.member_type:
+            self.doc.value = to_html(selected_obj.doc)
             self.doctab.value = ''
             self.inputs.children = []
             self.tabs.remove_class('visible')
@@ -440,26 +706,27 @@ class SageExplorer(VBox):
         """If we are exploring an object, all menu items are functions"""
         self.output.value = ''
         func = self.selected_menu_value
-        self.doctab.value = to_html(func.__doc__)
-        if self.overrides[func.__name__]:
+        if not hasattr(func, 'doc'):
+            func.compute_doc()
+        self.doctab.value = to_html(func.doc)
+        if func.overrides:
             self.doctab.value += to_html("Overrides:")
-            self.doctab.value += to_html(', '.join([extract_classname(x, element_ok=True) for x in self.overrides[func.__name__]]))
+            self.doctab.value += to_html(', '.join([extract_classname(x, element_ok=True) for x in func.overrides]))
         inputs = []
         try:
-            argspec = getargspec(func)
             shift = 0
-            for i in range(len(argspec.args)):
-                argname = argspec.args[i]
+            for i in range(len(func.args)):
+                argname = func.args[i]
                 if argname in ['self']:
                     shift = 1
                     continue
                 default = ''
-                if argspec.defaults and len(argspec.defaults) > i - shift and argspec.defaults[i - shift]:
-                    default = argspec.defaults[i - shift]
+                if func.defaults and len(func.defaults) > i - shift and func.defaults[i - shift]:
+                    default = func.defaults[i - shift]
                 inputs.append(Text(description=argname, placeholder=str(default)))
         except:
             print (func, "attr?")
-            print (argspec)
+            print (func.args, func.defaults)
         self.inputs.children = inputs
         self.doc.remove_class('visible')
         self.doc.add_class('invisible')
@@ -484,9 +751,9 @@ class SageExplorer(VBox):
             sage: p = Partition([3,3,2,1])
             sage: e = SageExplorer(p)
             sage: e.get_members()
-            sage: e.members[2].name, e.members[2].private
+            sage: e.members[2].name, e.members[2].privacy
             ('__class__', 'python_special')
-            sage: e.members[68].name, e.members[68].origin, e.members[68].private
+            sage: e.members[68].name, e.members[68].origin, e.members[68].privacy
             ('_doccls', <class 'sage.combinat.partition.Partitions_all_with_category.element_class'>, 'private')
             sage: e.members[112].name, e.members[112].overrides, e.members[112].prop_label
             ('_reduction',
@@ -506,28 +773,15 @@ class SageExplorer(VBox):
             c0 = self.value.__class__
         self.valueclass = c0
         members = []
-        Member = namedtuple('Member', ['name', 'member', 'member_type', 'origin', 'overrides', 'private', 'prop_label'])
-        self.origins, self.overrides = member_origins(c0, [x[0] for x in getmembers(c0)])
         for name, member in getmembers(c0):
             if isabstract(member) or 'deprecated' in str(type(member)).lower():
                 continue
-            m = re.match("<(type|class) '([.\w]+)'>", str(type(member)))
-            if m and ('method' in m.group(2)):
-                member_type = m.group(2)
-            else:
-                member_type = "attribute (%s)" % str(type(member))
-            origin = self.origins[name]
-            overs = self.overrides[name]
-            private = None
-            if name.startswith('_'):
-                if name.startswith('__') and name.endswith('__'):
-                    private = 'python_special'
-                elif name.startswith('_') and name.endswith('_'):
-                    private = 'sage_special'
-                else:
-                    private = 'private'
-            prop_label =  property_label(self.value, name)
-            members.append(Member(name, member, member_type, origin, overs, private, prop_label))
+            m = ExploredMember(name, member=member, parent=self.value)
+            m.compute_member_type()
+            m.compute_origin()
+            m.compute_privacy()
+            m.compute_property_label(CONFIG_PROPERTIES)
+            members.append(m)
         self.members = members
 
     def get_attributes(self):
@@ -542,9 +796,9 @@ class SageExplorer(VBox):
             sage: p = Partition([3,3,2,1])
             sage: e = SageExplorer(p)
             sage: e.get_attributes()
-            sage: e.attributes[0].name, e.attributes[0].private
+            sage: e.attributes[0].name, e.attributes[0].privacy
             ('__class__', 'python_special')
-            sage: e.attributes[30].name, e.attributes[30].origin, e.attributes[30].private
+            sage: e.attributes[30].name, e.attributes[30].origin, e.attributes[30].privacy
             ('_doccls', <class 'sage.combinat.partition.Partitions_all_with_category.element_class'>, 'private')
             sage: e.attributes[33].name, e.attributes[33].overrides, e.attributes[33].prop_label
             ('_reduction',
@@ -555,16 +809,16 @@ class SageExplorer(VBox):
               <class 'sage.categories.sets_with_partial_maps.SetsWithPartialMaps.element_class'>,
               <class 'sage.categories.objects.Objects.element_class'>],
              None)
-            sage: e.attributes[34].name, e.attributes[34].overrides, e.attributes[34].prop_label
+            sage: e.attributes[35].name, e.attributes[35].overrides, e.attributes[34].prop_label
             ('young_subgroup', [<class 'sage.combinat.partition.Partition'>], None)
         """
         if not hasattr(self, 'members'):
             self.get_members()
-        Attribute = namedtuple('Attribute', ['name', 'member', 'member_type', 'origin', 'overrides', 'private', 'prop_label'])
-        self.attributes = []
+        attributes = []
         for m in self.members:
             if m.member_type.startswith('attribute'):
-                self.attributes.append(Attribute(m.name, m.member, m.member_type, m.origin, m.overrides, m.private, m.prop_label))
+                attributes.append(m)
+        self.attributes = attributes
 
     def get_methods(self):
         r"""
@@ -576,7 +830,7 @@ class SageExplorer(VBox):
             sage: p = Partition([3,3,2,1])
             sage: e = SageExplorer(p)
             sage: e.get_methods()
-            sage: e.methods[54].name, e.methods[54].member_type, e.methods[54].private
+            sage: e.methods[54].name, e.methods[54].member_type, e.methods[54].privacy
             ('_latex_coeff_repr', 'method_descriptor', 'private')
             sage: e.methods[99].name, e.methods[99].args, e.methods[99].origin
             ('add_cell', ['self', 'i', 'j'], <class 'sage.combinat.partition.Partition'>)
@@ -587,22 +841,13 @@ class SageExplorer(VBox):
         """
         if not hasattr(self, 'members'):
             self.get_members()
-        Method = namedtuple('Method', ['name', 'member', 'member_type', 'origin', 'overrides', 'private', 'prop_label', 'args', 'defaults'])
-        self.methods = []
+        methods = []
         for m in self.members:
             if not 'method' in m.member_type:
                 continue
-            args = None
-            defaults = None
-            try:
-                argspec = getargspec(m.member)
-                if hasattr(argspec, 'args'):
-                    args = argspec.args
-                if hasattr(argspec, 'args'):
-                    defaults = argspec.defaults
-            except:
-                pass
-            self.methods.append(Method(m.name, m.member, m.member_type, m.origin, m.overrides, m.private, m.prop_label, args, defaults))
+            m.compute_argspec()
+            methods.append(m)
+        self.methods = methods
 
     def compute(self):
         """Get some properties, depending on the object
@@ -639,9 +884,10 @@ class SageExplorer(VBox):
                 self.visualwidget = None
         attributes_as_properties = [m for m in self.attributes if m.prop_label]
         methods_as_properties = [m for m in self.methods if m.prop_label]
-        attributes = [m for m in self.attributes if not m in attributes_as_properties and not m.name in EXCLUDED_MEMBERS and not m.private in ['private', 'sage_special']]
-        methods = [m for m in self.methods if not m in methods_as_properties and not m.name in EXCLUDED_MEMBERS and not m.private in ['private', 'sage_special']]
+        attributes = [m for m in self.attributes if not m in attributes_as_properties and not m.name in EXCLUDED_MEMBERS and not m.privacy in ['private', 'sage_special']]
+        methods = [m for m in self.methods if not m in methods_as_properties and not m.name in EXCLUDED_MEMBERS and not m.privacy in ['private', 'sage_special']]
         props = [Title('Properties', 2)] # a list of HBoxes, to become self.propsbox's children
+        # Properties
         for p in attributes_as_properties + methods_as_properties:
             result = p.member
             success = True
@@ -666,7 +912,9 @@ class SageExplorer(VBox):
             self.propsbox.children = props + [self.make_back_button()]
         else:
             self.propsbox.children = props
+        # Object doc
         self.doc.value = to_html(obj.__doc__) # Initialize to object docstring
+        # Methods (sorted by definition classes)
         self.selected_menu_value = c0
         bases = []
         basemembers = {}
@@ -681,7 +929,7 @@ class SageExplorer(VBox):
         menus = []
         for i in range(len(bases)):
             c = bases[i]
-            menus.append(Select(rows=12, options = [(m.name, m.member) for m in methods if m.name in basemembers[c]]
+            menus.append(Select(rows=12, options = [(m.name, m) for m in methods if m.name in basemembers[c]]
             ))
         self.menus.children = menus
         for i in range(len(bases)):
@@ -707,7 +955,7 @@ class SageExplorer(VBox):
                     return
             try:
                 alarm(TIMEOUT)
-                out = self.selected_menu_value(obj, *args)
+                out = self.selected_menu_value.member(obj, *args)
                 cancel_alarm()
             except AlarmInterrupt:
                 self.output.value = to_html("Timeout!")
@@ -719,6 +967,7 @@ class SageExplorer(VBox):
         self.gobutton.on_click(compute_selected_method)
 
     def make_back_button(self):
+        """A button to go back to previous page."""
         if len(self.history) <= 1:
             return
         button = Button(description='Back', icon='history', tooltip="Go back to previous object page", layout=back_button_layout)
@@ -726,6 +975,7 @@ class SageExplorer(VBox):
         return button
 
     def make_new_page_button(self, obj):
+        """A button to open a new explorer on object 'obj'."""
         button = Button(description=str(obj), tooltip="Will close current explorer and open a new one")
         button.on_click(lambda b:self.set_value(obj))
         return button
