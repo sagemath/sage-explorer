@@ -19,7 +19,10 @@ from traitlets import Any
 from inspect import getargspec, getmembers, getmro, isclass, isfunction, ismethod, ismethoddescriptor, isabstract
 try: # Are we in a Sage environment?
     import sage.all
+<<<<<<< HEAD
     from sage.misc.sageinspect import sage_getargspec as getargspec
+=======
+>>>>>>> 2ed960e... We make explore button on all property results, not only Sage objects.
     from sage.misc.sphinxify import sphinxify
 except:
     pass
@@ -900,19 +903,18 @@ class SageExplorer(VBox):
                 try:
                     result = result()
                 except:
-                    success = False
-                    msg = "Could not evaluate '%s'" % p.name
-                    continue
-            button = self.make_new_page_button(result)
-            b_label = p.prop_label
-            if type(result) is type(True):
-                b_label += '?'
-            else:
-                b_label += ':'
-            if success:
-                props.append(HBox([Label(b_label), button]))
-            else:
-                props.append(HBox([Label(b_label), Label(msg)]))
+                    print ("Warning: Error in finding method %s" % p.name)
+                    value = None
+                button = self.make_new_page_button(value)
+                b_label = property_label(obj, p.name)
+                if type(value) is type(True):
+                    b_label += '?'
+                else:
+                    b_label += ':'
+                props.append(HBox([
+                    Label(b_label),
+                    button
+                    ]))
         if len(self.history) > 1:
             self.propsbox.children = props + [self.make_back_button()]
         else:
