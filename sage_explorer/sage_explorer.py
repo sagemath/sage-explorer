@@ -15,8 +15,8 @@ AUTHORS:
 """
 import re
 from ipywidgets import Layout, Box, VBox, HBox, Text, Label, HTML, Select, Textarea, Accordion, Tab, Button
+from traitlets import Any
 from inspect import getargspec, getmembers, getmro, isclass, isfunction, ismethod, ismethoddescriptor, isabstract
-from collections import namedtuple
 try: # Are we in a Sage environment?
     import sage.all
     from sage.misc.sageinspect import sage_getargspec as getargspec
@@ -632,6 +632,8 @@ class Title(Label):
 class SageExplorer(VBox):
     """Sage Explorer in Jupyter Notebook"""
 
+    value = Any()
+
     def __init__(self, obj=None):
         """
         TESTS::
@@ -873,6 +875,9 @@ class SageExplorer(VBox):
             # Reset if necessary, then replace with visualbox
             self.visualbox.children = [self.visualtext]
             self.visualwidget = visualwidget
+            def graphical_change(change):
+                self.set_value(change.new)
+            self.visualwidget.observe(graphical_change, names='value')
             replace_widget_hard(self.visualbox, self.visualtext, self.visualwidget)
         else:
             try:
