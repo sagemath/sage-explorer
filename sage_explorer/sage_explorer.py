@@ -626,7 +626,7 @@ def make_catalog_menu_options(catalog):
         sage: from sage_explorer.sage_explorer import make_catalog_menu_options
         sage: from sage.monoids import all as monoids_catalog
         sage: members = make_catalog_menu_options(monoids_catalog)
-        sage: members[0].name, members[0].member_type
+        sage: members[0][0], members[0][1].member_type
         ('AlphabeticStrings', "attribute (<type 'function'>)")
     """
     members = []
