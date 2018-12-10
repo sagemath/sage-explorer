@@ -357,7 +357,7 @@ class ExploredMember(object):
     r"""
     A member of the explored object: method, attribute ..
     """
-    vocabulary = ['name', 'member', 'parent', 'member_type', 'origin', 'overrides', 'privacy', 'prop_label', 'args', 'defaults']
+    vocabulary = ['name', 'member', 'parent', 'member_type', 'doc', 'origin', 'overrides', 'privacy', 'prop_label', 'args', 'defaults']
 
     def __init__(self, name, **kws):
         r"""
@@ -401,6 +401,13 @@ class ExploredMember(object):
             return
         self.parent = parent
         self.member = getattr(parent, self.name)
+        self.doc = self.member.__doc__
+
+    def compute_doc(self, parent=None):
+        if hasattr(self, 'member'):
+            self.doc = self.member.__doc__
+        else:
+            self.compute_member(parent)
 
     def compute_member_type(self, parent=None):
         r"""
@@ -673,20 +680,20 @@ class SageExplorer(VBox):
             """If we are exploring an object (future ObjectExplorer class), all menu items are functions"""
             self.init_selected_func()
         """We are in catalog page (future SageExplorer)"""
-        selected_obj = self.selected_menu_value
-        if isfunction(selected_obj):
-            if not getargspec(selected_obj).args:
+        selected_obj = self.selected_menu_value # An ExplorerMember
+        if 'function' in selected_obj.member_type or 'method' in selected_obj.member_type:
+            if not selected_obj.args:
                 try:
-                    selected_obj = selected_obj()
+                    selected_obj.member = selected_obj.member()
                 except:
                     pass
-            elif getargspec(selected_obj).defaults and len(getargspec(selected_obj).defaults) == len(getargspec(selected_obj).args):
+            elif selected_obj.defaults and len(selected_obj.defaults) == len(selected_obj.args):
                 try:
-                    selected_obj = selected_obj(*getargspec(selected_obj).defaults)
+                    selected_obj.member = selected_obj.member(selected_obj.defaults)
                 except:
                     pass
-        if isclass(selected_obj):
-            self.doc.value = to_html(selected_obj.__doc__)
+        if 'class' in selected_obj.member_type:
+            self.doc.value = to_html(selected_obj.doc)
             self.doctab.value = ''
             self.inputs.children = []
             self.tabs.remove_class('visible')
@@ -699,26 +706,27 @@ class SageExplorer(VBox):
         """If we are exploring an object, all menu items are functions"""
         self.output.value = ''
         func = self.selected_menu_value
-        self.doctab.value = to_html(func.__doc__)
-        if self.overrides[func.__name__]:
+        if not hasattr(func, 'doc'):
+            func.compute_doc()
+        self.doctab.value = to_html(func.doc)
+        if func.overrides:
             self.doctab.value += to_html("Overrides:")
-            self.doctab.value += to_html(', '.join([extract_classname(x, element_ok=True) for x in self.overrides[func.__name__]]))
+            self.doctab.value += to_html(', '.join([extract_classname(x, element_ok=True) for x in func.overrides]))
         inputs = []
         try:
-            argspec = getargspec(func)
             shift = 0
-            for i in range(len(argspec.args)):
-                argname = argspec.args[i]
+            for i in range(len(func.args)):
+                argname = func.args[i]
                 if argname in ['self']:
                     shift = 1
                     continue
                 default = ''
-                if argspec.defaults and len(argspec.defaults) > i - shift and argspec.defaults[i - shift]:
-                    default = argspec.defaults[i - shift]
+                if func.defaults and len(func.defaults) > i - shift and func.defaults[i - shift]:
+                    default = func.defaults[i - shift]
                 inputs.append(Text(description=argname, placeholder=str(default)))
         except:
             print (func, "attr?")
-            print (argspec)
+            print (func.args, func.defaults)
         self.inputs.children = inputs
         self.doc.remove_class('visible')
         self.doc.add_class('invisible')
@@ -879,6 +887,7 @@ class SageExplorer(VBox):
         attributes = [m for m in self.attributes if not m in attributes_as_properties and not m.name in EXCLUDED_MEMBERS and not m.privacy in ['private', 'sage_special']]
         methods = [m for m in self.methods if not m in methods_as_properties and not m.name in EXCLUDED_MEMBERS and not m.privacy in ['private', 'sage_special']]
         props = [Title('Properties', 2)] # a list of HBoxes, to become self.propsbox's children
+        # Properties
         for p in attributes_as_properties + methods_as_properties:
             result = p.member
             success = True
@@ -903,7 +912,9 @@ class SageExplorer(VBox):
             self.propsbox.children = props + [self.make_back_button()]
         else:
             self.propsbox.children = props
+        # Object doc
         self.doc.value = to_html(obj.__doc__) # Initialize to object docstring
+        # Methods (sorted by definition classes)
         self.selected_menu_value = c0
         bases = []
         basemembers = {}
@@ -918,7 +929,7 @@ class SageExplorer(VBox):
         menus = []
         for i in range(len(bases)):
             c = bases[i]
-            menus.append(Select(rows=12, options = [(m.name, m.member) for m in methods if m.name in basemembers[c]]
+            menus.append(Select(rows=12, options = [(m.name, m) for m in methods if m.name in basemembers[c]]
             ))
         self.menus.children = menus
         for i in range(len(bases)):
@@ -944,7 +955,7 @@ class SageExplorer(VBox):
                     return
             try:
                 alarm(TIMEOUT)
-                out = self.selected_menu_value(obj, *args)
+                out = self.selected_menu_value.member(obj, *args)
                 cancel_alarm()
             except AlarmInterrupt:
                 self.output.value = to_html("Timeout!")
