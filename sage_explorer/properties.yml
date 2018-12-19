@@ -34,6 +34,10 @@ an_element:
 cardinality:
   in: EnumeratedSets.Finite
 
+addition_table:
+  in: AdditiveSemigroups.Finite
+  when: cardinality < 21
+
 multiplication_table:
   in: Semigroups.Finite
   when: cardinality < 21
@@ -83,6 +87,12 @@ is_standard:
   not in: StandardTableaux()
 
 conjugate:
+  in: Tableaux()
+
+charge:
+  in: Tableaux()
+
+cocharge:
   in: Tableaux()
 
 ##############################################################################
