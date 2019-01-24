@@ -640,6 +640,23 @@ class ExploredMember(object):
         else:
             self.prop_label = ' '.join([x.capitalize() for x in self.name.split('_')])
 
+class ExploredParent(ExploredMember):
+    r"""
+    An adaptation of ExploredMember
+    for a parent of the explored object.
+
+    """
+    def __init__(self, name, cls, child):
+        self.name = name
+        self.member = cls
+        self.parent = child
+
+    compute_member = lambda x:None
+    compute_member_type = lambda x:'class'
+    compute_origin = lambda x:None
+    compute_argspec = lambda x:None
+    compute_property_label = lambda x:None
+
 def make_catalog_menu_options(catalog):
     r"""Turn catalog into usable menu options
 
@@ -701,6 +718,7 @@ class SageExplorer(VBox):
         self.visualbox.children = [self.visualtext]
         self.top = HBox([self.titlebox, self.visualbox], layout=justified_h_layout)
         self.menus = Accordion(selected_index=None)
+        self.menu_headers = {}
         self.menusbox = VBox([Title("Menus", 2), self.menus])
         self.inputs = HBox()
         self.gobutton = Button(description='Run!', tooltip='Run the function or method, with specified arguments')
@@ -732,12 +750,14 @@ class SageExplorer(VBox):
             sage: str(e.doctab.value[:100])
             '<div class="docstring">\n    \n  <blockquote>\n<div><p>Returns the string monoid on generators A-Z:\n<sp'
         """
+        selected_obj = self.selected_menu_value # An ExploredMember
+        if not selected_obj: # No method is selected, use the menu header
+            selected_obj = ExploredMember(self.menu_headers[self.menu_index]) # An ExploredParent
         if self.value:
             """If we are exploring an object, all menu items are functions"""
             self.init_selected_func()
             return
         """We are on the catalogs page"""
-        selected_obj = self.selected_menu_value # An ExplorerMember
         if not hasattr(selected_obj, 'member_type'):
             selected_obj.compute_member_type()
         if not hasattr(selected_obj, 'doc'):
@@ -1016,12 +1036,18 @@ class SageExplorer(VBox):
         menus = []
         for i in range(len(bases)):
             c = bases[i]
-            menus.append(Select(rows=12, options = [(m.name, m) for m in methods if m.name in basemembers[c]]
+            menus.append(Select(rows=12, options = [('--', None)] + [(m.name, m) for m in methods if m.name in basemembers[c]]
             ))
         self.menus.children = menus
         for i in range(len(bases)):
             c = bases[i]
             self.menus.set_title(i, extract_classname(c))
+            self.menu_headers[i] = ExploredParent(extract_classname(c), c, self)
+        def menus_on_change(change):
+            self.selected_menu_value = None
+            self.menu_index = change.new
+            self.init_selected_menu_value()
+        self.menus.observe(menus_on_change, names='selected_index')
         def menu_on_change(change):
             self.selected_menu_value = change.new
             self.init_selected_menu_value()
@@ -1175,7 +1201,7 @@ class SageExplorer(VBox):
         self.gobutton.description = 'Go!'
         menus = []
         for label, catalog in catalogs:
-            menu = Select(rows=12, options=make_catalog_menu_options(catalog))
+            menu = Select(rows=12, options=[('--', None)] + make_catalog_menu_options(catalog))
             menus.append(menu)
         self.menus.children = menus
         for i, (label, _) in enumerate(catalogs):
