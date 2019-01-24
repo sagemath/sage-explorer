@@ -44,10 +44,11 @@ css_lines.append(".invisible {display: none; width: 0; height: 0}")
 css_lines.append(".visible {display: table}")
 css_lines.append(".title-level1 {font-size: 150%;color: purple}")
 css_lines.append(".title-level2 {font-size: 120%;color: red}")
+css_lines.append(".methodoutput {font-size: 110%}")
 css_lines.append(".lightborder {width: 100%; border: 1px solid #CCC; margin: 3px; padding: 3px}")
 css_lines.append(".titlebox {max-width: 65%}")
 css_lines.append(".visualbox {min-height: 100px; max-height: 400px; min-width: 300px; padding: 15px; margin: auto; display: table}")
-css_lines.append(".tabs {width: 100%}")
+css_lines.append(".workpanel {width: 100% !important, border: 1px solid white}")
 css_lines.append(".widget-text .widget-label, .widget-box .widget-button {width: auto}")
 css_lines.append("UL {list-style-type: none; padding-left:0;}")
 css = HTML("<style>%s</style>" % '\n'.join(css_lines))
@@ -703,16 +704,12 @@ class SageExplorer(VBox):
         self.menusbox = VBox([Title("Menus", 2), self.menus])
         self.inputs = HBox()
         self.gobutton = Button(description='Run!', tooltip='Run the function or method, with specified arguments')
+        self.output_label = Label('Help')
+        self.gobutton.add_class('invisible') # Hide go button and label when no method is open
+        self.output_label.add_class('invisible') # Hide go button and label when no method is open
         self.output = HTML()
-        self.worktab = VBox((self.inputs, self.gobutton, self.output))
-        self.doc = HTML()
-        self.doctab = HTML() # For the method docstring
-        self.tabs = Tab((self.worktab, self.doctab)) # Will be used when a method is selected
-        self.tabs.add_class('tabs')
-        self.tabs.set_title(0, 'Call')
-        self.tabs.set_title(1, 'Help')
-        self.main = Box((self.doc, self.tabs))
-        self.tabs.add_class('invisible') # Hide tabs at first display
+        self.main = VBox((self.inputs, self.gobutton, self.output_label, self.output))
+        #self.main = Box((self.doc, self.tabs))
         self.bottom = HBox((self.menusbox, self.main), layout=main_h_layout)
         self.menusbox.add_class('lightborder')
         self.main.add_class('lightborder')
@@ -746,7 +743,11 @@ class SageExplorer(VBox):
         if not hasattr(selected_obj, 'doc'):
             selected_obj.compute_doc()
         if 'function' in selected_obj.member_type or 'method' in selected_obj.member_type:
-            self.doctab.value = to_html(selected_obj.doc)
+            self.gobutton.remove_class('invisible')
+            self.gobutton.add_class('visible')
+            self.output_label.remove_class('invisible')
+            self.output_label.add_class('visible')
+            self.output.value = to_html(selected_obj.doc)
             if not hasattr(selected_obj, 'args'):
                 try:
                     selected_obj.member = selected_obj.member()
@@ -759,13 +760,12 @@ class SageExplorer(VBox):
                     pass
             return
         if 'class' in selected_obj.member_type:
-            self.doc.value = to_html(selected_obj.doc)
-            self.doctab.value = ''
+            self.output.value = to_html(selected_obj.doc)
             self.inputs.children = []
-            self.tabs.remove_class('visible')
-            self.tabs.add_class('invisible')
-            self.doc.remove_class('invisible')
-            self.doc.add_class('visible')
+            self.gobutton.remove_class('visible')
+            self.gobutton.add_class('invisible')
+            self.output_label.remove_class('visible')
+            self.output_label.add_class('invisible')
             return
 
     def init_selected_func(self):
@@ -789,10 +789,10 @@ class SageExplorer(VBox):
             func.compute_doc()
         if not hasattr(func, 'origin'):
             func.compute_origin()
-        self.doctab.value = to_html(func.doc)
+        self.output.value = to_html(func.doc)
         if func.overrides:
-            self.doctab.value += to_html("Overrides:")
-            self.doctab.value += to_html(', '.join([extract_classname(x, element_ok=True) for x in func.overrides]))
+            self.output.value += to_html("Overrides:")
+            self.output.value += to_html(', '.join([extract_classname(x, element_ok=True) for x in func.overrides]))
         inputs = []
         if not hasattr(func, 'args'):
             func.compute_argspec()
@@ -811,10 +811,6 @@ class SageExplorer(VBox):
             print (func, "attr?")
             print (func.args, func.defaults)
         self.inputs.children = inputs
-        self.doc.remove_class('visible')
-        self.doc.add_class('invisible')
-        self.tabs.remove_class('invisible')
-        self.tabs.add_class('visible')
 
     def get_title(self):
         r"""
@@ -958,7 +954,7 @@ class SageExplorer(VBox):
             self.get_methods()
         self.classname = extract_classname(c0, element_ok=False)
         self.title.value = self.get_title()
-        replace_widget_w_css(self.tabs, self.doc)
+        #replace_widget_w_css(self.tabs, self.doc)
         visualwidget = get_widget(obj)
         if visualwidget:
             # Reset if necessary, then replace with visualbox
@@ -979,7 +975,8 @@ class SageExplorer(VBox):
         attributes_as_properties = [m for m in self.attributes if m.prop_label]
         methods_as_properties = [m for m in self.methods if m.prop_label]
         attributes = [m for m in self.attributes if not m in attributes_as_properties and not m.name in EXCLUDED_MEMBERS and not m.privacy in ['private', 'sage_special']]
-        methods = [m for m in self.methods if not m in methods_as_properties and not m.name in EXCLUDED_MEMBERS and not m.privacy in ['private', 'sage_special']]
+        #methods = [m for m in self.methods if not m in methods_as_properties and not m.name in EXCLUDED_MEMBERS and not m.privacy in ['private', 'sage_special']]
+        methods = [m for m in self.methods if not m.name in EXCLUDED_MEMBERS and not m.privacy in ['private', 'sage_special']]
         props = [Title('Properties', 2)] # a list of HBoxes, to become self.propsbox's children
         # Properties
         for p in attributes_as_properties + methods_as_properties:
@@ -1003,7 +1000,7 @@ class SageExplorer(VBox):
         else:
             self.propsbox.children = props
         # Object doc
-        self.doc.value = to_html(obj.__doc__) # Initialize to object docstring
+        self.output.value = to_html(obj.__doc__) # Initialize to object docstring
         # Methods (sorted by definition classes)
         self.selected_menu_value = c0
         bases = []
@@ -1051,6 +1048,7 @@ class SageExplorer(VBox):
                     cancel_alarm()
             except AlarmInterrupt:
                 self.output.value = to_html("Timeout!")
+                cancel_alarm()
             except Exception as e:
                 self.output.value = to_html(e)
                 return
@@ -1185,7 +1183,7 @@ class SageExplorer(VBox):
         def menu_on_change(change):
             self.selected_object = change.new
             self.display_new_value(self.selected_object.name)
-            self.doctab.value = to_html(change.new.doc)
+            self.output.value = to_html(change.new.doc)
             self.gobutton.on_click(lambda b:self.set_value(self.selected_object.member))
         for menu in self.menus.children:
             menu.observe(menu_on_change, names='value')
