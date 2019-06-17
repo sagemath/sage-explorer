@@ -578,7 +578,7 @@ class ExploredMember(object):
             if funcname == 'isclass': # FIXME Prendre les premières valeurs de obj.getmembers pour le test -> calculer cette liste avant ?
                 res = eval_in_main(funcname)(self.parent)
             else:
-                res = getattr(self.parent, funcname)
+                res = getattr(self.parent, funcname).__call__()
             if operator and complement:
                 res = operator(res, eval_in_main(complement))
             return (res == expected)
