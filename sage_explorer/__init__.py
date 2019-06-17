@@ -8,6 +8,6 @@
 
 from .sage_explorer import SageExplorer, SageExplorer as explore
 try:
-    import _widgets
+    from ._widgets import *
 except:
     pass
