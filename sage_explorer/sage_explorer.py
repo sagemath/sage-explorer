@@ -675,8 +675,10 @@ def make_catalog_menu_options(catalog):
         sage: from sage_explorer.sage_explorer import make_catalog_menu_options
         sage: from sage.monoids import all as monoids_catalog
         sage: members = make_catalog_menu_options(monoids_catalog)
-        sage: members[0][0], members[0][1].member_type
-        ('AlphabeticStrings', "attribute (<type 'function'>)")
+        sage: members[0][0]
+        'AlphabeticStrings'
+        sage: 'string monoid on generators A-Z' in members[0][1].doc
+        True
     """
     members = []
     if type(catalog) == type([]):
@@ -747,8 +749,8 @@ class SageExplorer(VBox):
             sage: m = ExploredMember('AlphabeticStrings', member=AlphabeticStrings)
             sage: e.selected_menu_value = m
             sage: e.init_selected_menu_value()
-            sage: str(e.doctab.value[:100])
-            '<div class="docstring">\n    \n  <blockquote>\n<div><p>Returns the string monoid on generators A-Z:\n<sp'
+            sage: 'string monoid on generators A-Z' in e.doc.value
+            True
         """
         selected_obj = self.selected_menu_value # An ExploredMember
         if not selected_obj: # No method is selected, use the menu header
@@ -862,15 +864,15 @@ class SageExplorer(VBox):
             ('__class__', 'python_special')
             sage: e.members[68].name, e.members[68].origin, e.members[68].privacy
             ('_doccls', <class 'sage.combinat.partition.Partitions_all_with_category.element_class'>, 'private')
-            sage: e.members[112].name, e.members[112].overrides, e.members[112].prop_label
-            ('_reduction',
+            sage: [(e.members[i].name, e.members[i].overrides, e.members[i].prop_label) for i in range(len(e.members)) if e.members[i].name == '_reduction']
+            [('_reduction',
              [<class 'sage.categories.infinite_enumerated_sets.InfiniteEnumeratedSets.element_class'>,
               <class 'sage.categories.enumerated_sets.EnumeratedSets.element_class'>,
               <class 'sage.categories.sets_cat.Sets.Infinite.element_class'>,
               <class 'sage.categories.sets_cat.Sets.element_class'>,
               <class 'sage.categories.sets_with_partial_maps.SetsWithPartialMaps.element_class'>,
               <class 'sage.categories.objects.Objects.element_class'>],
-             None)
+             None)]
             sage: e = SageExplorer(Partition)
             sage: e.get_members()
         """
@@ -903,21 +905,12 @@ class SageExplorer(VBox):
             sage: p = Partition([3,3,2,1])
             sage: e = SageExplorer(p)
             sage: e.get_attributes()
-            sage: e.attributes[0].name, e.attributes[0].privacy
-            ('__class__', 'python_special')
-            sage: e.attributes[30].name, e.attributes[30].origin, e.attributes[30].privacy
-            ('_doccls', <class 'sage.combinat.partition.Partitions_all_with_category.element_class'>, 'private')
-            sage: e.attributes[33].name, e.attributes[33].overrides, e.attributes[33].prop_label
-            ('_reduction',
-             [<class 'sage.categories.infinite_enumerated_sets.InfiniteEnumeratedSets.element_class'>,
-              <class 'sage.categories.enumerated_sets.EnumeratedSets.element_class'>,
-              <class 'sage.categories.sets_cat.Sets.Infinite.element_class'>,
-              <class 'sage.categories.sets_cat.Sets.element_class'>,
-              <class 'sage.categories.sets_with_partial_maps.SetsWithPartialMaps.element_class'>,
-              <class 'sage.categories.objects.Objects.element_class'>],
-             None)
-            sage: e.attributes[35].name, e.attributes[35].overrides, e.attributes[34].prop_label
-            ('young_subgroup', [<class 'sage.combinat.partition.Partition'>], None)
+            sage: e.attributes[0].privacy
+            'python_special'
+            sage: [e.attributes[i].origin for i in range(len(e.attributes)) if e.attributes[i].name in ['_doccls', '_dummy_attribute', 'young_subgroup']]
+            [<class 'sage.combinat.partition.Partitions_all_with_category.element_class'>,
+             <class 'sage.categories.sets_cat.Sets.element_class'>,
+             <class 'sage.combinat.partition.Partitions_all_with_category.element_class'>]
         """
         if not hasattr(self, 'members'):
             self.get_members()
@@ -937,12 +930,10 @@ class SageExplorer(VBox):
             sage: p = Partition([3,3,2,1])
             sage: e = SageExplorer(p)
             sage: e.get_methods()
-            sage: e.methods[54].name, e.methods[54].member_type, e.methods[54].privacy
-            ('_latex_coeff_repr', 'method_descriptor', 'private')
-            sage: e.methods[99].name, e.methods[99].args, e.methods[99].origin
-            ('add_cell', ['self', 'i', 'j'], <class 'sage.combinat.partition.Partition'>)
-            sage: e.methods[106].name, e.methods[106].args, e.methods[106].defaults
-            ('arm_lengths', ['self', 'flat'], (False,))
+            sage: [e.methods[i].privacy for i in range(len(e.methods)) if e.methods[i].name in ['_latex_coeff_repr', '_sage_', 'is_zero']]
+            ['private', 'sage_special', None]
+            sage: [e.methods[i].args for i in range(len(e.methods)) if e.methods[i].name in ['_unicode_art_', 'dual_equivalence_graph', 'upper_hook']]
+            [['self'], ['self', 'directed', 'coloring'], ['self', 'i', 'j', 'alpha']]
             sage: e = SageExplorer(Partition)
             sage: e.get_methods()
         """
@@ -950,7 +941,7 @@ class SageExplorer(VBox):
             self.get_members()
         methods = []
         for m in self.members:
-            if not 'method' in m.member_type:
+            if not 'method' in m.member_type and not 'function' in m.member_type:
                 continue
             m.compute_argspec()
             methods.append(m)
