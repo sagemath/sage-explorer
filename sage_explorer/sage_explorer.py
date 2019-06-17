@@ -48,6 +48,7 @@ css_lines.append(".lightborder {width: 100%; border: 1px solid #CCC; margin: 3px
 css_lines.append(".catalog-menus {min-width: 200px;}")
 css_lines.append(".titlebox {max-width: 65%}")
 css_lines.append(".visualbox {min-height: 100px; max-height: 400px; min-width: 300px; padding: 15px; margin: auto; display: table}")
+css_lines.append(".catalog-menus {min-width: 200px;}")
 css_lines.append(".tabs {width: 100%}")
 css_lines.append(".widget-text .widget-label, .widget-box .widget-button {width: auto}")
 css_lines.append("UL {list-style-type: none; padding-left:0;}")
@@ -693,6 +694,7 @@ class SageExplorer(VBox):
         self.propsbox = VBox() # Will be a VBox full of HBoxes, one for each property
         self.titlebox = VBox()
         self.titlebox.add_class('titlebox')
+        self.titlebox.add_class('lightborder')
         self.titlebox.children = [self.title, self.propsbox]
         self.visualbox = Box()
         self.visualtext = Textarea('', rows=8)
@@ -702,6 +704,8 @@ class SageExplorer(VBox):
         self.top = HBox([self.titlebox, self.visualbox], layout=justified_h_layout)
         self.menus = Accordion(selected_index=None)
         self.menusbox = VBox([Title("Menus", 2), self.menus])
+        self.menusbox.add_class('catalog-menus')
+        self.menusbox.add_class('lightborder')
         self.inputs = HBox()
         self.gobutton = Button(description='Run!', tooltip='Run the function or method, with specified arguments')
         self.output = HTML()
@@ -713,12 +717,9 @@ class SageExplorer(VBox):
         self.tabs.set_title(0, 'Call')
         self.tabs.set_title(1, 'Help')
         self.main = Box((self.doc, self.tabs))
+        self.main.add_class('lightborder')
         self.tabs.add_class('invisible') # Hide tabs at first display
         self.bottom = HBox((self.menusbox, self.main), layout=main_h_layout)
-        self.menusbox.add_class('lightborder')
-        self.menusbox.add_class('catalog-menus')
-        self.main.add_class('lightborder')
-        self.titlebox.add_class('lightborder')
         self.children = (self.top, self.bottom)
         self.history = []
         self.set_value(obj)
