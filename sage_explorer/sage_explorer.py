@@ -81,7 +81,7 @@ def eval_in_main(s):
 TIMEOUT = 15 # in seconds
 EXCLUDED_MEMBERS = ['__init__', '__repr__', '__str__']
 OPERATORS = {'==' : OP.eq, '<' : OP.lt, '<=' : OP.le, '>' : OP.gt, '>=' : OP.ge}
-CONFIG_PROPERTIES = yaml.load(open(os.path.join(os.path.dirname(__file__),'properties.yml')))
+CONFIG_PROPERTIES = yaml.load(open(os.path.join(os.path.dirname(__file__),'properties.yml')), yaml.SafeLoader)
 
 def to_html(s):
     r"""Display nicely formatted HTML string
@@ -436,7 +436,7 @@ class ExploredMember(object):
             self.compute_member(parent)
         if not hasattr(self, 'member'):
             raise ValueError("Cannot determine the type of a non existent member.")
-        m = re.match("<(type|class) '([.\w]+)'>", str(type(self.member)))
+        m = re.match("<(type|class) '([.\\w]+)'>", str(type(self.member)))
         if m and ('method' in m.group(2)):
             self.member_type = m.group(2)
         else:
