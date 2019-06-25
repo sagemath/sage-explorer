@@ -1,0 +1,106 @@
+##############################################################################
+# Methods for categories
+
+an_instance:
+  isinstance: type # For category classes, and possibly other categories
+  label: A [typical] instance
+
+example:
+  isinstance: Category
+
+super_categories:
+  isinstance: Category
+
+axioms:
+  isinstance: Category
+
+structure:
+  isinstance: Category
+
+##############################################################################
+# Methods for parents
+
+# - axioms and structure of the category?
+
+base_ring:
+  when: has_base
+
+category:
+  in: Sets
+
+an_element:
+  in: Sets
+
+cardinality:
+  in: EnumeratedSets.Finite
+
+addition_table:
+  in: AdditiveSemigroups.Finite
+  when: cardinality < 21
+
+multiplication_table:
+  in: Semigroups.Finite
+  when: cardinality < 21
+
+characteristic:
+  in: Fields
+
+polynomial:
+  in: Fields.Finite
+
+genus:
+  isinstance: sage.schemes.elliptic_curves.ell_generic.EllipticCurve_generic
+
+cremona_label:
+  isinstance: sage.schemes.elliptic_curves.ell_generic.EllipticCurve_generic
+
+a_invariants:
+  isinstance: sage.schemes.elliptic_curves.ell_generic.EllipticCurve_generic
+
+b_invariants:
+  isinstance: sage.schemes.elliptic_curves.ell_generic.EllipticCurve_generic
+
+conductor:
+  isinstance: sage.schemes.elliptic_curves.ell_generic.EllipticCurve_generic
+
+##############################################################################
+# Methods for elements
+
+# - category of the parent?
+
+parent:
+  isinstance: sage.structure.element.Element
+  label: Element of
+
+conjugate:
+  in: Partitions()
+
+hook_lengths:
+  in: Partitions()
+
+evaluation:
+  in: Tableaux()
+  not when: is_standard
+
+is_standard:
+  in: Tableaux()
+  not in: StandardTableaux()
+
+conjugate:
+  in: Tableaux()
+
+charge:
+  in: Tableaux()
+
+cocharge:
+  in: Tableaux()
+
+##############################################################################
+# Methods for homsets
+# - an_element (probably already derived from Parent)
+# - the category this is a morphism for
+
+##############################################################################
+# Methods for morphisms
+# - domain, codomain
+# - the category this is a morphism for
