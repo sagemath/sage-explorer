@@ -24,7 +24,7 @@ setup(
     description='Jupyter (new) explorer widget for SAGE objects',
     long_description = readfile("README.rst"),
     url='https://github.com/sagemath/new-sage-explorer',
-    author='Odile Bénassy, Nicolas M. Thiéry',
+    author='Odile Bénassy, Nathan Carter, Nicolas M. Thiéry',
     author_email='odile.benassy@u-psud.fr',
     license='GPLv2+',
     classifiers=[
