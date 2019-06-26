@@ -3,6 +3,7 @@ new_sage_explorer.egg-info
 js/lib
 *node_modules
 dist
+build
 js/dist
 js/docs
 js/new_sage_explorer
