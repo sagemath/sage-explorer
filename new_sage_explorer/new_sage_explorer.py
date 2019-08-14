@@ -14,11 +14,20 @@ AUTHORS:
 
 """
 import ipyvuetify as v
-from ipywidgets import Box, HBox, VBox, GridBox, Label, Layout, Text, HTML, Button
+#from ipyvuetify import ExpansionPanel
+from ipywidgets import Box, HBox, VBox, GridBox, Label, Layout, Text, HTML, HTMLMath, Button, Combobox
+from ipywidgets.widgets.widget_description import DescriptionStyle
 from traitlets import Any
+from ipywidgets.widgets.trait_types import InstanceDict, Color
 from inspect import isclass
+from sage.misc.sphinxify import sphinxify
 from .explored_member import get_members, get_properties
 
+title_layout = Layout(width='100%', padding='12px')
+css_lines = []
+css_lines.append(".title-level2 {font-size: 150%}")
+css_lines.append(".explorer-title {background-color: teal}")
+css = HTML("<style>%s</style>" % '\n'.join(css_lines))
 
 def get_visual_widget(obj):
     r"""
@@ -51,15 +60,27 @@ class Title(Label):
         self.add_class('title-level%d' % level)
 
 
-class ExplorerTitle(VBox):
+class MathTitle(HTMLMath):
+    r"""A title of various levels
+
+    For HTML display
+    """
+    def __init__(self, value='', level=1):
+        super(MathTitle, self).__init__(value)
+        self.value = sphinxify(value)
+        self.add_class("title-level%d" % level)
+
+
+class ExplorerTitle(Box):
     r"""The sage explorer title bar
     """
     value = Any()
 
     def __init__(self, obj):
-        t = "Exploring: %s" % str(obj)
-        d = [l for l in obj.__doc__.split("\n") if l][0].strip()
-        super(ExplorerTitle, self).__init__([Title(t), Label(d)])
+        s = "Exploring: %s" % str(obj)
+        #d = [l for l in obj.__doc__.split("\n") if l][0].strip()
+        super(ExplorerTitle, self).__init__((MathTitle(s, 2),))
+        self.add_class("explorer-title")
         self.value = obj
 
 
