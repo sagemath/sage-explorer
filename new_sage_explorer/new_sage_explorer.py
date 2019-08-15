@@ -120,7 +120,7 @@ class ExplorerProperties(GridBox):
         for p in get_properties(obj):
             val = getattr(obj, p.name).__call__()
             children.append(Label(p.prop_label))
-            children.append(ExplorableValue(str(val)))
+            children.append(ExplorableValue(val))
             children.append(Label("?"))
         super(ExplorerProperties, self).__init__(children, layout=Layout(grid_template_columns='40% 40% 20%'))
         self.value = obj
@@ -257,7 +257,7 @@ class NewSageExplorer(VBox):
         self.inputbutton = Button(description='-')
         self.gobutton = Button(description='Run!', tooltip='Run the function or method, with specified arguments')
         self.actionbox = HBox([self.namingbox, Label('.'), self.searchbox, Label('('), self.inputbox, self.inputbutton, Label(')'), self.gobutton])
-        self.outputbox = ExplorableValue()
+        self.outputbox = ExplorableValue(obj)
         self.helpbox = ExplorerHelp(obj)
         self.bottom = HBox([self.actionbox, self.outputbox, self.helpbox])
         self.children = (self.top, self.bottom)

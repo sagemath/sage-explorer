@@ -392,12 +392,16 @@ def get_properties(obj):
         sage: pp[3].name, pp[3].prop_label
         ('is_standard', 'Is Standard')
     """
+    try:
+        members = getmembers(obj)
+    except:
+        return [] # Can be a numeric value ..
     properties = []
     #if isclass(obj):
     #    cls = obj
     #else:
     #    cls = obj.__class__
-    for name, member in getmembers(obj):
+    for name, member in members:
         if isabstract(member) or 'deprecated' in str(type(member)).lower():
             continue
         m = ExploredMember(name, member=member, parent=obj)
