@@ -13,8 +13,6 @@ AUTHORS:
 - Odile Bénassy, Nicolas Thiéry, Nathan Carter
 
 """
-import ipyvuetify as v
-#from ipyvuetify import ExpansionPanel
 from ipywidgets import Box, HBox, VBox, GridBox, Label, Layout, Text, HTML, HTMLMath, Button, Combobox
 from ipywidgets.widgets.widget_description import DescriptionStyle
 from traitlets import Any
@@ -102,7 +100,7 @@ class ExplorableValue(HTML):
 
 class ExplorerProperties(GridBox):
     r"""
-    GridBox, or v.Container ?
+    Display object properties as a table.
     """
     value = Any()
 
@@ -173,7 +171,7 @@ class ExplorerNaming(Text):
         self.value = label
 
 
-class ExplorerMethodSearch(v.Combobox):
+class ExplorerMethodSearch(Combobox):
     r"""
     A widget to search a method
     """
@@ -195,7 +193,7 @@ class ExplorerInput(Text):
         self.value = obj
 
 
-class ExplorerHelp(v.ExpansionPanel):
+class ExplorerHelp(Box):
     r"""
     Contains help, or output + help as expandable
     Contains MathJax
