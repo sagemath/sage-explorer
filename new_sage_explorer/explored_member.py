@@ -56,7 +56,7 @@ class ExploredMember(object):
         Must have a name.
 
         TESTS::
-            sage: from sage_explorer.sage_explorer import ExploredMember
+            sage: from new_sage_explorer.explored_member import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
             sage: m = ExploredMember('conjugate', parent=p)
@@ -76,7 +76,7 @@ class ExploredMember(object):
         Get method or attribute value, given the name.
 
         TESTS::
-            sage: from sage_explorer.sage_explorer import ExploredMember
+            sage: from new_sage_explorer.explored_member import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
             sage: m = ExploredMember('conjugate', parent=p)
@@ -99,7 +99,7 @@ class ExploredMember(object):
         Get method or attribute documentation, given the name.
 
         TESTS::
-            sage: from sage_explorer.sage_explorer import ExploredMember
+            sage: from new_sage_explorer.explored_member import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
             sage: m = ExploredMember('conjugate', parent=p)
@@ -117,7 +117,7 @@ class ExploredMember(object):
         Get method or attribute value, given the name.
 
         TESTS::
-            sage: from sage_explorer.sage_explorer import ExploredMember
+            sage: from new_sage_explorer.explored_member import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
             sage: m = ExploredMember('conjugate', parent=p)
@@ -139,7 +139,7 @@ class ExploredMember(object):
         Compute member privacy, if any.
 
         TESTS::
-            sage: from sage_explorer.sage_explorer import ExploredMember
+            sage: from new_sage_explorer.explored_member import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
             sage: m = ExploredMember('__class__', parent=p)
@@ -168,7 +168,7 @@ class ExploredMember(object):
         of overrides if any.
 
         TESTS::
-            sage: from sage_explorer.sage_explorer import ExploredMember
+            sage: from new_sage_explorer.explored_member import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
             sage: m = ExploredMember('_reduction', parent=p)
@@ -208,7 +208,7 @@ class ExploredMember(object):
         If this member is a method: compute its args and defaults.
 
         TESTS::
-            sage: from sage_explorer.sage_explorer import ExploredMember
+            sage: from new_sage_explorer.explored_member import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
             sage: m = ExploredMember('add_cell', parent=p)
@@ -233,7 +233,7 @@ class ExploredMember(object):
         Retrieve the property label, if any, from configuration 'config'.
 
         TESTS::
-            sage: from sage_explorer.sage_explorer import ExploredMember
+            sage: from new_sage_explorer.explored_member import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: F = GF(7)
             sage: m = ExploredMember('polynomial', parent=F)
@@ -347,17 +347,17 @@ def get_members(cls):
         sage: mm = get_members(Partition)
         sage: mm[2].name, mm[2].privacy
         ('__class__', 'python_special')
-        sage: mm[68].name, mm[68].origin, mm[68].privacy
-        ('_doccls', <class 'sage.combinat.partition.Partitions_all_with_category.element_class'>, 'private')
-        sage: [(mm[i].name, mm[i].overrides, mm[i].prop_label) for i in range(len(mm)) if mm[i].name == '_reduction']
-        [('_reduction',
-         [<class 'sage.categories.infinite_enumerated_sets.InfiniteEnumeratedSets.element_class'>,
-          <class 'sage.categories.enumerated_sets.EnumeratedSets.element_class'>,
-          <class 'sage.categories.sets_cat.Sets.Infinite.element_class'>,
-          <class 'sage.categories.sets_cat.Sets.element_class'>,
-          <class 'sage.categories.sets_with_partial_maps.SetsWithPartialMaps.element_class'>,
-          <class 'sage.categories.objects.Objects.element_class'>],
-          None)]
+        sage: [(mm[i].name, mm[i].overrides, mm[i].privacy) for i in range(len(mm)) if mm[i].name == '_unicode_art_']
+        [('_unicode_art_',
+         [<class 'sage.combinat.combinat.CombinatorialElement'>,
+          <class 'sage.combinat.combinat.CombinatorialObject'>,
+          <class 'sage.structure.element.Element'>,
+          <class 'sage.structure.sage_object.SageObject'>],
+         'sage_special')]
+        sage: from sage.combinat.tableau import Tableau
+        sage: mm = get_members(Tableau([[1], [2], [3]]))
+        sage: [(mm[i].name, mm[i].parent, mm[i].origin, mm[i].prop_label) for i in range(len(mm)) if mm[i].name == 'conjugate']
+        [('conjugate', [[1], [2], [3]], <class 'sage.combinat.tableau.Tableau'>, 'Conjugate')]
     """
     members = []
     for name, member in getmembers(cls):
@@ -386,23 +386,21 @@ def get_properties(obj):
         sage: st = StandardTableaux(3).an_element()
         sage: sst = SemistandardTableaux(3).an_element()
         sage: pp = get_properties(st)
-        sage: pp
-        sage: pp[2].name, pp[2].label
-        ('__class__', 'python_special')
+        sage: pp[3].name, pp[3].prop_label
+        ('parent', 'Element of')
         sage: pp = get_properties(sst)
-        sage: pp
-        sage: pp[2].name, pp[2].label
-        ('__class__', 'python_special')
+        sage: pp[3].name, pp[3].prop_label
+        ('is_standard', 'Is Standard')
     """
     properties = []
-    if isclass(obj):
-        cls = obj
-    else:
-        cls = obj.__class__
-    for name, member in getmembers(cls):
+    #if isclass(obj):
+    #    cls = obj
+    #else:
+    #    cls = obj.__class__
+    for name, member in getmembers(obj):
         if isabstract(member) or 'deprecated' in str(type(member)).lower():
             continue
-        m = ExploredMember(name, member=member, parent=cls)
+        m = ExploredMember(name, member=member, parent=obj)
         m.compute_property_label(CONFIG_PROPERTIES)
         if m.prop_label:
             properties.append(m)
