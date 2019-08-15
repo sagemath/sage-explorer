@@ -171,15 +171,24 @@ class ExplorerNaming(Text):
         self.value = label
 
 
-class ExplorerMethodSearch(Combobox):
+class ExplorerMethodSearch(Box):
     r"""
     A widget to search a method
     """
     value = Any()
 
     def __init__(self, obj):
-        super(ExplorerMethodSearch, self).__init__()
         self.value = obj
+        self.get_members()
+        c = Combobox(options=[m.name for m in self.members])
+        super(ExplorerMethodSearch, self).__init__((c,))
+
+    def get_members(self):
+        if isclass(self.value):
+            cls = self.value
+        else:
+            cls = self.value.__class__
+        self.members = get_members(cls)
 
 
 class ExplorerInput(Text):
