@@ -18,13 +18,14 @@ from ipywidgets.widgets.widget_description import DescriptionStyle
 from traitlets import Any
 from ipywidgets.widgets.trait_types import InstanceDict, Color
 from inspect import isclass
-from sage.misc.sphinxify import sphinxify
+from ipyevents import Event
 from .explored_member import get_members, get_properties
 
 title_layout = Layout(width='100%', padding='12px')
 css_lines = []
 css_lines.append(".title-level2 {font-size: 150%}")
 css_lines.append(".explorer-title {background-color: teal}")
+css_lines.append(".explorable-value {background-color: #999}")
 css = HTML("<style>%s</style>" % '\n'.join(css_lines))
 
 def get_visual_widget(obj):
@@ -65,7 +66,7 @@ class MathTitle(HTMLMath):
     """
     def __init__(self, value='', level=1):
         super(MathTitle, self).__init__(value)
-        self.value = sphinxify(value)
+        self.value = '$$%s$$' % value
         self.add_class("title-level%d" % level)
 
 
@@ -82,20 +83,30 @@ class ExplorerTitle(Box):
         self.value = obj
 
 
-class ExplorableValue(HTMLMath):
+class ExplorableValue(Box):
     r"""
     A repr string with a link for a Sage object.
     FIXME will be a DOMWidget or HTML, with a specific javascript View
     """
     value = Any()
 
-    def __init__(self, val=None):
-        if not val:
-            s = ''
+    def __init__(self, obj):
+        self.value = obj # we should compute it -- or use it -- as a 'member'
+        if hasattr(obj, '_latex_list'):
+            s = obj._latex_list()
+        elif hasattr(obj, '_latex_'):
+            s = obj._latex_()
         else:
-            s = "<span>%s</span>" % str(val)
-        super(ExplorableValue, self).__init__(s)
-        self.value = val
+            s = obj.__str__()
+        h = HTMLMath('$$%s$$' % s)
+        l0 = Label(" ")
+        l = Label("Output here")
+        def handle_clic(e):
+            l.value = str(obj)
+        clic = Event(source=h, watched_events=['click'])
+        clic.on_dom_event(handle_clic)
+        super(ExplorableValue, self).__init__((h, l0, l))
+        self.add_class('explorable-value')
 
 
 class ExplorerProperties(GridBox):
