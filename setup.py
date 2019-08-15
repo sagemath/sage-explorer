@@ -136,5 +136,5 @@ setup(
     keywords = "SageMath widget explorer jupyter notebook",
     packages = ['new_sage_explorer'],
     #cmdclass = cmdclass,
-    install_requires = ['PyYAML', 'ipyevents', 'sage-combinat-widgets', 'sage-package', 'sphinx']
+    install_requires = ['PyYAML', 'ipywidgets >= 7.5.0', 'ipyevents', 'sage-combinat-widgets', 'sage-package', 'sphinx']
 )

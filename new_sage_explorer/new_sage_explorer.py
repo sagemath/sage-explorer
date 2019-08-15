@@ -82,7 +82,7 @@ class ExplorerTitle(Box):
         self.value = obj
 
 
-class ExplorableValue(HTML):
+class ExplorableValue(HTMLMath):
     r"""
     A repr string with a link for a Sage object.
     FIXME will be a DOMWidget or HTML, with a specific javascript View
@@ -109,7 +109,7 @@ class ExplorerProperties(GridBox):
         for p in get_properties(obj):
             val = getattr(obj, p.name).__call__()
             children.append(Label(p.prop_label))
-            children.append(ExplorableHTML(str(val)))
+            children.append(ExplorableValue(str(val)))
             children.append(Label("?"))
         super(ExplorerProperties, self).__init__(children, layout=Layout(grid_template_columns='40% 40% 20%'))
         self.value = obj
@@ -210,8 +210,10 @@ class ExplorerHelp(Box):
     value = Any()
 
     def __init__(self, obj):
-        super(ExplorerHelp, self).__init__()
         self.value = obj
+        #t = HTMLMath("$$%s$$" % str(obj))
+        t = HTMLMath("$$%s$$" % obj.__doc__)
+        super(ExplorerHelp, self).__init__((t,))
 
 
 class NewSageExplorer(VBox):
