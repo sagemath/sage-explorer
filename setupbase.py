@@ -54,11 +54,11 @@ __version__ = '0.2.0'
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 is_repo = os.path.exists(pjoin(HERE, '.git'))
-node_modules = pjoin(HERE, 'js', 'node_modules')
-npm_path = ':'.join([
-    pjoin(node_modules, '.bin'),
-    os.environ.get('PATH', os.defpath),
-])
+#node_modules = pjoin(HERE, 'js', 'node_modules')
+#npm_path = ':'.join([
+#    pjoin(node_modules, '.bin'),
+#    os.environ.get('PATH', os.defpath),
+#])
 SEPARATORS = os.sep if os.altsep is None else os.sep + os.altsep
 
 if "--skip-npm" in sys.argv:

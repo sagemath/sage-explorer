@@ -12,16 +12,16 @@ from setuptools.command.egg_info import egg_info
 #from subprocess import check_call
 
 here = os.path.dirname(os.path.abspath(__file__))
-node_root = os.path.join(here, 'js')
+#node_root = os.path.join(here, 'js')
 is_repo = os.path.exists(os.path.join(here, '.git'))
 
-npm_path = os.pathsep.join([
-    os.path.join(node_root, 'node_modules', '.bin'),
-                os.environ.get('PATH', os.defpath),
-])
+#npm_path = os.pathsep.join([
+#    os.path.join(node_root, 'node_modules', '.bin'),
+#                os.environ.get('PATH', os.defpath),
+#])
 from setupbase import (
-    create_cmdclass, install_npm, ensure_targets,
-    find_packages, combine_commands, ensure_python,
+    create_cmdclass, #install_npm, ensure_targets,
+    find_packages, combine_commands, #ensure_python,
     get_version, HERE
 )
 
@@ -32,13 +32,13 @@ from setuptools import setup
 name = 'new_sage_explorer'
 
 # Ensure a valid python version
-ensure_python('>=3.4')
+#ensure_python('>=3.4')
 
 # Get our version
 version = get_version(pjoin(name, '_version.py'))
 
-nb_path = pjoin(node_root, name, 'nbextension', 'static')
-lab_path = pjoin(node_root, name, 'labextension')
+#nb_path = pjoin(node_root, name, 'nbextension', 'static')
+#lab_path = pjoin(node_root, name, 'labextension')
 
 # Get information from separate files (README, VERSION)
 def readfile(filename):
@@ -83,31 +83,32 @@ def js_prerelease(command, strict=False):
 
 # Representative files that should exist after a successful build
 jstargets = [
-    pjoin(nb_path, 'index.js'),
-    pjoin(node_root, 'lib', 'plugin.js'),
+#    pjoin(nb_path, 'index.js'),
+#    pjoin(node_root, 'lib', 'plugin.js'),
 ]
 
 package_data_spec = {
     name: [
-        'nbextension/static/*.*js*',
-        'labextension/*.tgz'
+#        'nbextension/static/*.*js*',
+#        'labextension/*.tgz'
     ]
 }
 
 data_files_spec = [
-    ('share/jupyter/nbextensions/new_sage_explorer',
-        nb_path, '*.js*'),
-    ('share/jupyter/lab/extensions', lab_path, '*.tgz'),
-    ('etc/jupyter/nbconfig/notebook.d' , HERE, 'new_sage_explorer.json')
+#    ('share/jupyter/nbextensions/new_sage_explorer',
+#        nb_path, '*.js*'),
+#    ('share/jupyter/lab/extensions', lab_path, '*.tgz'),
+#    ('etc/jupyter/nbconfig/notebook.d' , HERE, 'new_sage_explorer.json')
 ]
 
 
 cmdclass = create_cmdclass('jsdeps', package_data_spec=package_data_spec,
     data_files_spec=data_files_spec)
+"""
 cmdclass['jsdeps'] = combine_commands(
     install_npm(node_root, build_cmd='build:all'),
     ensure_targets(jstargets),
-)
+)"""
 cmdclass['test'] = SageTest
 
 
@@ -134,6 +135,6 @@ setup(
     package_data = {'new_sage_explorer': ['*.yml']},
     keywords = "SageMath widget explorer jupyter notebook",
     packages = ['new_sage_explorer'],
-    cmdclass = cmdclass,
-    install_requires = ['PyYAML', 'sage-combinat-widgets', 'sage-package', 'sphinx']
+    #cmdclass = cmdclass,
+    install_requires = ['PyYAML', 'ipyevents', 'sage-combinat-widgets', 'sage-package', 'sphinx']
 )
