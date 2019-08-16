@@ -119,7 +119,7 @@ class ExplorerDescription(Box):
         self.add_class("explorer-description")
 
 
-class ExplorableValue(HBox):
+class ExplorableValue(Box):
     r"""
     A repr string with a link for a Sage object.
     FIXME will be a DOMWidget or HTML, with a specific javascript View
@@ -136,14 +136,9 @@ class ExplorableValue(HBox):
             s = obj.__str__()
         h = HTMLMath('$%s$' % s)
         h.add_class('explorable-value')
-        l0 = Label(" ")
-        l = Label("clc")
-        def handle_clic(e):
-            l.value = str(obj)
-        clic = Event(source=h, watched_events=['click'])
-        clic.on_dom_event(handle_clic)
+        self.clc = Event(source=h, watched_events=['click'])
         super(ExplorableValue, self).__init__(
-            (h, l0, l),
+            (h,),
             layout = Layout(border='1px solid green', padding='2px 50px 2px 2px')
         )
 
@@ -317,8 +312,19 @@ class NewSageExplorer(VBox):
             sage: widget = NewSageExplorer(t)
         """
         super(NewSageExplorer, self).__init__()
+        self.history = []
+        self.set_value(obj)
+
+    def compute(self):
+        obj = self.value
         self.titlebox = ExplorerTitle(obj)
-        self.propsbox = VBox([ExplorerDescription(obj), ExplorerProperties(obj)])
+        props = ExplorerProperties(obj)
+        def handle_click(e):
+            self.set_value(e.source.value)
+        for v in props.children:
+            if type(v) == ExplorableValue:
+                v.clc.on_dom_event(handle_click)
+        self.propsbox = VBox([ExplorerDescription(obj), props])
         self.titlebox.add_class('titlebox')
         self.titlebox.add_class('lightborder')
         self.visualbox = ExplorerVisual(obj)
@@ -373,8 +379,6 @@ class NewSageExplorer(VBox):
         self.bottom = VBox([self.actionbox, self.outputbox, self.helpbox])
 
         self.children = (self.top, self.bottom)
-        self.history = []
-        self.set_value(obj)
 
     def set_value(self, obj):
         r"""
@@ -395,7 +399,7 @@ class NewSageExplorer(VBox):
         """
         self.history.append(obj)
         self.value = obj
-        #self.compute()
+        self.compute()
 
     def get_value(self):
         r"""
