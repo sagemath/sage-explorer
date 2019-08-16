@@ -13,7 +13,8 @@ AUTHORS:
 - Odile Bénassy, Nicolas Thiéry, Nathan Carter
 
 """
-from ipywidgets import Box, HBox, VBox, GridBox, Label, Layout, Text, HTML, HTMLMath, Accordion, Button, Combobox
+import re
+from ipywidgets import Accordion, Box, Button, Combobox, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, VBox
 from ipywidgets.widgets.widget_description import DescriptionStyle
 from traitlets import Any, Unicode
 from ipywidgets.widgets.trait_types import InstanceDict, Color
@@ -208,22 +209,32 @@ class ExplorerMenus(Box):
 
 class ExplorerNaming(Box):
     r"""
-    A text input to give a name
+    A text input to give a name to a math object
     """
     value = Any()
+    content = Unicode('')
 
-    def __init__(self, obj, label="x"):
+    def __init__(self, obj):
         self.value = obj
+        t = Text()
         super(ExplorerNaming, self).__init__(
-            (Text(label),),
+            (t,),
             layout=Layout(width='25px')
         )
+        def changed(change):
+            self.content = change.new
+        t.observe(changed, names='value')
+        self.get_input_name()
 
-    def update(self, label):
-        r"""
-        FIXME check the namespace first
-        """
-        self.value = label
+    def get_input_name(self):
+        sh_hist = get_ipython().history_manager.input_hist_parsed[-50:]
+        sh_hist.reverse()
+        for l in sh_hist:
+            if 'explore' in l:
+                m = re.search(r'explore[ ]*\([ ]*([^)]+)\)', l)
+                if m:
+                    self.children[0].value = m.group(1).strip()
+                    break
 
 
 class ExplorerMethodSearch(Box):
