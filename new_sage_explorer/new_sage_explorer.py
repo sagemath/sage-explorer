@@ -15,7 +15,7 @@ AUTHORS:
 """
 from ipywidgets import Box, HBox, VBox, GridBox, Label, Layout, Text, HTML, HTMLMath, Accordion, Button, Combobox
 from ipywidgets.widgets.widget_description import DescriptionStyle
-from traitlets import Any
+from traitlets import Any, Unicode
 from ipywidgets.widgets.trait_types import InstanceDict, Color
 from inspect import isclass
 from ipyevents import Event
@@ -133,7 +133,7 @@ class ExplorableValue(HBox):
             s = obj._latex_()
         else:
             s = obj.__str__()
-        h = HTMLMath('$$%s$$' % s)
+        h = HTMLMath('$%s$' % s)
         h.add_class('explorable-value')
         l0 = Label(" ")
         l = Label("clc")
@@ -231,12 +231,19 @@ class ExplorerMethodSearch(Box):
     A widget to search a method
     """
     value = Any()
+    selected_name = Unicode('')
 
     def __init__(self, obj):
         self.value = obj
         self.get_members()
+        self.selected_member = None
         c = Combobox(options=[m.name for m in self.members])
         super(ExplorerMethodSearch, self).__init__((c,))
+        def changed(change):
+            new_val = change.new#['value']
+            if new_val in self.members_dict:
+                self.selected_name = new_val
+        c.observe(changed, names='value')
 
     def get_members(self):
         if isclass(self.value):
@@ -244,17 +251,15 @@ class ExplorerMethodSearch(Box):
         else:
             cls = self.value.__class__
         self.members = get_members(cls)
+        self.members_dict = {m.name: m for m in self.members}
 
+    def get_member(self):
+        if self.selected_name in self.members_dict:
+            return self.members_dict[self.selected_name].member
 
-class ExplorerInput(Text):
-    r"""
-    A text input to input method arguments
-    """
-    value = Any()
-
-    def __init__(self, obj=None):
-        super(ExplorerInput, self).__init__()
-        self.value = obj
+    def get_doc(self):
+        if self.selected_name in self.members_dict:
+            return self.members_dict[self.selected_name].doc
 
 
 class ExplorerOutput(Box):
@@ -265,7 +270,8 @@ class ExplorerOutput(Box):
 
     def __init__(self, obj=None):
         self.value = obj
-        super(ExplorerOutput, self).__init__((HTMLMath("&nbsp;"),))
+        self.output = HTMLMath("&nbsp;")
+        super(ExplorerOutput, self).__init__((self.output,))
 
 
 class ExplorerHelp(Accordion):
@@ -320,9 +326,26 @@ class NewSageExplorer(VBox):
         self.menusbox = ExplorerMenus(obj)
         self.namingbox = ExplorerNaming(obj)
         self.searchbox = ExplorerMethodSearch(obj)
-        self.inputbox = ExplorerInput()
+        self.inputbox = Text()
         self.inputbutton = Button(description='-', layout=Layout(width='30px'))
-        self.gobutton = Button(description='Run!', tooltip='Run the function or method, with specified arguments')
+        self.gobutton = Button(description='Run!', tooltip='Run the method with specified arguments')
+        def compute_selected_method(button):
+            args = []
+            if self.inputbox.value:
+                args = self.inputbox.value.split(',')
+            try:
+            #    if AlarmInterrupt:
+            #        alarm(TIMEOUT)
+                out = self.searchbox.get_member()(obj, *args)
+            #        if AlarmInterrupt:
+            #            cancel_alarm()
+            #except AlarmInterrupt:
+            #    self.output.value = to_html("Timeout!")
+            except Exception as e:
+                self.outputbox.output.value = 'Error: %s; input=%s' % (e, str(args))
+                return
+            self.outputbox.output.value = '$%s$' % out
+        self.gobutton.on_click(compute_selected_method)
         self.actionbox = HBox([
             self.namingbox,
             Separator('.'),
