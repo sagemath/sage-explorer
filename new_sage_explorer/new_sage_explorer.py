@@ -110,11 +110,13 @@ class ExplorerDescription(Box):
     r"""The sage explorer object description
     """
     value = Any()
+    content = Unicode('')
 
     def __init__(self, obj):
         self.value = obj
         s = [l for l in obj.__doc__.split("\n") if l][0].strip()
         super(ExplorerDescription, self).__init__((HTMLMath(s),))
+        self.content = s
         self.add_class("explorer-description")
 
 
@@ -210,10 +212,10 @@ class ExplorerNaming(Box):
 
     def __init__(self, obj):
         self.value = obj
-        t = Text()
+        t = Text(layout=Layout(width='55px', padding='0', margin='0'))
         super(ExplorerNaming, self).__init__(
             (t,),
-            layout=Layout(width='25px')
+            layout=Layout(padding='0')
         )
         def changed(change):
             self.content = change.new
@@ -221,14 +223,7 @@ class ExplorerNaming(Box):
         self.get_input_name()
 
     def get_input_name(self):
-        sh_hist = get_ipython().history_manager.input_hist_parsed[-50:]
-        sh_hist.reverse()
-        for l in sh_hist:
-            if 'explore' in l:
-                m = re.search(r'explore[ ]*\([ ]*([^)]+)\)', l)
-                if m:
-                    self.children[0].value = m.group(1).strip()
-                    break
+        self.children[0].value = "Hist[0]"
 
 
 class ExplorerMethodSearch(Box):
@@ -241,11 +236,10 @@ class ExplorerMethodSearch(Box):
     def __init__(self, obj):
         self.value = obj
         self.get_members()
-        self.selected_member = None
         c = Combobox(options=[m.name for m in self.members])
         super(ExplorerMethodSearch, self).__init__((c,))
         def changed(change):
-            new_val = change.new#['value']
+            new_val = change.new
             if new_val in self.members_dict:
                 self.selected_name = new_val
         c.observe(changed, names='value')
@@ -294,7 +288,10 @@ class ExplorerHelp(Accordion):
             selected_index=None,
             layout=Layout(width='95%', border='1px solid yellow', padding='0')
         )
-        self.set_title(0, "Help")
+        self.update_title("Help")
+
+    def update_title(self, t):
+        self.set_title(0, t)
 
 
 class NewSageExplorer(VBox):
@@ -317,13 +314,14 @@ class NewSageExplorer(VBox):
     def compute(self):
         obj = self.value
         self.titlebox = ExplorerTitle(obj)
-        props = ExplorerProperties(obj)
+        self.description = ExplorerDescription(obj)
+        self.props = ExplorerProperties(obj)
         def handle_click(e):
             self.set_value(e.source.value)
-        for v in props.children:
+        for v in self.props.children:
             if type(v) == ExplorableValue:
                 v.clc.on_dom_event(handle_click)
-        self.propsbox = VBox([ExplorerDescription(obj), props])
+        self.propsbox = VBox([self.description, self.props])
         self.titlebox.add_class('titlebox')
         self.titlebox.add_class('lightborder')
         self.visualbox = ExplorerVisual(obj)
@@ -374,6 +372,7 @@ class NewSageExplorer(VBox):
         ])
         self.outputbox = ExplorerOutput(obj)
         self.helpbox = ExplorerHelp(obj)
+        self.helpbox.update_title(self.description.content + " ..")
 
         self.bottom = VBox([self.actionbox, self.outputbox, self.helpbox])
 
