@@ -13,12 +13,13 @@ AUTHORS:
 - Odile Bénassy, Nicolas Thiéry
 
 """
-import re
+from cysignals.alarm import alarm, cancel_alarm
+from cysignals.signals import AlarmInterrupt
+from inspect import isclass
 from ipywidgets import Accordion, Box, Button, Combobox, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, VBox
 from ipywidgets.widgets.widget_description import DescriptionStyle
 from traitlets import Any, Unicode
 from ipywidgets.widgets.trait_types import InstanceDict, Color
-from inspect import isclass
 from ipyevents import Event
 from .explored_member import get_members, get_properties
 
@@ -35,17 +36,36 @@ try:
 except:
     pass # We are in the test environment
 
+import __main__
+def _eval_in_main(s, locals={}):
+    """
+    Evaluate the expression `s` in the global scope
 
-def get_visual_widget(obj):
+    TESTS::
+        sage: from sage_explorer.sage_explorer import _eval_in_main
+        sage: from sage.combinat.tableau import Tableaux
+        sage: _eval_in_main("Tableaux")
+        <class 'sage.combinat.tableau.Tableaux'>
+    """
+    try:
+        globs = sage.all.__dict__
+    except:
+        globs = __main__.__dict__
+    globs.update(locals)
+    return eval(s, globs)
+
+TIMEOUT = 15 # in seconds
+
+def _get_visual_widget(obj):
     r"""
     Which is the specialized widget class name for viewing this object (if any)
 
     TESTS::
         sage: from sage.all import *
         sage: from sage_explorer._widgets import *
-        sage: from sage_explorer.sage_explorer import get_visual_widget
+        sage: from sage_explorer.sage_explorer import _get_visual_widget
         sage: p = Partition([3,3,2,1])
-        sage: get_visual_widget(p).__class__
+        sage: _get_visual_widget(p).__class__
         <class 'sage_combinat_widgets.grid_view_widget.GridViewWidget'>
     """
     if isclass(obj):
@@ -173,7 +193,7 @@ class ExplorerVisual(Box):
     def __init__(self, obj):
         self.value = obj
         super(ExplorerVisual, self).__init__(layout = Layout(border='1px solid red'))
-        w = get_visual_widget(obj)
+        w = _get_visual_widget(obj)
         if w:
             self.children = [w]
         else:
@@ -344,19 +364,18 @@ class SageExplorer(VBox):
         self.inputbutton = Button(description='-', layout=Layout(width='30px'))
         self.gobutton = Button(description='Run!', tooltip='Run the method with specified arguments')
         def compute_selected_method(button):
-            args = []
-            if self.inputbox.value:
-                args = self.inputbox.value.split(',')
+            method_name = self.searchbox.selected_method
+            args = self.inputbox.value
             try:
-            #    if AlarmInterrupt:
-            #        alarm(TIMEOUT)
-                out = self.searchbox.get_member()(obj, *args)
-            #        if AlarmInterrupt:
-            #            cancel_alarm()
-            #except AlarmInterrupt:
-            #    self.output.value = to_html("Timeout!")
+                if AlarmInterrupt:
+                    alarm(TIMEOUT)
+                out = _eval_in_main("__obj__.{}({})".format(method_name, args), locals={"__obj__": obj})
+                if AlarmInterrupt:
+                    cancel_alarm()
+            except AlarmInterrupt:
+                self.output.output.value = "Timeout!"
             except Exception as e:
-                self.outputbox.output.value = 'Error: %s; input=%s' % (e, str(args))
+                self.outputbox.output.value = 'Error: %s; method_name=%s; input=%s;' % (e, method_name, self.inputbox.value)
                 return
             self.outputbox.output.value = '$%s$' % out
         self.gobutton.on_click(compute_selected_method)
