@@ -16,9 +16,9 @@ AUTHORS:
 from cysignals.alarm import alarm, cancel_alarm
 from cysignals.signals import AlarmInterrupt
 from inspect import isclass
-from ipywidgets import Accordion, Box, Button, Combobox, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, VBox
+from ipywidgets import Accordion, Box, Button, Combobox, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, Textarea, VBox
 from ipywidgets.widgets.widget_description import DescriptionStyle
-from traitlets import Any, Unicode
+from traitlets import Any, Unicode, dlink, observe
 from ipywidgets.widgets.trait_types import InstanceDict, Color
 from ipyevents import Event
 from .explored_member import get_members, get_properties
@@ -55,6 +55,7 @@ def _eval_in_main(s, locals={}):
     return eval(s, globs)
 
 TIMEOUT = 15 # in seconds
+MAX_LEN_HISTORY = 50
 
 def _get_visual_widget(obj):
     r"""
@@ -143,12 +144,12 @@ class ExplorerDescription(Box):
 class ExplorableValue(Box):
     r"""
     A repr string with a link for a Sage object.
-    FIXME will be a DOMWidget or HTML, with a specific javascript View
     """
     value = Any()
 
-    def __init__(self, obj):
+    def __init__(self, obj, parent=None):
         self.value = obj # we should compute it -- or use it -- as a 'member'
+        self.parent = parent
         if hasattr(obj, '_latex_list'):
             s = obj._latex_list()
         elif hasattr(obj, '_latex_'):
@@ -162,6 +163,9 @@ class ExplorableValue(Box):
             (h,),
             layout = Layout(border='1px solid green', padding='2px 50px 2px 2px')
         )
+        def propagate_click(event):
+            self.parent.value = self.value
+        self.clc.on_dom_event(propagate_click)
 
 
 class ExplorerProperties(Box):
@@ -176,8 +180,7 @@ class ExplorerProperties(Box):
         for p in get_properties(obj):
             val = getattr(obj, p.name).__call__()
             children.append(Label(p.prop_label))
-            children.append(ExplorableValue(val))
-            #children.append(Label("?"))
+            children.append(ExplorableValue(val, parent=self))
         super(ExplorerProperties, self).__init__(
             (GridBox(children, layout=Layout(grid_template_columns='25% 75%')),),
             layout=Layout(border='1px solid red')
@@ -332,26 +335,24 @@ class SageExplorer(VBox):
             sage: t = StandardTableaux(15).random_element()
             sage: widget = SageExplorer(t)
         """
+        self.donottrack = True # Prevent any interactivity while drawing the widget
         super(SageExplorer, self).__init__()
-        self.history = []
-        self.set_value(obj)
+        self.value = obj
+        self._history = []
+        self.compute()
+        self.donottrack = False
 
     def compute(self):
         obj = self.value
         self.titlebox = ExplorerTitle(obj)
-        self.description = ExplorerDescription(obj)
-        self.props = ExplorerProperties(obj)
-        def handle_click(e):
-            self.set_value(e.source.value)
-        for v in self.props.children:
-            if type(v) == ExplorableValue:
-                v.clc.on_dom_event(handle_click)
-        self.propsbox = VBox([self.description, self.props])
         self.titlebox.add_class('titlebox')
         self.titlebox.add_class('lightborder')
+        self.description = ExplorerDescription(obj)
+        self.props = ExplorerProperties(obj)
+        dlink((self.props, 'value'), (self, 'value')) # Handle the clicks on property values
+        self.propsbox = VBox([self.description, self.props])
         self.visualbox = ExplorerVisual(obj)
         self.visualbox.add_class('visualbox')
-
         self.top = VBox(
             [self.titlebox,
              HBox(
@@ -400,10 +401,64 @@ class SageExplorer(VBox):
         def selected_method_changed(change):
             self.helpbox.content = self.searchbox.get_doc()
         self.searchbox.observe(selected_method_changed, names='selected_method')
-
         self.bottom = VBox([self.actionbox, self.outputbox, self.helpbox])
 
         self.children = (self.top, self.bottom)
+
+    def push_history(self, obj):
+        r"""
+        Push an object to explorer history.
+        Ensure that history does not become too long.
+
+        INPUT:
+
+            - ``obj`` -- an object (the old one)
+
+        TESTS::
+
+            sage: from sage_explorer import SageExplorer
+            sage: t = Tableau([[1, 2, 5, 6], [3], [4]])
+            sage: e = SageExplorer(t)
+            sage: e._history
+            []
+            sage: e.push_history(t)
+            sage: e._history
+            [[[1, 2, 5, 6], [3], [4]]]
+        """
+        self._history.append(obj)
+        if len(self._history) > MAX_LEN_HISTORY:
+            self._history = self._history[1:]
+
+    @observe('value')
+    def value_changed(self, change):
+        r"""
+        What to do when the value has been changed.
+
+        INPUT:
+
+            - ``change`` -- a change Bunch
+
+        TESTS ::
+
+            sage: from sage_explorer import SageExplorer
+            sage: t = Tableau([[1, 2, 5, 6], [3], [4]])
+            sage: new_t = Tableau([[1, 2, 7, 6], [3], [4]])
+            sage: e = SageExplorer(t)
+            sage: e._history
+            []
+            sage: from traitlets import Bunch
+            sage: e.value_changed(Bunch({'name': 'value', 'old': t, 'new': new_t, 'owner': e, 'type': 'change'}))
+            sage: e._history
+            [[[1, 2, 5, 6], [3], [4]]]
+        """
+        if self.donottrack:
+            return
+        old_val = change.old
+        new_val = change.new
+        actually_changed = (id(new_val) != id(old_val))
+        if actually_changed:
+            self.push_history(old_val)
+            self.compute()
 
     def set_value(self, obj):
         r"""
@@ -422,9 +477,7 @@ class SageExplorer(VBox):
             sage: e.get_value()
             [[1, 2, 3, 4], [5, 6]]
         """
-        self.history.append(obj)
-        self.value = obj
-        self.compute()
+        self.value = obj # If value has changed, will call the observer
 
     def get_value(self):
         r"""
@@ -458,10 +511,11 @@ class SageExplorer(VBox):
             sage: e.get_value()
             [3, 3, 2, 1]
         """
-        if self.history:
-            self.history.pop()
-        if self.history:
-            self.value = self.history[-1]
-        else:
-            self.value = None
-        #self.compute()
+        if not self._history:
+            print("No more history!")
+            return
+        prev = self._history.pop()
+        self.donottrack = True
+        self.value = prev
+        self.compute()
+        self.donottrack = False
