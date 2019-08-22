@@ -251,7 +251,7 @@ class ExplorerMethodSearch(Box):
     A widget to search a method
     """
     value = Any()
-    selected_name = Unicode('')
+    selected_method = Unicode('')
 
     def __init__(self, obj):
         self.value = obj
@@ -261,7 +261,7 @@ class ExplorerMethodSearch(Box):
         def changed(change):
             new_val = change.new
             if new_val in self.members_dict:
-                self.selected_name = new_val
+                self.selected_method = new_val
         c.observe(changed, names='value')
 
     def get_members(self):
@@ -273,12 +273,12 @@ class ExplorerMethodSearch(Box):
         self.members_dict = {m.name: m for m in self.members}
 
     def get_member(self):
-        if self.selected_name in self.members_dict:
-            return self.members_dict[self.selected_name].member
+        if self.selected_method in self.members_dict:
+            return self.members_dict[self.selected_method].member
 
     def get_doc(self):
-        if self.selected_name in self.members_dict:
-            return self.members_dict[self.selected_name].doc
+        if self.selected_method in self.members_dict:
+            return self.members_dict[self.selected_method].member.__doc__
 
 
 class ExplorerOutput(Box):
@@ -299,19 +299,24 @@ class ExplorerHelp(Accordion):
     Contains MathJax
     """
     value = Any()
+    content = Unicode('')
 
     def __init__(self, obj):
         self.value = obj
-        t = HTMLMath("$$%s$$" % obj.__doc__)
+        t = HTMLMath()
         super(ExplorerHelp, self).__init__(
             (t,),
             selected_index=None,
             layout=Layout(width='95%', border='1px solid yellow', padding='0')
         )
-        self.update_title("Help")
+        def content_changed(change):
+            self.compute()
+        self.observe(content_changed, names='content')
+        self.content = obj.__doc__
 
-    def update_title(self, t):
-        self.set_title(0, t)
+    def compute(self):
+        self.children[0].value = "$$%s$$" % self.content
+        self.set_title(0, [l for l in self.content.split(".") if l][0].strip())
 
 
 class SageExplorer(VBox):
@@ -391,7 +396,10 @@ class SageExplorer(VBox):
         ])
         self.outputbox = ExplorerOutput(obj)
         self.helpbox = ExplorerHelp(obj)
-        self.helpbox.update_title(self.description.content + " ..")
+
+        def selected_method_changed(change):
+            self.helpbox.content = self.searchbox.get_doc()
+        self.searchbox.observe(selected_method_changed, names='selected_method')
 
         self.bottom = VBox([self.actionbox, self.outputbox, self.helpbox])
 
