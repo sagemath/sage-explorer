@@ -21,7 +21,7 @@ class SageTest(TestCommand):
             sys.exit(1)
 
 setup(
-    name = "sage-explorer",
+    name = name,
     version = readfile("VERSION"),
     description='Jupyter explorer widget for SAGE objects',
     long_description = readfile("README.rst"),
