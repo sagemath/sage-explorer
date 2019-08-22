@@ -41,7 +41,13 @@ Sage Explorer is distributed on PyPI.
 
     $ sage -pip install sage_explorer
 
+
 Usage
 -----
 
 See the `demo notebook <demo_sage_explorer.ipynb>`_.
+
+Thanks
+------
+
+* Nathan Carter http://nathancarter.github.io/ had inspiring insights for the new 0.5.0 design 

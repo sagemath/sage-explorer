@@ -5,6 +5,8 @@ from setuptools import setup
 from codecs import open # To open the README file with proper encoding
 from setuptools.command.test import test as TestCommand # for tests
 
+# The name of the project
+name = 'new_sage_explorer'
 
 # Get information from separate files (README, VERSION)
 def readfile(filename):
@@ -42,5 +44,5 @@ setup(
     keywords = "SageMath widget explorer jupyter notebook",
     packages = ['sage_explorer'],
     cmdclass = {'test': SageTest}, # adding a special setup command for tests
-    install_requires = ['PyYAML', 'sage-combinat-widgets']
+    install_requires = ['PyYAML', 'ipywidgets >= 7.5.0', 'ipyevents', 'sage-combinat-widgets', 'sage-package', 'sphinx']
 )
