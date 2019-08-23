@@ -76,6 +76,15 @@ def _get_visual_widget(obj):
     else:
         return
 
+def math_repr(obj):
+    # When Sage LaTeX implementation
+    # applies well to MathJax, use it.
+    if hasattr(obj, '_latex_'):
+        s = obj._latex_()
+        if 'tikz' not in s and 'raisebox' not in s:
+            return "${}$" . format(s)
+    return obj.__str__()
+
 
 class Title(Label):
     r"""A title of various levels
@@ -95,7 +104,7 @@ class MathTitle(HTMLMath):
     """
     def __init__(self, value='', level=1):
         super(MathTitle, self).__init__(value)
-        self.value = '$$%s$$' % value
+        self.value = math_repr(value)
         self.add_class("title-level%d" % level)
 
 
@@ -118,7 +127,7 @@ class ExplorerTitle(Box):
     value = Any()
 
     def __init__(self, obj):
-        s = "Exploring: %s" % str(obj)
+        s = "Exploring: {}" . format(math_repr(obj))
         super(ExplorerTitle, self).__init__(
             (MathTitle(s, 2),),
             layout=Layout(padding='5px 10px')
@@ -153,13 +162,7 @@ class ExplorableValue(Box):
     def __init__(self, obj, parent=None):
         self.value = obj # we should compute it -- or use it -- as a 'member'
         self.parent = parent
-        if hasattr(obj, '_latex_list'):
-            s = obj._latex_list()
-        elif hasattr(obj, '_latex_'):
-            s = obj._latex_()
-        else:
-            s = obj.__str__()
-        h = HTMLMath('$%s$' % s)
+        h = HTMLMath(math_repr(obj))
         h.add_class('explorable-value')
         self.clc = Event(source=h, watched_events=['click'])
         super(ExplorableValue, self).__init__(
@@ -330,7 +333,7 @@ class ExplorerHelp(Accordion):
         self.content = obj.__doc__ or 'Help'
 
     def compute(self):
-        self.children[0].value = "$$%s$$" % self.content
+        self.children[0].value = self.content
         self.set_title(0, [l for l in self.content.split(".") if l][0].strip())
 
 
