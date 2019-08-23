@@ -13,6 +13,7 @@ AUTHORS:
 - Odile Bénassy, Nicolas Thiéry
 
 """
+import re
 from cysignals.alarm import alarm, cancel_alarm
 from cysignals.signals import AlarmInterrupt
 from inspect import isclass
@@ -237,6 +238,7 @@ class ExplorerNaming(Box):
     A text input to give a name to a math object
     """
     value = Any()
+    initial_name = Unicode('')
     history_index = Integer(-1)
     content = Unicode('')
 
@@ -253,7 +255,13 @@ class ExplorerNaming(Box):
         t.observe(changed, names='value')
         # History change
         def history_changed(change):
-            self.content = "Hist[{}]" . format(change.new)
+            if self.initial_name:
+                if change.new == 0:
+                    self.content = self.initial_name
+                else:
+                    self.content = "{}_H{}" . format(self.initial_name, change.new)
+            else:
+                self.content = "Hist[{}]" . format(change.new)
             self.children[0].value = self.content
         self.observe(history_changed, names='history_index')
 
@@ -349,6 +357,7 @@ class SageExplorer(VBox):
     """Sage Explorer in Jupyter Notebook"""
 
     value = Any()
+    initial_name = Unicode()
     history_index = Integer(0)
 
     def __init__(self, obj=None):
@@ -362,9 +371,20 @@ class SageExplorer(VBox):
         self.donottrack = True # Prevent any interactivity while drawing the widget
         super(SageExplorer, self).__init__()
         self.value = obj
+        self.get_initial_name()
         self._history = [obj]
         self.compute()
         self.donottrack = False
+
+    def get_initial_name(self):
+        sh_hist = get_ipython().history_manager.input_hist_parsed[-50:]
+        sh_hist.reverse()
+        for l in sh_hist:
+            if 'explore' in l:
+                m = re.search(r'explore[ ]*\([ ]*([^)]+)\)', l)
+                if m:
+                    self.initial_name = m.group(1).strip()
+                    break
 
     def compute(self):
         obj = self.value
@@ -389,6 +409,7 @@ class SageExplorer(VBox):
 
         self.menusbox = ExplorerMenus(obj)
         self.namingbox = ExplorerNaming(obj)
+        self.namingbox.initial_name = self.initial_name
         dlink((self, 'history_index'), (self.namingbox, 'history_index'))
         self.searchbox = ExplorerMethodSearch(obj)
         self.inputbox = Text()
