@@ -334,7 +334,12 @@ class ExplorerHelp(Accordion):
 
     def compute(self):
         self.children[0].value = self.content
-        self.set_title(0, [l for l in self.content.split(".") if l][0].strip())
+        s = self.content.strip()
+        end_first_line = max(s.find('.'), s.find('\n'))
+        if end_first_line > 0:
+            self.set_title(0, s[:end_first_line])
+        else:
+            self.set_title(0, s[:100])
 
 
 class SageExplorer(VBox):
