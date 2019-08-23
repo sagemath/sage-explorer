@@ -13,8 +13,8 @@ AUTHORS:
 - Odile Bénassy, Nicolas Thiéry
 
 """
-import yaml, os, re, six, operator as OP
-from inspect import getargspec, getmembers, getmro, isclass, isfunction, ismethod, ismethoddescriptor, isabstract
+import yaml, os, re, six, types, operator as OP
+from inspect import getargspec, getmro, isclass, isfunction, ismethod, ismethoddescriptor, isabstract
 from functools import lru_cache
 try: # Are we in a Sage environment?
     import sage.all
@@ -42,6 +42,55 @@ def eval_in_main(s):
         return eval(s, sage.all.__dict__)
     except:
         return eval(s, __main__.__dict__)
+
+def getmembers(object, predicate=None):
+    """Return all members of an object as (name, value) pairs sorted by name.
+    Optionally, only return members that satisfy a given predicate.
+    This function patches inspect.getmembers
+    because of Python3's new `__weakref__` attribute.
+    """
+    if isclass(object):
+        mro = (object,) + getmro(object)
+    else:
+        mro = ()
+    results = []
+    processed = set()
+    names = dir(object)
+    # :dd any DynamicClassAttributes to the list of names if object is a class;
+    # this may result in duplicate entries if, for example, a virtual
+    # attribute with the same name as a DynamicClassAttribute exists
+    try:
+        for base in object.__bases__:
+            for k, v in base.__dict__.items():
+                if isinstance(v, types.DynamicClassAttribute):
+                    names.append(k)
+    except AttributeError:
+        pass
+    for key in names:
+        # First try to get the value via getattr.  Some descriptors don't
+        # like calling their __get__ (see bug #1785), so fall back to
+        # looking in the __dict__.
+        if key == '__weakref__':
+            continue
+        try:
+            value = getattr(object, key)
+            # handle the duplicate key
+            if key in processed:
+                raise AttributeError
+        except AttributeError:
+            for base in mro:
+                if key in base.__dict__:
+                    value = base.__dict__[key]
+                    break
+            else:
+                # could be a (currently) missing slot member, or a buggy
+                # __dir__; discard and move on
+                continue
+        if not predicate or predicate(value):
+            results.append((key, value))
+        processed.add(key)
+    results.sort(key=lambda pair: pair[0])
+    return results
 
 
 class ExploredMember(object):
@@ -234,12 +283,16 @@ class ExploredMember(object):
 
         TESTS::
             sage: from new_sage_explorer.explored_member import ExploredMember
-            sage: from sage.combinat.partition import Partition
             sage: F = GF(7)
             sage: m = ExploredMember('polynomial', parent=F)
             sage: m.compute_property_label({'polynomial': {'in': 'Fields.Finite'}})
             sage: m.prop_label
             'Polynomial'
+            sage: G = PermutationGroup([[(1,2,3),(4,5)],[(3,4)]])
+            sage: m = ExploredMember('category', parent=G)
+            sage: m.compute_property_label({'category': {'in': 'Sets'}})
+            sage: m.prop_label
+            'Category'
         """
         self.prop_label = None
         if not self.name in config.keys():
