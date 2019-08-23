@@ -18,7 +18,7 @@ from cysignals.signals import AlarmInterrupt
 from inspect import isclass
 from ipywidgets import Accordion, Box, Button, Combobox, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, Textarea, VBox
 from ipywidgets.widgets.widget_description import DescriptionStyle
-from traitlets import Any, Unicode, dlink, observe
+from traitlets import Any, Integer, Unicode, dlink, observe
 from ipywidgets.widgets.trait_types import InstanceDict, Color
 from ipyevents import Event
 from .explored_member import get_members, get_properties
@@ -237,6 +237,7 @@ class ExplorerNaming(Box):
     A text input to give a name to a math object
     """
     value = Any()
+    history_index = Integer(-1)
     content = Unicode('')
 
     def __init__(self, obj):
@@ -246,13 +247,15 @@ class ExplorerNaming(Box):
             (t,),
             layout=Layout(padding='0')
         )
+        # User input
         def changed(change):
             self.content = change.new
         t.observe(changed, names='value')
-        self.get_input_name()
-
-    def get_input_name(self):
-        self.children[0].value = "Hist[0]"
+        # History change
+        def history_changed(change):
+            self.content = "Hist[{}]" . format(change.new)
+            self.children[0].value = self.content
+        self.observe(history_changed, names='history_index')
 
 
 class ExplorerMethodSearch(Box):
@@ -346,6 +349,7 @@ class SageExplorer(VBox):
     """Sage Explorer in Jupyter Notebook"""
 
     value = Any()
+    history_index = Integer(0)
 
     def __init__(self, obj=None):
         """
@@ -385,6 +389,7 @@ class SageExplorer(VBox):
 
         self.menusbox = ExplorerMenus(obj)
         self.namingbox = ExplorerNaming(obj)
+        dlink((self, 'history_index'), (self.namingbox, 'history_index'))
         self.searchbox = ExplorerMethodSearch(obj)
         self.inputbox = Text()
         self.inputbutton = Button(description='-', layout=Layout(width='30px'))
@@ -449,6 +454,7 @@ class SageExplorer(VBox):
             [[[1, 2, 5, 6], [3], [4]], 42]
         """
         self._history.append(obj)
+        self.history_index = self.history_index + 1
         if len(self._history) > MAX_LEN_HISTORY:
             self._history = self._history[1:]
 
@@ -538,6 +544,7 @@ class SageExplorer(VBox):
             print("No more history!")
             return
         self._history.pop()
+        self.history_index = self.history_index - 1
         self.donottrack = True
         self.value = self._history[-1]
         self.compute()
