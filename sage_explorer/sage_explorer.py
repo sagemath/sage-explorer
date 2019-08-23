@@ -135,7 +135,10 @@ class ExplorerDescription(Box):
 
     def __init__(self, obj):
         self.value = obj
-        s = [l for l in obj.__doc__.split("\n") if l][0].strip()
+        if obj.__doc__:
+            s = [l for l in obj.__doc__.split("\n") if l][0].strip()
+        else:
+            s = ''
         super(ExplorerDescription, self).__init__((HTMLMath(s),))
         self.content = s
         self.add_class("explorer-description")
@@ -289,12 +292,21 @@ class ExplorerOutput(Box):
     A text input to input method arguments
     """
     value = Any()
+    content = Any()
 
     def __init__(self, obj=None):
         self.value = obj
-        self.output = HTMLMath("&nbsp;")
-        super(ExplorerOutput, self).__init__((self.output,))
-
+        self.output = HTMLMath("")
+        self.output.add_class('explorable-value')
+        self.clc = Event(source=self.output, watched_events=['click'])
+        super(ExplorerOutput, self).__init__(
+            (self.output,),
+            layout = Layout(border='1px solid green', padding='2px 50px 2px 2px')
+        )
+        def propagate_click(event):
+            pass
+            #self.value = self.output.value
+        self.clc.on_dom_event(propagate_click)
 
 class ExplorerHelp(Accordion):
     r"""
@@ -315,7 +327,7 @@ class ExplorerHelp(Accordion):
         def content_changed(change):
             self.compute()
         self.observe(content_changed, names='content')
-        self.content = obj.__doc__
+        self.content = obj.__doc__ or 'Help'
 
     def compute(self):
         self.children[0].value = "$$%s$$" % self.content
@@ -383,6 +395,7 @@ class SageExplorer(VBox):
             except Exception as e:
                 self.outputbox.output.value = 'Error: %s; method_name=%s; input=%s;' % (e, method_name, self.inputbox.value)
                 return
+            self.outputbox.value = out
             self.outputbox.output.value = '$%s$' % out
         self.gobutton.on_click(compute_selected_method)
         self.actionbox = HBox([
@@ -396,6 +409,7 @@ class SageExplorer(VBox):
             self.gobutton
         ])
         self.outputbox = ExplorerOutput(obj)
+        dlink((self.outputbox, 'value'), (self, 'value')) # Handle the clicks on output values
         self.helpbox = ExplorerHelp(obj)
 
         def selected_method_changed(change):
