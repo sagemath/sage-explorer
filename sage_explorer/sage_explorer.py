@@ -353,7 +353,7 @@ class SageExplorer(VBox):
         self.donottrack = True # Prevent any interactivity while drawing the widget
         super(SageExplorer, self).__init__()
         self.value = obj
-        self._history = []
+        self._history = [obj]
         self.compute()
         self.donottrack = False
 
@@ -435,12 +435,13 @@ class SageExplorer(VBox):
 
             sage: from sage_explorer import SageExplorer
             sage: t = Tableau([[1, 2, 5, 6], [3], [4]])
+            sage: n = 42
             sage: e = SageExplorer(t)
             sage: e._history
-            []
-            sage: e.push_history(t)
-            sage: e._history
             [[[1, 2, 5, 6], [3], [4]]]
+            sage: e.push_history(n)
+            sage: e._history
+            [[[1, 2, 5, 6], [3], [4]], 42]
         """
         self._history.append(obj)
         if len(self._history) > MAX_LEN_HISTORY:
@@ -462,11 +463,11 @@ class SageExplorer(VBox):
             sage: new_t = Tableau([[1, 2, 7, 6], [3], [4]])
             sage: e = SageExplorer(t)
             sage: e._history
-            []
+            [[[1, 2, 5, 6], [3], [4]]]
             sage: from traitlets import Bunch
             sage: e.value_changed(Bunch({'name': 'value', 'old': t, 'new': new_t, 'owner': e, 'type': 'change'}))
             sage: e._history
-            [[[1, 2, 5, 6], [3], [4]]]
+            [[[1, 2, 5, 6], [3], [4]], [[1, 2, 7, 6], [3], [4]]]
         """
         if self.donottrack:
             return
@@ -474,7 +475,7 @@ class SageExplorer(VBox):
         new_val = change.new
         actually_changed = (id(new_val) != id(old_val))
         if actually_changed:
-            self.push_history(old_val)
+            self.push_history(new_val)
             self.compute()
 
     def set_value(self, obj):
@@ -531,8 +532,8 @@ class SageExplorer(VBox):
         if not self._history:
             print("No more history!")
             return
-        prev = self._history.pop()
+        self._history.pop()
         self.donottrack = True
-        self.value = prev
+        self.value = self._history[-1]
         self.compute()
         self.donottrack = False
