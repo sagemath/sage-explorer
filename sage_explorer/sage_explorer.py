@@ -436,8 +436,10 @@ class SageExplorer(VBox):
         dlink((self, 'history_index'), (self.namingbox, 'history_index'))
         self.searchbox = ExplorerMethodSearch(obj)
         self.inputbox = Text()
-        self.inputbutton = Button(description='-', layout=Layout(width='30px'))
-        self.gobutton = Button(description='Run!', tooltip='Run the method with specified arguments')
+        self.runbutton = Button(
+            description='Run!',
+            tooltip='Run the method with specified arguments',
+            layout = Layout(width='4em'))
         def compute_selected_method(button):
             method_name = self.searchbox.selected_method
             args = self.inputbox.value
@@ -454,16 +456,15 @@ class SageExplorer(VBox):
                 return
             self.outputbox.value = out
             self.outputbox.output.value = '$%s$' % out
-        self.gobutton.on_click(compute_selected_method)
+        self.runbutton.on_click(compute_selected_method)
         self.actionbox = HBox([
             self.namingbox,
             Separator('.'),
             self.searchbox,
             Separator('('),
             self.inputbox,
-            self.inputbutton,
             Separator(')'),
-            self.gobutton
+            self.runbutton
         ])
         self.outputbox = ExplorerOutput(obj)
         dlink((self.outputbox, 'value'), (self, 'value')) # Handle the clicks on output values
