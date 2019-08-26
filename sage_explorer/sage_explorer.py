@@ -13,7 +13,7 @@ AUTHORS:
 - Odile Bénassy, Nicolas Thiéry
 
 """
-import re
+import re, warnings
 from cysignals.alarm import alarm, cancel_alarm
 from cysignals.signals import AlarmInterrupt
 from inspect import isclass
@@ -21,7 +21,9 @@ from ipywidgets import Accordion, Box, Button, Combobox, GridBox, HBox, HTML, HT
 from ipywidgets.widgets.widget_description import DescriptionStyle
 from traitlets import Any, Integer, Unicode, dlink, observe
 from ipywidgets.widgets.trait_types import InstanceDict, Color
-from ipyevents import Event
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    from ipyevents import Event
 from .explored_member import _eval_in_main, get_members, get_properties
 
 title_layout = Layout(width='100%', padding='12px')
