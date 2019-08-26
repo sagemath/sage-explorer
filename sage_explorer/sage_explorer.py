@@ -19,7 +19,7 @@ from cysignals.signals import AlarmInterrupt
 from inspect import isclass
 from ipywidgets import Accordion, Box, Button, Combobox, Dropdown, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, Textarea, VBox
 from ipywidgets.widgets.widget_description import DescriptionStyle
-from traitlets import Any, Integer, Unicode, dlink, observe
+from traitlets import Any, Bool, Integer, Unicode, dlink, observe
 from ipywidgets.widgets.trait_types import InstanceDict, Color
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -297,6 +297,7 @@ class ExplorerOutput(Box):
     """
     value = Any()
     content = Any()
+    in_error = Bool(False)
 
     def __init__(self, obj=None):
         self.value = obj
@@ -455,8 +456,10 @@ class SageExplorer(VBox):
             except AlarmInterrupt:
                 self.output.output.value = "Timeout!"
             except Exception as e:
+                self.outputbox.in_error = True
                 self.outputbox.output.value = 'Error: %s; method_name=%s; input=%s;' % (e, method_name, self.argsbox.value)
                 return
+            self.outputbox.in_error = False
             self.outputbox.value = out
             self.outputbox.output.value = '$%s$' % out
         self.runbutton.on_click(compute_selected_method)
