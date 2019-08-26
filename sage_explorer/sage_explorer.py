@@ -259,6 +259,8 @@ class ExplorerMethodSearch(Box):
     """
     value = Any()
     selected_method = Unicode('')
+    no_args = Bool(False)
+    args_placeholder = Unicode("Enter arguments")
 
     def __init__(self, obj):
         self.value = obj
@@ -272,6 +274,15 @@ class ExplorerMethodSearch(Box):
             new_val = change.new
             if new_val in self.members_dict:
                 self.selected_method = new_val
+                args, defaults = self.get_argspec()
+                if (not args or args == ['self']) and not self.no_args:
+                    self.no_args = True
+                if (args and args != ['self']) and self.no_args:
+                    self.no_args = False
+                if defaults:
+                    self.args_placeholder = str(defaults)
+                else:
+                    self.args_placeholder = "Enter arguments"
         c.observe(changed, names='value')
 
     def get_members(self):
@@ -290,10 +301,41 @@ class ExplorerMethodSearch(Box):
         if self.selected_method in self.members_dict:
             return self.members_dict[self.selected_method].member.__doc__
 
+    def get_argspec(self):
+        if self.selected_method in self.members_dict:
+            m = self.members_dict[self.selected_method]
+            if not hasattr(m, 'args'):
+                m.compute_argspec()
+            return m.args, m.defaults
+
+class ExplorerArgs(Box):
+    r"""
+    A text input to input method arguments
+    """
+    value = Any()
+    content = Any()
+    no_args = Bool(False)
+
+    def __init__(self, obj=None):
+        self.value = obj
+        t = Text(placeholder="Enter arguments")
+        super(ExplorerArgs, self).__init__(
+            (t,),
+            layout = Layout(border='1px solid green', padding='2px 50px 2px 2px')
+        )
+        def disabled(change):
+            if change.new == True:
+                change.owner.placeholder = ""
+            elif change.new == False:
+                change.owner.placeholder = "Enter arguments"
+        t.observe(disabled, names='disabled')
+        dlink((self, 'no_args'), (self.children[0], 'disabled'))
+        dlink((self.children[0], 'value'), (self, 'content'))
+
 
 class ExplorerOutput(Box):
     r"""
-    A text input to input method arguments
+    A text box to output method results
     """
     value = Any()
     content = Any()
@@ -439,14 +481,15 @@ class SageExplorer(VBox):
         self.namingbox.initial_name = self.initial_name
         dlink((self, 'history_index'), (self.namingbox, 'history_index'))
         self.searchbox = ExplorerMethodSearch(obj)
-        self.argsbox = Text(placeholder="Enter arguments")
+        self.argsbox = ExplorerArgs(obj)
+        dlink((self.searchbox, 'no_args'), (self.argsbox, 'no_args'))
         self.runbutton = Button(
             description='Run!',
             tooltip='Run the method with specified arguments',
             layout = Layout(width='4em'))
         def compute_selected_method(button):
             method_name = self.searchbox.selected_method
-            args = self.argsbox.value
+            args = self.argsbox.content
             try:
                 if AlarmInterrupt:
                     alarm(TIMEOUT)
