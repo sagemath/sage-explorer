@@ -28,20 +28,22 @@ OPERATORS = {'==' : OP.eq, '<' : OP.lt, '<=' : OP.le, '>' : OP.gt, '>=' : OP.ge}
 CONFIG_PROPERTIES = yaml.load(open(os.path.join(os.path.dirname(__file__),'properties.yml')), yaml.SafeLoader)
 
 import __main__
-def eval_in_main(s):
+def _eval_in_main(s, locals={}):
     """
     Evaluate the expression `s` in the global scope
 
     TESTS::
-        sage: from new_sage_explorer.explored_member import eval_in_main
+        sage: from sage_explorer.explored_member import _eval_in_main
         sage: from sage.combinat.tableau import Tableaux
-        sage: eval_in_main("Tableaux")
+        sage: _eval_in_main("Tableaux")
         <class 'sage.combinat.tableau.Tableaux'>
     """
     try:
-        return eval(s, sage.all.__dict__)
+        globs = sage.all.__dict__
     except:
-        return eval(s, __main__.__dict__)
+        globs = __main__.__dict__
+    globs.update(locals)
+    return eval(s, globs)
 
 def getmembers(object, predicate=None):
     """Return all members of an object as (name, value) pairs sorted by name.
@@ -105,7 +107,7 @@ class ExploredMember(object):
         Must have a name.
 
         TESTS::
-            sage: from new_sage_explorer.explored_member import ExploredMember
+            sage: from sage_explorer.explored_member import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
             sage: m = ExploredMember('conjugate', parent=p)
@@ -125,7 +127,7 @@ class ExploredMember(object):
         Get method or attribute value, given the name.
 
         TESTS::
-            sage: from new_sage_explorer.explored_member import ExploredMember
+            sage: from sage_explorer.explored_member import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
             sage: m = ExploredMember('conjugate', parent=p)
@@ -148,7 +150,7 @@ class ExploredMember(object):
         Get method or attribute documentation, given the name.
 
         TESTS::
-            sage: from new_sage_explorer.explored_member import ExploredMember
+            sage: from sage_explorer.explored_member import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
             sage: m = ExploredMember('conjugate', parent=p)
@@ -166,7 +168,7 @@ class ExploredMember(object):
         Get method or attribute value, given the name.
 
         TESTS::
-            sage: from new_sage_explorer.explored_member import ExploredMember
+            sage: from sage_explorer.explored_member import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
             sage: m = ExploredMember('conjugate', parent=p)
@@ -188,7 +190,7 @@ class ExploredMember(object):
         Compute member privacy, if any.
 
         TESTS::
-            sage: from new_sage_explorer.explored_member import ExploredMember
+            sage: from sage_explorer.explored_member import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
             sage: m = ExploredMember('__class__', parent=p)
@@ -217,7 +219,7 @@ class ExploredMember(object):
         of overrides if any.
 
         TESTS::
-            sage: from new_sage_explorer.explored_member import ExploredMember
+            sage: from sage_explorer.explored_member import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
             sage: m = ExploredMember('_reduction', parent=p)
@@ -257,7 +259,7 @@ class ExploredMember(object):
         If this member is a method: compute its args and defaults.
 
         TESTS::
-            sage: from new_sage_explorer.explored_member import ExploredMember
+            sage: from sage_explorer.explored_member import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
             sage: m = ExploredMember('add_cell', parent=p)
@@ -282,13 +284,17 @@ class ExploredMember(object):
         Retrieve the property label, if any, from configuration 'config'.
 
         TESTS::
-            sage: from new_sage_explorer.explored_member import ExploredMember
+            sage: from sage_explorer.explored_member import ExploredMember
             sage: F = GF(7)
             sage: m = ExploredMember('polynomial', parent=F)
             sage: m.compute_property_label({'polynomial': {'in': 'Fields.Finite'}})
             sage: m.prop_label
             'Polynomial'
             sage: G = PermutationGroup([[(1,2,3),(4,5)],[(3,4)]])
+            sage: m = ExploredMember('cardinality', parent=G)
+            sage: m.compute_property_label({'cardinality': {'in': 'EnumeratedSets.Finite'}})
+            sage: m.prop_label
+            'Cardinality'
             sage: m = ExploredMember('category', parent=G)
             sage: m.compute_property_label({'category': {'in': 'Sets'}})
             sage: m.prop_label
@@ -302,30 +308,30 @@ class ExploredMember(object):
         myconfig = config[self.name]
         if 'isinstance' in myconfig.keys():
             """Test isinstance"""
-            if not isinstance(self.parent, eval_in_main(myconfig['isinstance'])):
+            if not isinstance(self.parent, _eval_in_main(myconfig['isinstance'])):
                 return
         if 'not isinstance' in myconfig.keys():
             """Test not isinstance"""
-            if isinstance(self.parent, eval_in_main(myconfig['not isinstance'])):
+            if isinstance(self.parent, _eval_in_main(myconfig['not isinstance'])):
                 return
         if 'in' in myconfig.keys():
             """Test in"""
             try:
-                if not self.parent in eval_in_main(myconfig['in']):
+                if not self.parent in _eval_in_main(myconfig['in']):
                     return
             except:
                 return # The error is : descriptor 'category' of 'sage.structure.parent.Parent' object needs an argument
         if 'not in' in myconfig.keys():
             """Test not in"""
-            if self.parent in eval_in_main(myconfig['not in']):
+            if self.parent in _eval_in_main(myconfig['not in']):
                 return
         def test_when(funcname, expected, operator=None, complement=None):
             if funcname == 'isclass': # FIXME Prendre les premières valeurs de obj.getmembers pour le test -> calculer cette liste avant ?
-                res = eval_in_main(funcname)(self.parent)
+                res = _eval_in_main(funcname)(self.parent)
             else:
                 res = getattr(self.parent, funcname).__call__()
             if operator and complement:
-                res = operator(res, eval_in_main(complement))
+                res = operator(res, _eval_in_main(complement))
             return (res == expected)
         def split_when(s):
             when_parts = myconfig['when'].split()
@@ -395,7 +401,7 @@ def get_members(cls):
 
     TESTS::
 
-        sage: from new_sage_explorer.explored_member import get_members
+        sage: from sage_explorer.explored_member import get_members
         sage: from sage.combinat.partition import Partition
         sage: mm = get_members(Partition)
         sage: mm[2].name, mm[2].privacy
@@ -434,26 +440,26 @@ def get_properties(obj):
 
     TESTS::
 
-        sage: from new_sage_explorer.explored_member import get_properties
+        sage: from sage_explorer.explored_member import get_properties
         sage: from sage.combinat.tableau import *
         sage: st = StandardTableaux(3).an_element()
         sage: sst = SemistandardTableaux(3).an_element()
+        sage: G = PermutationGroup([[(1,2,3),(4,5)],[(3,4)]])
         sage: pp = get_properties(st)
         sage: pp[3].name, pp[3].prop_label
         ('parent', 'Element of')
         sage: pp = get_properties(sst)
         sage: pp[3].name, pp[3].prop_label
         ('is_standard', 'Is Standard')
+        sage: pp = get_properties(G)
+        sage: len(pp)
+        3
     """
     try:
         members = getmembers(obj)
     except:
         return [] # Can be a numeric value ..
     properties = []
-    #if isclass(obj):
-    #    cls = obj
-    #else:
-    #    cls = obj.__class__
     for name, member in members:
         if isabstract(member) or 'deprecated' in str(type(member)).lower():
             continue

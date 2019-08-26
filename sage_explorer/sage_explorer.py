@@ -22,7 +22,7 @@ from ipywidgets.widgets.widget_description import DescriptionStyle
 from traitlets import Any, Integer, Unicode, dlink, observe
 from ipywidgets.widgets.trait_types import InstanceDict, Color
 from ipyevents import Event
-from .explored_member import get_members, get_properties
+from .explored_member import _eval_in_main, get_members, get_properties
 
 title_layout = Layout(width='100%', padding='12px')
 css_lines = []
@@ -36,24 +36,6 @@ try:
     ip.display_formatter.format(css)
 except:
     pass # We are in the test environment
-
-import __main__
-def _eval_in_main(s, locals={}):
-    """
-    Evaluate the expression `s` in the global scope
-
-    TESTS::
-        sage: from sage_explorer.sage_explorer import _eval_in_main
-        sage: from sage.combinat.tableau import Tableaux
-        sage: _eval_in_main("Tableaux")
-        <class 'sage.combinat.tableau.Tableaux'>
-    """
-    try:
-        globs = sage.all.__dict__
-    except:
-        globs = __main__.__dict__
-    globs.update(locals)
-    return eval(s, globs)
 
 TIMEOUT = 15 # in seconds
 MAX_LEN_HISTORY = 50
