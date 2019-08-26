@@ -263,7 +263,10 @@ class ExplorerMethodSearch(Box):
     def __init__(self, obj):
         self.value = obj
         self.get_members()
-        c = Combobox(options=[m.name for m in self.members])
+        c = Combobox(
+            options=[m.name for m in self.members],
+            placeholder="Enter method name"
+        )
         super(ExplorerMethodSearch, self).__init__((c,))
         def changed(change):
             new_val = change.new
@@ -435,14 +438,14 @@ class SageExplorer(VBox):
         self.namingbox.initial_name = self.initial_name
         dlink((self, 'history_index'), (self.namingbox, 'history_index'))
         self.searchbox = ExplorerMethodSearch(obj)
-        self.inputbox = Text()
+        self.argsbox = Text(placeholder="Enter arguments")
         self.runbutton = Button(
             description='Run!',
             tooltip='Run the method with specified arguments',
             layout = Layout(width='4em'))
         def compute_selected_method(button):
             method_name = self.searchbox.selected_method
-            args = self.inputbox.value
+            args = self.argsbox.value
             try:
                 if AlarmInterrupt:
                     alarm(TIMEOUT)
@@ -452,7 +455,7 @@ class SageExplorer(VBox):
             except AlarmInterrupt:
                 self.output.output.value = "Timeout!"
             except Exception as e:
-                self.outputbox.output.value = 'Error: %s; method_name=%s; input=%s;' % (e, method_name, self.inputbox.value)
+                self.outputbox.output.value = 'Error: %s; method_name=%s; input=%s;' % (e, method_name, self.argsbox.value)
                 return
             self.outputbox.value = out
             self.outputbox.output.value = '$%s$' % out
@@ -462,7 +465,7 @@ class SageExplorer(VBox):
             Separator('.'),
             self.searchbox,
             Separator('('),
-            self.inputbox,
+            self.argsbox,
             Separator(')'),
             self.runbutton
         ])
