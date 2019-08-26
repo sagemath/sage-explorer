@@ -41,7 +41,8 @@ def _eval_in_main(s, locals={}):
     try:
         globs = sage.all.__dict__
     except:
-        globs = __main__.__dict__
+        globs = {}
+    globs.update(__main__.__dict__)
     globs.update(locals)
     return eval(s, globs)
 

@@ -17,7 +17,7 @@ import re, warnings
 from cysignals.alarm import alarm, cancel_alarm
 from cysignals.signals import AlarmInterrupt
 from inspect import isclass
-from ipywidgets import Accordion, Box, Button, Combobox, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, Textarea, VBox
+from ipywidgets import Accordion, Box, Button, Combobox, Dropdown, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, Textarea, VBox
 from ipywidgets.widgets.widget_description import DescriptionStyle
 from traitlets import Any, Integer, Unicode, dlink, observe
 from ipywidgets.widgets.trait_types import InstanceDict, Color
@@ -228,25 +228,28 @@ class ExplorerNaming(Box):
 
     def __init__(self, obj):
         self.value = obj
-        t = Text(layout=Layout(width='55px', padding='0', margin='0'))
+        d = Dropdown(
+            options=[('Hist[0]', 0)],
+            value=0,
+            layout=Layout(width='5em', padding='0', margin='0')
+        )
         super(ExplorerNaming, self).__init__(
-            (t,),
+            (d,),
             layout=Layout(padding='0')
         )
         # User input
         def changed(change):
-            self.content = change.new
-        t.observe(changed, names='value')
+            self.content = self.children[0].options[change.new][0]
+        d.observe(changed, names='value')
         # History change
         def history_changed(change):
-            if self.initial_name:
-                if change.new == 0:
-                    self.content = self.initial_name
-                else:
-                    self.content = "{}_H{}" . format(self.initial_name, change.new)
+            self.children[0].options = [(self.initial_name, 0)] + [("Hist[{}]" . format(i+1), i+1) for i in range(change.new)]
+            self.children[0].value = change.new
+            if change.new == 0:
+                self.content = self.initial_name
+                self.children[0].disabled = True
             else:
                 self.content = "Hist[{}]" . format(change.new)
-            self.children[0].value = self.content
         self.observe(history_changed, names='history_index')
 
 
@@ -360,15 +363,51 @@ class SageExplorer(VBox):
         self.compute()
         self.donottrack = False
 
-    def get_initial_name(self):
-        sh_hist = get_ipython().history_manager.input_hist_parsed[-50:]
+    def get_initial_name(self, test_sh_hist=[]):
+        r"""Attempt to deduce the widget value variable name
+        from notebook input history.
+        In case it is not found, or not a string, set to `Hist[0]`.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import _eval_in_main, SageExplorer
+            sage: w = SageExplorer(42)
+            sage: w.get_initial_name()
+            sage: w.initial_name
+            'Hist[0]'
+            sage: import __main__
+            sage: __main__.__dict__.update({'x': 42})
+            sage: w.get_initial_name(test_sh_hist=["w = explore(42)", "w"])
+            sage: w.initial_name
+            'Hist[0]'
+            sage: w.get_initial_name(test_sh_hist=["x=42", "w = explore(x)", "w"])
+            sage: w.initial_name
+            'x'
+            sage: w.get_initial_name(test_sh_hist=["x=42", "w = explore(x)", "explore(43)", "w"])
+            sage: w.initial_name
+            'x'
+        """
+        self.initial_name = "Hist[0]"
+        try:
+            sh_hist = get_ipython().history_manager.input_hist_parsed[-50:]
+        except:
+            sh_hist = test_sh_hist # We are in the test environment
         sh_hist.reverse()
         for l in sh_hist:
             if 'explore' in l:
                 m = re.search(r'explore[ ]*\([ ]*([^)]+)\)', l)
                 if m:
-                    self.initial_name = m.group(1).strip()
-                    break
+                    initial_name_candidate = m.group(1).strip()
+                    try:
+                        if initial_name_candidate[0].isdigit():
+                            continue
+                    except:
+                        pass
+                    try:
+                        if _eval_in_main(initial_name_candidate) == self.value:
+                            self.initial_name = initial_name_candidate
+                            break
+                    except:
+                        pass
 
     def compute(self):
         obj = self.value
