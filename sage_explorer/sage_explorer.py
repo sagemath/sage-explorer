@@ -359,8 +359,13 @@ class ExplorerOutput(Box):
         )
         def propagate_click(event):
             pass
-            #self.value = self.output.value
         self.clc.on_dom_event(propagate_click)
+        def in_error_changed(change):
+            if change.new is False:
+                self.output.remove_class('explorable-value')
+            else:
+                self.output.add_class('explorable-value')
+        self.observe(in_error_changed, names = 'in_error')
 
 class ExplorerHelp(Accordion):
     r"""
@@ -508,7 +513,7 @@ class SageExplorer(VBox):
                 self.output.output.value = "Timeout!"
             except Exception as e:
                 self.outputbox.in_error = True
-                self.outputbox.output.value = 'Error: %s; method_name=%s; input=%s;' % (e, method_name, self.argsbox.value)
+                self.outputbox.output.value = '<span class="ansi-red-fg">Error: {}</span>' .format(e)
                 return
             self.outputbox.in_error = False
             self.outputbox.value = out
