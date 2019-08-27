@@ -113,13 +113,16 @@ class ExplorerTitle(Box):
     value = Any()
 
     def __init__(self, obj):
-        s = "Exploring: {}" . format(math_repr(obj))
+        self.value = obj
+        m = MathTitle("Exploring: {}" . format(math_repr(obj)), 2)
         super(ExplorerTitle, self).__init__(
-            (MathTitle(s, 2),),
+            (m,),
             layout=Layout(padding='5px 10px')
         )
         self.add_class("explorer-title")
-        self.value = obj
+        def value_changed(change):
+            self.children[0].value = "Exploring: {}" . format(math_repr(change.new))
+        m.observe(value_changed, names='value')
 
 
 class ExplorerDescription(Box):
@@ -464,6 +467,7 @@ class SageExplorer(VBox):
         self.titlebox = ExplorerTitle(obj)
         self.titlebox.add_class('titlebox')
         self.titlebox.add_class('lightborder')
+        dlink((self, 'value'), (self.titlebox, 'value'))
         self.description = ExplorerDescription(obj)
         self.props = ExplorerProperties(obj)
         dlink((self.props, 'value'), (self, 'value')) # Handle the clicks on property values
