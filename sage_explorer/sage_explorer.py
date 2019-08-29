@@ -111,18 +111,17 @@ class ExplorerTitle(Box):
     r"""The sage explorer title bar
     """
     value = Any()
+    content = Unicode('')
 
     def __init__(self, obj):
         self.value = obj
-        m = MathTitle("Exploring: {}" . format(math_repr(obj)), 2)
+        self.content = "Exploring: {}" . format(math_repr(obj))
+        m = MathTitle(self.content, 2)
         super(ExplorerTitle, self).__init__(
             (m,),
             layout=Layout(padding='5px 10px')
         )
         self.add_class("explorer-title")
-        def value_changed(change):
-            self.children[0].value = "Exploring: {}" . format(math_repr(change.new))
-        m.observe(value_changed, names='value')
 
 
 class ExplorerDescription(Box):
@@ -344,28 +343,25 @@ class ExplorerOutput(Box):
     r"""
     A text box to output method results
     """
-    value = Any()
-    content = Any()
-    in_error = Bool(False)
+    value = Any() # the explorer value
+    content = Any() # output value
+#    in_error = Bool(False)
 
     def __init__(self, obj=None):
         self.value = obj
         self.output = HTMLMath("")
         self.output.add_class('explorable-value')
         self.clc = Event(source=self.output, watched_events=['click'])
+        def propagate_click(event):
+            self.value = self.content
+        self.clc.on_dom_event(propagate_click)
+        self.error = HTML("")
+        self.error.add_class("ansi-red-fg")
         super(ExplorerOutput, self).__init__(
-            (self.output,),
+            (self.output, self.error),
             layout = Layout(border='1px solid green', padding='2px 50px 2px 2px')
         )
-        def propagate_click(event):
-            pass
-        self.clc.on_dom_event(propagate_click)
-        def in_error_changed(change):
-            if change.new is False:
-                self.output.remove_class('explorable-value')
-            else:
-                self.output.add_class('explorable-value')
-        self.observe(in_error_changed, names = 'in_error')
+
 
 class ExplorerHelp(Accordion):
     r"""
@@ -510,14 +506,16 @@ class SageExplorer(VBox):
                 if AlarmInterrupt:
                     cancel_alarm()
             except AlarmInterrupt:
-                self.output.output.value = "Timeout!"
-            except Exception as e:
-                self.outputbox.in_error = True
-                self.outputbox.output.value = '<span class="ansi-red-fg">Error: {}</span>' .format(e)
+                self.outputbox.error.value = "Timeout!"
+                self.outputbox.output.value = ''
                 return
-            self.outputbox.in_error = False
-            self.outputbox.value = out
-            self.outputbox.output.value = '$%s$' % out
+            except Exception as e:
+                self.outputbox.error.value = '<span class="ansi-red-fg">Error: {}</span>' .format(e)
+                self.outputbox.output.value = ''
+                return
+            self.outputbox.content = out
+            self.outputbox.output.value = '${}$' .format(math_repr(out))
+            self.outputbox.error.value = ''
         self.runbutton.on_click(compute_selected_method)
         self.actionbox = HBox([
             self.namingbox,
