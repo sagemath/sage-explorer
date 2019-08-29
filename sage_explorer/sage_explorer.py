@@ -186,9 +186,11 @@ class ExplorerVisual(Box):
     The sage explorer visual representation
     """
     value = Any()
+    content = Any() # holds visual widget value
 
     def __init__(self, obj):
         self.value = obj
+        self.content = obj
         super(ExplorerVisual, self).__init__(
             layout = Layout(border='1px solid red', right='0')
         )
@@ -202,6 +204,7 @@ class ExplorerVisual(Box):
             except:
                 l = repr(obj)
             self.children = [Textarea(l, rows=8)]
+        dlink((self.children[0], 'value'), (self, 'content'))
 
     def get_widget(self):
         if isclass(self.obj):
@@ -475,6 +478,7 @@ class SageExplorer(VBox):
         self.propsbox = VBox([self.description, self.props])
         self.visualbox = ExplorerVisual(obj)
         self.visualbox.add_class('visualbox')
+        dlink((self.visualbox, 'content'), (self, 'value')) # Handle the visual widget changes
         self.top = VBox(
             [self.titlebox,
              HBox(
