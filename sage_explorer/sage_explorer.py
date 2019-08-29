@@ -30,8 +30,9 @@ title_layout = Layout(width='100%', padding='12px')
 css_lines = []
 css_lines.append(".title-level2 {font-size: 150%}")
 css_lines.append('.explorer-title {background-color: teal; background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAQAAACROWYpAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAAAHdElNRQfjCBQVGx7629/nAAAB60lEQVQ4y5WUQU8aQRSAv0UPGDcaJYKaCISj6VFJ6skfoEc5EUhIvWniTzFpjyb2ZJB/UBtMf0BvwA0WIfFAemqRSGJ2xwPDMLuz227nXd68ed/uvDfvPYhaZTwEAo9ylEsiEs5iAWCRjQOvs6ntCiEabLIeBqe4pkFR7mwfbEvtgDqf2QreIMVXXARP1MhQosEYIWVMgxJpKjgIPO5I6+gat7jKtcOrAufySos/UveoswGwDMASuyoAm/2Q3CT5oHSLjOTkOsQx/hYlQ46C365oUf5NJpybF9uh5XN6o0uTJl3efPYOuyZcYqq59LkkS5IkWS7oaydTSn7QYpWGDz32nR/78HvsWfVZlNmjQIGiKgWXK74E7nXBNUtSf+EnDg4D1PsupEveCCpPz/BzEyGtMWBk2EYMDFsiuqtirASeYcuRMWwZcobNW6ZqJCzPiZGwUw3WEjZ/qvv/f6rFMoskxwor5P5VJAA7tAPl2aNJk16gPFtsm3CNSazGeKEaRIs8xW5Jh0Md3eAhNioQfJtNklmRuDyr9x7TZmoENaXDROqCEa5+OB+AfSqkOQsZgNt8YigHYMj8vOW7isbmUcGPqnw+8oN6SP0RHPo3Cr7RrFukFht9Cv72fcoJ0eCX7hLdVUOETM8wyuUdTAVXcgNG490AAAAldEVYdGRhdGU6Y3JlYXRlADIwMTktMDgtMjBUMTk6Mjc6MzArMDI6MDCNIxYDAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDE5LTA4LTIwVDE5OjI3OjMwKzAyOjAw/H6uvwAAAABJRU5ErkJggg=="); background-repeat: no-repeat; background-position: right;background-origin: content-box;}')
-css_lines.append(".explorable-value {background-color: #ccc}")
-css_lines.append(".explorer-visual {position: absolute;}")
+css_lines.append(".explorer-flexrow {padding:0; display:flex; flex-flow:row wrap}")
+css_lines.append(".explorer-flexitem {flex-grow:1}")
+css_lines.append(".explorable-value {background-color: #eee}")
 css = HTML("<style>%s</style>" % '\n'.join(css_lines))
 
 try:
@@ -155,7 +156,7 @@ class ExplorableValue(Box):
         self.clc = Event(source=h, watched_events=['click'])
         super(ExplorableValue, self).__init__(
             (h,),
-            layout = Layout(border='1px solid green', padding='2px 50px 2px 2px')
+            layout = Layout(border='1px solid #eee', padding='2px 50px 2px 2px')
         )
         def propagate_click(event):
             self.parent.value = self.value
@@ -173,11 +174,10 @@ class ExplorerProperties(Box):
         children = []
         for p in get_properties(obj):
             val = getattr(obj, p.name).__call__()
-            children.append(Label(p.prop_label))
+            children.append(Box((Label(p.prop_label),),layout=Layout(border='1px solid #eee')))
             children.append(ExplorableValue(val, parent=self))
         super(ExplorerProperties, self).__init__(
-            (GridBox(children, layout=Layout(grid_template_columns='25% 75%')),),
-            layout=Layout(border='1px solid red')
+            (GridBox(children, layout=Layout(border='1px solid #eee', width='100%', grid_template_columns='auto auto')),)
             )
 
 
@@ -192,9 +192,8 @@ class ExplorerVisual(Box):
         self.value = obj
         self.content = obj
         super(ExplorerVisual, self).__init__(
-            layout = Layout(border='1px solid red', right='0')
+            layout = Layout(right='0')
         )
-        self.add_class('explorer-visual') # needed for absolute positioning
         w = _get_visual_widget(obj)
         if w:
             self.children = [w]
@@ -213,20 +212,9 @@ class ExplorerVisual(Box):
             return obj._widget_()
         else:
             return
-        
-
-class ExplorerMenus(Box):
-    r"""
-    Contains a Treeview
-    """
-    value = Any()
-
-    def __init__(self, obj):
-        super(ExplorerMenus, self).__init__()
-        self.value = obj
 
 
-class ExplorerNaming(Box):
+class ExplorerHistory(Box):
     r"""
     A text input to give a name to a math object
     """
@@ -237,21 +225,27 @@ class ExplorerNaming(Box):
 
     def __init__(self, obj):
         self.value = obj
+        self.donottrack = True
         d = Dropdown(
             options=[('Hist[0]', 0)],
             value=0,
             layout=Layout(width='5em', padding='0', margin='0')
         )
-        super(ExplorerNaming, self).__init__(
+        super(ExplorerHistory, self).__init__(
             (d,),
             layout=Layout(padding='0')
         )
         # User input
         def changed(change):
+            self.donottrack = True
             self.content = self.children[0].options[change.new][0]
+            self.history_index = self.children[0].options[change.new][1]
+            self.donottrack = False
         d.observe(changed, names='value')
         # History change
         def history_changed(change):
+            if self.donottrack:
+                return
             self.children[0].options = [(self.initial_name, 0)] + [("Hist[{}]" . format(i+1), i+1) for i in range(change.new)]
             self.children[0].value = change.new
             if change.new == 0:
@@ -260,6 +254,7 @@ class ExplorerNaming(Box):
             else:
                 self.content = "Hist[{}]" . format(change.new)
         self.observe(history_changed, names='history_index')
+        self.donottrack = False
 
 
 class ExplorerMethodSearch(Box):
@@ -327,17 +322,18 @@ class ExplorerArgs(Box):
 
     def __init__(self, obj=None):
         self.value = obj
-        t = Text(placeholder="Enter arguments")
+        t = Text(placeholder="Enter arguments", layout=Layout(width="100%"))
         super(ExplorerArgs, self).__init__(
-            (t,),
-            layout = Layout(border='1px solid green', padding='2px 50px 2px 2px')
+            (t,)
         )
-        def disabled(change):
+        self.add_class("explorer-flexitem")
+        def disable(change):
             if change.new == True:
+                change.owner.value = ""
                 change.owner.placeholder = ""
             elif change.new == False:
                 change.owner.placeholder = "Enter arguments"
-        t.observe(disabled, names='disabled')
+        self.children[0].observe(disable, names='disabled')
         dlink((self, 'no_args'), (self.children[0], 'disabled'))
         dlink((self.children[0], 'value'), (self, 'content'))
 
@@ -362,7 +358,7 @@ class ExplorerOutput(Box):
         self.error.add_class("ansi-red-fg")
         super(ExplorerOutput, self).__init__(
             (self.output, self.error),
-            layout = Layout(border='1px solid green', padding='2px 50px 2px 2px')
+            layout = Layout(padding='2px 50px 2px 2px')
         )
 
 
@@ -380,7 +376,7 @@ class ExplorerHelp(Accordion):
         super(ExplorerHelp, self).__init__(
             (t,),
             selected_index=None,
-            layout=Layout(width='95%', border='1px solid yellow', padding='0')
+            layout=Layout(width='100%', padding='0')
         )
         def content_changed(change):
             self.compute()
@@ -476,30 +472,34 @@ class SageExplorer(VBox):
         self.props = ExplorerProperties(obj)
         dlink((self.props, 'value'), (self, 'value')) # Handle the clicks on property values
         self.propsbox = VBox([self.description, self.props])
+        self.propsbox.add_class('explorer-flexitem')
         self.visualbox = ExplorerVisual(obj)
-        self.visualbox.add_class('visualbox')
         dlink((self.visualbox, 'content'), (self, 'value')) # Handle the visual widget changes
+        topflex = HBox(
+            (self.propsbox, Separator(' '), self.visualbox),
+            layout=Layout(margin='10px 0')
+        )
+        topflex.add_class("explorer-flexrow")
         self.top = VBox(
-            [self.titlebox,
-             HBox(
-                 [self.propsbox, Separator(' '), self.visualbox],
-                         layout=Layout(margin='10px 0')
-             )
-            ],
-            layout=Layout(border='1px solid yellow')
+            (self.titlebox, topflex)
         )
 
-        self.menusbox = ExplorerMenus(obj)
-        self.namingbox = ExplorerNaming(obj)
-        self.namingbox.initial_name = self.initial_name
-        dlink((self, 'history_index'), (self.namingbox, 'history_index'))
+        self.histbox = ExplorerHistory(obj)
+        self.histbox.initial_name = self.initial_name
+        dlink((self, 'history_index'), (self.histbox, 'history_index'))
+        def history_index_changed(change):
+            # We are going back in the explorer history
+            for i in range(change.old - change.new): # should be > 0
+                self.pop_value()
+        self.observe(history_index_changed, names='history_index')
         self.searchbox = ExplorerMethodSearch(obj)
         self.argsbox = ExplorerArgs(obj)
         dlink((self.searchbox, 'no_args'), (self.argsbox, 'no_args'))
         self.runbutton = Button(
             description='Run!',
             tooltip='Run the method with specified arguments',
-            layout = Layout(width='4em'))
+            layout = Layout(width='4em', right='0')
+        )
         def compute_selected_method(button):
             method_name = self.searchbox.selected_method
             args = self.argsbox.content
@@ -521,8 +521,8 @@ class SageExplorer(VBox):
             self.outputbox.output.value = '${}$' .format(math_repr(out))
             self.outputbox.error.value = ''
         self.runbutton.on_click(compute_selected_method)
-        self.actionbox = HBox([
-            self.namingbox,
+        middleflex = HBox([
+            self.histbox,
             Separator('.'),
             self.searchbox,
             Separator('('),
@@ -530,14 +530,16 @@ class SageExplorer(VBox):
             Separator(')'),
             self.runbutton
         ])
+        middleflex.add_class("explorer-flexrow")
         self.outputbox = ExplorerOutput(obj)
         dlink((self.outputbox, 'value'), (self, 'value')) # Handle the clicks on output values
+        dlink((self.histbox, 'history_index'), (self, 'history_index')) # Handle the history selection
         self.helpbox = ExplorerHelp(obj)
 
         def selected_method_changed(change):
             self.helpbox.content = self.searchbox.get_doc()
         self.searchbox.observe(selected_method_changed, names='selected_method')
-        self.bottom = VBox([self.actionbox, self.outputbox, self.helpbox])
+        self.bottom = VBox([middleflex, self.outputbox, self.helpbox])
 
         self.children = (self.top, self.bottom)
 
