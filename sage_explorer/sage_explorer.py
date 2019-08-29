@@ -17,9 +17,10 @@ import re, warnings
 from cysignals.alarm import alarm, cancel_alarm
 from cysignals.signals import AlarmInterrupt
 from inspect import isclass
+from collections import deque
 from ipywidgets import Accordion, Box, Button, Combobox, Dropdown, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, Textarea, VBox
 from ipywidgets.widgets.widget_description import DescriptionStyle
-from traitlets import Any, Bool, Integer, Unicode, dlink, observe
+from traitlets import Any, Bool, Instance, Integer, Unicode, dlink, observe
 from ipywidgets.widgets.trait_types import InstanceDict, Color
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -29,10 +30,11 @@ from .explored_member import _eval_in_main, get_members, get_properties
 title_layout = Layout(width='100%', padding='12px')
 css_lines = []
 css_lines.append(".title-level2 {font-size: 150%}")
-css_lines.append('.explorer-title {background-color: teal; background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAQAAACROWYpAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAAAHdElNRQfjCBQVGx7629/nAAAB60lEQVQ4y5WUQU8aQRSAv0UPGDcaJYKaCISj6VFJ6skfoEc5EUhIvWniTzFpjyb2ZJB/UBtMf0BvwA0WIfFAemqRSGJ2xwPDMLuz227nXd68ed/uvDfvPYhaZTwEAo9ylEsiEs5iAWCRjQOvs6ntCiEabLIeBqe4pkFR7mwfbEvtgDqf2QreIMVXXARP1MhQosEYIWVMgxJpKjgIPO5I6+gat7jKtcOrAufySos/UveoswGwDMASuyoAm/2Q3CT5oHSLjOTkOsQx/hYlQ46C365oUf5NJpybF9uh5XN6o0uTJl3efPYOuyZcYqq59LkkS5IkWS7oaydTSn7QYpWGDz32nR/78HvsWfVZlNmjQIGiKgWXK74E7nXBNUtSf+EnDg4D1PsupEveCCpPz/BzEyGtMWBk2EYMDFsiuqtirASeYcuRMWwZcobNW6ZqJCzPiZGwUw3WEjZ/qvv/f6rFMoskxwor5P5VJAA7tAPl2aNJk16gPFtsm3CNSazGeKEaRIs8xW5Jh0Md3eAhNioQfJtNklmRuDyr9x7TZmoENaXDROqCEa5+OB+AfSqkOQsZgNt8YigHYMj8vOW7isbmUcGPqnw+8oN6SP0RHPo3Cr7RrFukFht9Cv72fcoJ0eCX7hLdVUOETM8wyuUdTAVXcgNG490AAAAldEVYdGRhdGU6Y3JlYXRlADIwMTktMDgtMjBUMTk6Mjc6MzArMDI6MDCNIxYDAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDE5LTA4LTIwVDE5OjI3OjMwKzAyOjAw/H6uvwAAAABJRU5ErkJggg=="); background-repeat: no-repeat; background-position: right;background-origin: content-box;}')
+css_lines.append('.explorer-title {background-color: teal; background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAQAAACROWYpAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAAAHdElNRQfjCBQVGx7629/nAAAB60lEQVQ4y5WUQU8aQRSAv0UPGDcaJYKaCISj6VFJ6skfoEc5EUhIvWniTzFpjyb2ZJB/UBtMf0BvwA0WIfFAemqRSGJ2xwPDMLuz227nXd68ed/uvDfvPYhaZTwEAo9ylEsiEs5iAWCRjQOvs6ntCiEabLIeBqe4pkFR7mwfbEvtgDqf2QreIMVXXARP1MhQosEYIWVMgxJpKjgIPO5I6+gat7jKtcOrAufySos/UveoswGwDMASuyoAm/2Q3CT5oHSLjOTkOsQx/hYlQ46C365oUf5NJpybF9uh5XN6o0uTJl3efPYOuyZcYqq59LkkS5IkWS7oaydTSn7QYpWGDz32nR/78HvsWfVZlNmjQIGiKgWXK74E7nXBNUtSf+EnDg4D1PsupEveCCpPz/BzEyGtMWBk2EYMDFsiuqtirASeYcuRMWwZcobNW6ZqJCzPiZGwUw3WEjZ/qvv/f6rFMoskxwor5P5VJAA7tAPl2aNJk16gPFtsm3CNSazGeKEaRIs8xW5Jh0Md3eAhNioQfJtNklmRuDyr9x7TZmoENaXDROqCEa5+OB+AfSqkOQsZgNt8YigHYMj8vOW7isbmUcGPqnw+8oN6SP0RHPo3Cr7RrFukFht9Cv72fcoJ0eCX7hLdVUOETM8wyuUdTAVXcgNG490AAAAldEVYdGRhdGU6Y3JlYXRlADIwMTktMDgtMjBUMTk6Mjc6MzArMDI6MDCNIxYDAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDE5LTA4LTIwVDE5OjI3OjMwKzAyOjAw/H6uvwAAAABJRU5ErkJggg=="); background-repeat: no-repeat; background-position: right;background-origin: content-box; border-radius: 4px}')
+css_lines.append(".explorer-table {border-collapse: collapse}")
 css_lines.append(".explorer-flexrow {padding:0; display:flex; flex-flow:row wrap}")
 css_lines.append(".explorer-flexitem {flex-grow:1}")
-css_lines.append(".explorable-value {background-color: #eee}")
+css_lines.append(".explorable-value {background-color: #eee; border-radius: 4px; padding: 4px}\n.explorable-value:hover {cursor: pointer}")
 css = HTML("<style>%s</style>" % '\n'.join(css_lines))
 
 try:
@@ -142,28 +144,123 @@ class ExplorerDescription(Box):
         self.add_class("explorer-description")
 
 
-class ExplorableValue(Box):
+class ExplorableHistory(deque):
+    def __init__(self, obj, initial_name=None):
+        super(ExplorableHistory, self).__init__()
+        self.append(obj)
+        self.initial_name = self.get_initial_name(value=obj)
+        self.current_index = 0
+
+    @staticmethod
+    def get_initial_name(value=None, test_sh_hist=[]):
+        r"""Attempt to deduce the widget value variable name
+        from notebook input history.
+        In case it is not found, or not a string, set to `Hist[0]`.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import _eval_in_main, SageExplorer
+            sage: w = SageExplorer(42)
+            sage: w.get_initial_name()
+            sage: w.initial_name
+            'Hist[0]'
+            sage: import __main__
+            sage: __main__.__dict__.update({'x': 42})
+            sage: w.get_initial_name(test_sh_hist=["w = explore(42)", "w"])
+            sage: w.initial_name
+            'Hist[0]'
+            sage: w.get_initial_name(test_sh_hist=["x=42", "w = explore(x)", "w"])
+            sage: w.initial_name
+            'x'
+            sage: w.get_initial_name(test_sh_hist=["x=42", "w = explore(x)", "explore(43)", "w"])
+            sage: w.initial_name
+            'x'
+        """
+        initial_name = "Hist[0]"
+        try:
+            sh_hist = get_ipython().history_manager.input_hist_parsed[-50:]
+        except:
+            sh_hist = test_sh_hist # We are in the test environment
+        sh_hist.reverse()
+        for l in sh_hist:
+            if 'explore' in l:
+                m = re.search(r'explore[ ]*\([ ]*([^)]+)\)', l)
+                if m:
+                    initial_name_candidate = m.group(1).strip()
+                    try:
+                        if initial_name_candidate[0].isdigit():
+                            continue
+                    except:
+                        if not value:
+                            return initial_name_candidate
+                    try:
+                        if _eval_in_main(initial_name_candidate) == value:
+                            initial_name = initial_name_candidate
+                            break
+                    except:
+                        pass
+        return initial_name
+
+    def get_index(self, i):
+        return self.current_index
+
+    def set_index(self, i):
+        self.current_index = i
+
+    def push(self, obj):
+        r"""
+        Push the history, ie append
+        an object and increment index.
+        """
+        self.current_index = self.__len__()
+        self.append(obj)
+        self.truncate(MAX_LEN_HISTORY)
+
+    def pop(self):
+        r"""
+        Pop the history, ie pop the list
+        and decrement index.
+        """
+        val = super(ExplorableHistory, self).pop()
+        self.current_index = self.__len__ - 1
+        return val
+
+    def get_item(self, i=None):
+        return self.__getitem__(i or self.current_index)
+
+    def get_current_item(self):
+        return self.get_item()
+
+    def make_menu_options(self):
+        first_label = self.initial_name or "Hist[0]"
+        return [(first_label, 0)] + [("Hist[{}]" . format(i+1), i+1) for i in range(self.__len__()-1)]
+
+    def truncate(self, max=MAX_LEN_HISTORY):
+        shift = self.__len__() - max
+        if shift < 1:
+            return
+        for i in range(shift):
+            self.popleft()
+        self.current_index = self.current_index + shift
+
+
+class ExplorableValue(HTMLMath):
     r"""
     A repr string with a link for a Sage object.
     """
-    value = Any()
+    content = Any() # We already have a value for ipywidgets.HTMLMath
 
     def __init__(self, obj, parent=None):
-        self.value = obj # we should compute it -- or use it -- as a 'member'
+        super(ExplorableValue, self).__init__(math_repr(obj), layout=Layout(margin='1px'))
         self.parent = parent
-        h = HTMLMath(math_repr(obj))
-        h.add_class('explorable-value')
-        self.clc = Event(source=h, watched_events=['click'])
-        super(ExplorableValue, self).__init__(
-            (h,),
-            layout = Layout(border='1px solid #eee', padding='2px 50px 2px 2px')
-        )
+        self.add_class('explorable-value')
+        self.clc = Event(source=self, watched_events=['click'])
         def propagate_click(event):
-            self.parent.value = self.value
+            if self.parent:
+                self.parent.value = self.value
         self.clc.on_dom_event(propagate_click)
 
 
-class ExplorerProperties(Box):
+class ExplorerProperties(GridBox):
     r"""
     Display object properties as a table.
     """
@@ -174,11 +271,13 @@ class ExplorerProperties(Box):
         children = []
         for p in get_properties(obj):
             val = getattr(obj, p.name).__call__()
-            children.append(Box((Label(p.prop_label),),layout=Layout(border='1px solid #eee')))
-            children.append(ExplorableValue(val, parent=self))
+            children.append(Box((Label(p.prop_label),), layout=Layout(border='1px solid #eee')))
+            children.append(Box((ExplorableValue(val, parent=self),), layout=Layout(border='1px solid #eee')))
         super(ExplorerProperties, self).__init__(
-            (GridBox(children, layout=Layout(border='1px solid #eee', width='100%', grid_template_columns='auto auto')),)
+            children,
+            layout=Layout(border='1px solid #eee', width='100%', grid_template_columns='auto auto')
             )
+        self.add_class("explorer-table")
 
 
 class ExplorerVisual(Box):
@@ -219,16 +318,15 @@ class ExplorerHistory(Box):
     A text input to give a name to a math object
     """
     value = Any()
-    initial_name = Unicode('')
-    history_index = Integer(-1)
-    content = Unicode('')
+    content = Any() # Use selection
+    _history = Instance(ExplorableHistory)
 
-    def __init__(self, obj):
+    def __init__(self, obj, history=None):
         self.value = obj
-        self.donottrack = True
+        self._history = history or ExplorableHistory(obj)
         d = Dropdown(
-            options=[('Hist[0]', 0)],
-            value=0,
+            options=self._history.make_menu_options(),
+            value = self._history.current_index,
             layout=Layout(width='5em', padding='0', margin='0')
         )
         super(ExplorerHistory, self).__init__(
@@ -237,23 +335,28 @@ class ExplorerHistory(Box):
         )
         # User input
         def changed(change):
+            if self.donottrack:
+                return
             self.donottrack = True
-            self.content = self.children[0].options[change.new][0]
-            self.history_index = self.children[0].options[change.new][1]
+            self.content = self._history.get_item(change.new)
+            self._history.set_index(change.new)
             self.donottrack = False
         d.observe(changed, names='value')
         # History change
         def history_changed(change):
             if self.donottrack:
                 return
-            self.children[0].options = [(self.initial_name, 0)] + [("Hist[{}]" . format(i+1), i+1) for i in range(change.new)]
-            self.children[0].value = change.new
+            self.donottrack = True
+            self._history = change.new
+            self.children[0].options = self._history.make_menu_options()
+            self.children[0].value = change.new.current_index
             if change.new == 0:
                 self.content = self.initial_name
                 self.children[0].disabled = True
             else:
-                self.content = "Hist[{}]" . format(change.new)
-        self.observe(history_changed, names='history_index')
+                self.content = "Hist[{}]" . format(change.new.current_index)
+            self.donottrack = False
+        self.observe(history_changed, names='_history')
         self.donottrack = False
 
 
@@ -344,7 +447,6 @@ class ExplorerOutput(Box):
     """
     value = Any() # the explorer value
     content = Any() # output value
-#    in_error = Bool(False)
 
     def __init__(self, obj=None):
         self.value = obj
@@ -397,8 +499,7 @@ class SageExplorer(VBox):
     """Sage Explorer in Jupyter Notebook"""
 
     value = Any()
-    initial_name = Unicode()
-    history_index = Integer(0)
+    _history = Instance(ExplorableHistory)
 
     def __init__(self, obj=None):
         """
@@ -411,56 +512,9 @@ class SageExplorer(VBox):
         self.donottrack = True # Prevent any interactivity while drawing the widget
         super(SageExplorer, self).__init__()
         self.value = obj
-        self.get_initial_name()
-        self._history = [obj]
+        self._history = ExplorableHistory(obj) #, initial_name=self.initial_name)
         self.compute()
         self.donottrack = False
-
-    def get_initial_name(self, test_sh_hist=[]):
-        r"""Attempt to deduce the widget value variable name
-        from notebook input history.
-        In case it is not found, or not a string, set to `Hist[0]`.
-
-        TESTS::
-            sage: from sage_explorer.sage_explorer import _eval_in_main, SageExplorer
-            sage: w = SageExplorer(42)
-            sage: w.get_initial_name()
-            sage: w.initial_name
-            'Hist[0]'
-            sage: import __main__
-            sage: __main__.__dict__.update({'x': 42})
-            sage: w.get_initial_name(test_sh_hist=["w = explore(42)", "w"])
-            sage: w.initial_name
-            'Hist[0]'
-            sage: w.get_initial_name(test_sh_hist=["x=42", "w = explore(x)", "w"])
-            sage: w.initial_name
-            'x'
-            sage: w.get_initial_name(test_sh_hist=["x=42", "w = explore(x)", "explore(43)", "w"])
-            sage: w.initial_name
-            'x'
-        """
-        self.initial_name = "Hist[0]"
-        try:
-            sh_hist = get_ipython().history_manager.input_hist_parsed[-50:]
-        except:
-            sh_hist = test_sh_hist # We are in the test environment
-        sh_hist.reverse()
-        for l in sh_hist:
-            if 'explore' in l:
-                m = re.search(r'explore[ ]*\([ ]*([^)]+)\)', l)
-                if m:
-                    initial_name_candidate = m.group(1).strip()
-                    try:
-                        if initial_name_candidate[0].isdigit():
-                            continue
-                    except:
-                        pass
-                    try:
-                        if _eval_in_main(initial_name_candidate) == self.value:
-                            self.initial_name = initial_name_candidate
-                            break
-                    except:
-                        pass
 
     def compute(self):
         obj = self.value
@@ -485,13 +539,7 @@ class SageExplorer(VBox):
         )
 
         self.histbox = ExplorerHistory(obj)
-        self.histbox.initial_name = self.initial_name
-        dlink((self, 'history_index'), (self.histbox, 'history_index'))
-        def history_index_changed(change):
-            # We are going back in the explorer history
-            for i in range(change.old - change.new): # should be > 0
-                self.pop_value()
-        self.observe(history_index_changed, names='history_index')
+        dlink((self, '_history'), (self.histbox, '_history'))
         self.searchbox = ExplorerMethodSearch(obj)
         self.argsbox = ExplorerArgs(obj)
         dlink((self.searchbox, 'no_args'), (self.argsbox, 'no_args'))
@@ -533,7 +581,7 @@ class SageExplorer(VBox):
         middleflex.add_class("explorer-flexrow")
         self.outputbox = ExplorerOutput(obj)
         dlink((self.outputbox, 'value'), (self, 'value')) # Handle the clicks on output values
-        dlink((self.histbox, 'history_index'), (self, 'history_index')) # Handle the history selection
+        dlink((self.histbox, '_history'), (self, '_history')) # Handle the history selection
         self.helpbox = ExplorerHelp(obj)
 
         def selected_method_changed(change):
@@ -542,32 +590,6 @@ class SageExplorer(VBox):
         self.bottom = VBox([middleflex, self.outputbox, self.helpbox])
 
         self.children = (self.top, self.bottom)
-
-    def push_history(self, obj):
-        r"""
-        Push an object to explorer history.
-        Ensure that history does not become too long.
-
-        INPUT:
-
-            - ``obj`` -- an object (the old one)
-
-        TESTS::
-
-            sage: from sage_explorer import SageExplorer
-            sage: t = Tableau([[1, 2, 5, 6], [3], [4]])
-            sage: n = 42
-            sage: e = SageExplorer(t)
-            sage: e._history
-            [[[1, 2, 5, 6], [3], [4]]]
-            sage: e.push_history(n)
-            sage: e._history
-            [[[1, 2, 5, 6], [3], [4]], 42]
-        """
-        self._history.append(obj)
-        self.history_index = self.history_index + 1
-        if len(self._history) > MAX_LEN_HISTORY:
-            self._history = self._history[1:]
 
     @observe('value')
     def value_changed(self, change):
@@ -597,7 +619,7 @@ class SageExplorer(VBox):
         new_val = change.new
         actually_changed = (id(new_val) != id(old_val))
         if actually_changed:
-            self.push_history(new_val)
+            self._history.push(new_val)
             self.compute()
 
     def set_value(self, obj):
@@ -654,9 +676,6 @@ class SageExplorer(VBox):
         if not self._history:
             print("No more history!")
             return
-        self._history.pop()
-        self.history_index = self.history_index - 1
-        self.donottrack = True
-        self.value = self._history[-1]
+        self.value = self._history.pop()
         self.compute()
         self.donottrack = False
