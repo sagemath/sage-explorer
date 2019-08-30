@@ -29,6 +29,8 @@ from .explored_member import _eval_in_main, get_members, get_properties
 
 title_layout = Layout(width='100%', padding='12px')
 css_lines = []
+css_lines.append(".visible {visibility: visible; display: inline}")
+css_lines.append(".invisible {visibility: hidden; display: none}")
 css_lines.append(".title-level2 {font-size: 150%}")
 css_lines.append('.explorer-title {background-color: teal; background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAQAAACROWYpAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAAAHdElNRQfjCBQVGx7629/nAAAB60lEQVQ4y5WUQU8aQRSAv0UPGDcaJYKaCISj6VFJ6skfoEc5EUhIvWniTzFpjyb2ZJB/UBtMf0BvwA0WIfFAemqRSGJ2xwPDMLuz227nXd68ed/uvDfvPYhaZTwEAo9ylEsiEs5iAWCRjQOvs6ntCiEabLIeBqe4pkFR7mwfbEvtgDqf2QreIMVXXARP1MhQosEYIWVMgxJpKjgIPO5I6+gat7jKtcOrAufySos/UveoswGwDMASuyoAm/2Q3CT5oHSLjOTkOsQx/hYlQ46C365oUf5NJpybF9uh5XN6o0uTJl3efPYOuyZcYqq59LkkS5IkWS7oaydTSn7QYpWGDz32nR/78HvsWfVZlNmjQIGiKgWXK74E7nXBNUtSf+EnDg4D1PsupEveCCpPz/BzEyGtMWBk2EYMDFsiuqtirASeYcuRMWwZcobNW6ZqJCzPiZGwUw3WEjZ/qvv/f6rFMoskxwor5P5VJAA7tAPl2aNJk16gPFtsm3CNSazGeKEaRIs8xW5Jh0Md3eAhNioQfJtNklmRuDyr9x7TZmoENaXDROqCEa5+OB+AfSqkOQsZgNt8YigHYMj8vOW7isbmUcGPqnw+8oN6SP0RHPo3Cr7RrFukFht9Cv72fcoJ0eCX7hLdVUOETM8wyuUdTAVXcgNG490AAAAldEVYdGRhdGU6Y3JlYXRlADIwMTktMDgtMjBUMTk6Mjc6MzArMDI6MDCNIxYDAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDE5LTA4LTIwVDE5OjI3OjMwKzAyOjAw/H6uvwAAAABJRU5ErkJggg=="); background-repeat: no-repeat; background-position: right;background-origin: content-box; border-radius: 4px}')
 css_lines.append(".explorer-table {border-collapse: collapse}")
@@ -68,6 +70,8 @@ def _get_visual_widget(obj):
 def math_repr(obj):
     # When Sage LaTeX implementation
     # applies well to MathJax, use it.
+    if not obj:
+        return ''
     if hasattr(obj, '_latex_'):
         s = obj._latex_()
         if 'tikz' not in s and 'raisebox' not in s:
@@ -158,21 +162,19 @@ class ExplorableHistory(deque):
         In case it is not found, or not a string, set to `Hist[0]`.
 
         TESTS::
-            sage: from sage_explorer.sage_explorer import _eval_in_main, SageExplorer
-            sage: w = SageExplorer(42)
-            sage: w.get_initial_name()
-            sage: w.initial_name
+            sage: from sage_explorer.sage_explorer import ExplorableHistory
+            sage: h = ExplorableHistory(42)
+            sage: h.get_initial_name()
             'Hist[0]'
             sage: import __main__
-            sage: __main__.__dict__.update({'x': 42})
-            sage: w.get_initial_name(test_sh_hist=["w = explore(42)", "w"])
-            sage: w.initial_name
+            sage: eval(compile('x=42','<string>', 'exec'))
+            sage: x
+            42
+            sage: h.get_initial_name(test_sh_hist=["w = explore(42)", "w"])
             'Hist[0]'
-            sage: w.get_initial_name(test_sh_hist=["x=42", "w = explore(x)", "w"])
-            sage: w.initial_name
+            sage: h.get_initial_name(test_sh_hist=["x=42", "w = explore(x)", "w"])
             'x'
-            sage: w.get_initial_name(test_sh_hist=["x=42", "w = explore(x)", "explore(43)", "w"])
-            sage: w.initial_name
+            sage: h.get_initial_name(test_sh_hist=["x=42", "w = explore(x)", "explore(43)", "w"])
             'x'
         """
         initial_name = "Hist[0]"
@@ -221,7 +223,7 @@ class ExplorableHistory(deque):
         and decrement index.
         """
         val = super(ExplorableHistory, self).pop()
-        self.current_index = self.__len__ - 1
+        self.current_index = self.__len__() - 1
         return val
 
     def get_item(self, i=None):
@@ -249,7 +251,7 @@ class ExplorableValue(HTMLMath):
     """
     content = Any() # We already have a value for ipywidgets.HTMLMath
 
-    def __init__(self, obj, parent=None):
+    def __init__(self, obj='', parent=None):
         super(ExplorableValue, self).__init__(math_repr(obj), layout=Layout(margin='1px'))
         self.parent = parent
         self.add_class('explorable-value')
@@ -450,8 +452,16 @@ class ExplorerOutput(Box):
 
     def __init__(self, obj=None):
         self.value = obj
-        self.output = HTMLMath("")
-        self.output.add_class('explorable-value')
+        self.output = ExplorableValue()
+        self.output.add_class('invisible')
+        def content_changed(change):
+            if change.new:
+                change.owner.remove_class('invisible')
+                change.owner.add_class('visible')
+            else:
+                change.owner.remove_class('visible')
+                change.owner.add_class('invisible')
+        self.output.observe(content_changed, names='value')
         self.clc = Event(source=self.output, watched_events=['click'])
         def propagate_click(event):
             self.value = self.content
@@ -508,6 +518,12 @@ class SageExplorer(VBox):
             sage: from sage_explorer.sage_explorer import SageExplorer
             sage: t = StandardTableaux(15).random_element()
             sage: widget = SageExplorer(t)
+            sage: type(widget.value)
+            <class 'sage.combinat.tableau.StandardTableaux_all_with_category.element_class'>
+            sage: len(widget._history)
+            1
+            sage: len(widget.histbox._history)
+            1
         """
         self.donottrack = True # Prevent any interactivity while drawing the widget
         super(SageExplorer, self).__init__()
@@ -562,6 +578,8 @@ class SageExplorer(VBox):
                 self.outputbox.output.value = ''
                 return
             except Exception as e:
+                if AlarmInterrupt:
+                    cancel_alarm()
                 self.outputbox.error.value = '<span class="ansi-red-fg">Error: {}</span>' .format(e)
                 self.outputbox.output.value = ''
                 return
@@ -607,11 +625,11 @@ class SageExplorer(VBox):
             sage: new_t = Tableau([[1, 2, 7, 6], [3], [4]])
             sage: e = SageExplorer(t)
             sage: e._history
-            [[[1, 2, 5, 6], [3], [4]]]
+            ExplorableHistory([[[1, 2, 5, 6], [3], [4]]])
             sage: from traitlets import Bunch
             sage: e.value_changed(Bunch({'name': 'value', 'old': t, 'new': new_t, 'owner': e, 'type': 'change'}))
             sage: e._history
-            [[[1, 2, 5, 6], [3], [4]], [[1, 2, 7, 6], [3], [4]]]
+            ExplorableHistory([[[1, 2, 5, 6], [3], [4]], [[1, 2, 7, 6], [3], [4]]])
         """
         if self.donottrack:
             return
@@ -676,6 +694,7 @@ class SageExplorer(VBox):
         if not self._history:
             print("No more history!")
             return
-        self.value = self._history.pop()
+        self._history.pop()
+        self.value = self._history[-1]
         self.compute()
         self.donottrack = False
