@@ -18,9 +18,9 @@ from cysignals.alarm import alarm, cancel_alarm
 from cysignals.signals import AlarmInterrupt
 from inspect import isclass
 from collections import deque
-from ipywidgets import Accordion, Box, Button, Combobox, Dropdown, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, Textarea, VBox
+from ipywidgets import Accordion, Box, Button, Combobox, DOMWidget, Dropdown, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, Textarea, VBox
 from ipywidgets.widgets.widget_description import DescriptionStyle
-from traitlets import Any, Bool, Instance, Integer, Unicode, dlink, observe
+from traitlets import Any, Bool, Dict, Instance, Integer, Unicode, dlink, link, observe
 from ipywidgets.widgets.trait_types import InstanceDict, Color
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -34,7 +34,7 @@ css_lines.append(".invisible {visibility: hidden; display: none}")
 css_lines.append(".title-level2 {font-size: 150%}")
 css_lines.append('.explorer-title {background-color: teal; background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAQAAACROWYpAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAAAHdElNRQfjCBQVGx7629/nAAAB60lEQVQ4y5WUQU8aQRSAv0UPGDcaJYKaCISj6VFJ6skfoEc5EUhIvWniTzFpjyb2ZJB/UBtMf0BvwA0WIfFAemqRSGJ2xwPDMLuz227nXd68ed/uvDfvPYhaZTwEAo9ylEsiEs5iAWCRjQOvs6ntCiEabLIeBqe4pkFR7mwfbEvtgDqf2QreIMVXXARP1MhQosEYIWVMgxJpKjgIPO5I6+gat7jKtcOrAufySos/UveoswGwDMASuyoAm/2Q3CT5oHSLjOTkOsQx/hYlQ46C365oUf5NJpybF9uh5XN6o0uTJl3efPYOuyZcYqq59LkkS5IkWS7oaydTSn7QYpWGDz32nR/78HvsWfVZlNmjQIGiKgWXK74E7nXBNUtSf+EnDg4D1PsupEveCCpPz/BzEyGtMWBk2EYMDFsiuqtirASeYcuRMWwZcobNW6ZqJCzPiZGwUw3WEjZ/qvv/f6rFMoskxwor5P5VJAA7tAPl2aNJk16gPFtsm3CNSazGeKEaRIs8xW5Jh0Md3eAhNioQfJtNklmRuDyr9x7TZmoENaXDROqCEa5+OB+AfSqkOQsZgNt8YigHYMj8vOW7isbmUcGPqnw+8oN6SP0RHPo3Cr7RrFukFht9Cv72fcoJ0eCX7hLdVUOETM8wyuUdTAVXcgNG490AAAAldEVYdGRhdGU6Y3JlYXRlADIwMTktMDgtMjBUMTk6Mjc6MzArMDI6MDCNIxYDAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDE5LTA4LTIwVDE5OjI3OjMwKzAyOjAw/H6uvwAAAABJRU5ErkJggg=="); background-repeat: no-repeat; background-position: right;background-origin: content-box; border-radius: 4px}')
 css_lines.append(".explorer-table {border-collapse: collapse}")
-css_lines.append(".explorer-flexrow {padding:0; display:flex; flex-flow:row wrap}")
+css_lines.append(".explorer-flexrow {padding:0; display:flex; flex-flow:row wrap; width:99%}")
 css_lines.append(".explorer-flexitem {flex-grow:1}")
 css_lines.append(".explorable-value {background-color: #eee; border-radius: 4px; padding: 4px}\n.explorable-value:hover {cursor: pointer}")
 css = HTML("<style>%s</style>" % '\n'.join(css_lines))
@@ -47,6 +47,7 @@ except:
 
 TIMEOUT = 15 # in seconds
 MAX_LEN_HISTORY = 50
+
 
 def _get_visual_widget(obj):
     r"""
@@ -247,19 +248,24 @@ class ExplorableHistory(deque):
 
 class ExplorableValue(HTMLMath):
     r"""
-    A repr string with a link for a Sage object.
-    """
-    content = Any() # We already have a value for ipywidgets.HTMLMath
+    A repr string with a link to a Sage object.
 
-    def __init__(self, obj='', parent=None):
-        super(ExplorableValue, self).__init__(math_repr(obj), layout=Layout(margin='1px'))
-        self.parent = parent
+    TESTS:
+        sage: from sage_explorer.sage_explorer import ExplorableValue
+        sage: ev = ExplorableValue("original val", explorable=42)
+    """
+    explorable = Any() # Some computed math object
+    new_val = Any() # Overall value. Will be changed when explorable is clicked
+
+    def __init__(self, obj, explorable):
+        self.new_val = obj
+        self.explorable = explorable
+        super(ExplorableValue, self).__init__(math_repr(explorable), layout=Layout(margin='1px'))
         self.add_class('explorable-value')
         self.clc = Event(source=self, watched_events=['click'])
-        def propagate_click(event):
-            if self.parent:
-                self.parent.value = self.value
-        self.clc.on_dom_event(propagate_click)
+        def set_new_val(event):
+            self.new_val = self.explorable
+        self.clc.on_dom_event(set_new_val)
 
 
 class ExplorerProperties(GridBox):
@@ -272,9 +278,11 @@ class ExplorerProperties(GridBox):
         self.value = obj
         children = []
         for p in get_properties(obj):
-            val = getattr(obj, p.name).__call__()
+            explorable = getattr(obj, p.name).__call__()
             children.append(Box((Label(p.prop_label),), layout=Layout(border='1px solid #eee')))
-            children.append(Box((ExplorableValue(val, parent=self),), layout=Layout(border='1px solid #eee')))
+            ev = ExplorableValue(obj, explorable)
+            dlink((ev, 'new_val'), (self, 'value')) # Propagate explorable if clicked
+            children.append(Box((ev,), layout=Layout(border='1px solid #eee')))
         super(ExplorerProperties, self).__init__(
             children,
             layout=Layout(border='1px solid #eee', width='100%', grid_template_columns='auto auto')
@@ -287,11 +295,10 @@ class ExplorerVisual(Box):
     The sage explorer visual representation
     """
     value = Any()
-    content = Any() # holds visual widget value
+    new_val = Any() # holds visual widget value
 
     def __init__(self, obj):
         self.value = obj
-        self.content = obj
         super(ExplorerVisual, self).__init__(
             layout = Layout(right='0')
         )
@@ -299,12 +306,12 @@ class ExplorerVisual(Box):
         if w:
             self.children = [w]
         else:
-            try:
+            if hasattr(obj, '__ascii_art__'):
                 l = repr(obj._ascii_art_())
-            except:
+            else:
                 l = repr(obj)
-            self.children = [Textarea(l, rows=8)]
-        dlink((self.children[0], 'value'), (self, 'content'))
+                self.children = [Textarea(l, rows=8)]
+        dlink((self.children[0], 'value'), (self, 'new_val'))
 
     def get_widget(self):
         if isclass(self.obj):
@@ -320,7 +327,7 @@ class ExplorerHistory(Box):
     A text input to give a name to a math object
     """
     value = Any()
-    content = Any() # Use selection
+    new_val = Any() # Use selection ?
     _history = Instance(ExplorableHistory)
 
     def __init__(self, obj, history=None):
@@ -340,10 +347,10 @@ class ExplorerHistory(Box):
             if self.donottrack:
                 return
             self.donottrack = True
-            self.content = self._history.get_item(change.new)
+            self.new_val = self._history.get_item(change.new)
             self._history.set_index(change.new)
             self.donottrack = False
-        d.observe(changed, names='value')
+        #d.observe(changed, names='value')
         # History change
         def history_changed(change):
             if self.donottrack:
@@ -353,12 +360,12 @@ class ExplorerHistory(Box):
             self.children[0].options = self._history.make_menu_options()
             self.children[0].value = change.new.current_index
             if change.new == 0:
-                self.content = self.initial_name
+                self.new_val = self.initial_name
                 self.children[0].disabled = True
             else:
-                self.content = "Hist[{}]" . format(change.new.current_index)
+                self.new_val = "Hist[{}]" . format(change.new.current_index)
             self.donottrack = False
-        self.observe(history_changed, names='_history')
+        #self.observe(history_changed, names='_history')
         self.donottrack = False
 
 
@@ -367,7 +374,7 @@ class ExplorerMethodSearch(Box):
     A widget to search a method
     """
     value = Any()
-    selected_method = Unicode('')
+    content = Unicode('')
     no_args = Bool(False)
     args_placeholder = Unicode("Enter arguments")
 
@@ -376,13 +383,14 @@ class ExplorerMethodSearch(Box):
         self.get_members()
         c = Combobox(
             options=[m.name for m in self.members],
-            placeholder="Enter method name"
+            placeholder="Enter method name",
+            continuous_update = False
         )
         super(ExplorerMethodSearch, self).__init__((c,))
-        def changed(change):
-            new_val = change.new
-            if new_val in self.members_dict:
-                self.selected_method = new_val
+        def method_changed(change):
+            selected_method = change.new
+            if selected_method in self.members_dict:
+                self.content = selected_method
                 args, defaults = self.get_argspec()
                 if (not args or args == ['self']) and not self.no_args:
                     self.no_args = True
@@ -392,7 +400,9 @@ class ExplorerMethodSearch(Box):
                     self.args_placeholder = str(defaults)
                 else:
                     self.args_placeholder = "Enter arguments"
-        c.observe(changed, names='value')
+        #dlink((self.children[0], 'value'), (self, 'content'))
+        self.observe(method_changed, names='content') # ici on calcule un éventuel no_args
+        #self.observe(method_changed, names='value') # ici on calcule un éventuel no_args
 
     def get_members(self):
         if isclass(self.value):
@@ -403,16 +413,16 @@ class ExplorerMethodSearch(Box):
         self.members_dict = {m.name: m for m in self.members}
 
     def get_member(self):
-        if self.selected_method in self.members_dict:
-            return self.members_dict[self.selected_method].member
+        if self.content in self.members_dict:
+            return self.members_dict[self.content].member
 
     def get_doc(self):
-        if self.selected_method in self.members_dict:
-            return self.members_dict[self.selected_method].member.__doc__
+        if self.content in self.members_dict:
+            return self.members_dict[self.content].member.__doc__
 
     def get_argspec(self):
-        if self.selected_method in self.members_dict:
-            m = self.members_dict[self.selected_method]
+        if self.content in self.members_dict:
+            m = self.members_dict[self.content]
             if not hasattr(m, 'args'):
                 m.compute_argspec()
             return m.args, m.defaults
@@ -422,12 +432,17 @@ class ExplorerArgs(Box):
     A text input to input method arguments
     """
     value = Any()
-    content = Any()
+    content = Unicode()
     no_args = Bool(False)
 
     def __init__(self, obj=None):
         self.value = obj
-        t = Text(placeholder="Enter arguments", layout=Layout(width="100%"))
+        self.content = ''
+        t = Text(
+            self.content,
+            placeholder="Enter arguments",
+            layout=Layout(width="100%")
+        )
         super(ExplorerArgs, self).__init__(
             (t,)
         )
@@ -443,28 +458,41 @@ class ExplorerArgs(Box):
         dlink((self.children[0], 'value'), (self, 'content'))
 
 
+class ExplorerRunButton(Button):
+    r"""
+    A button for running methods in the explorer.
+    """
+    def __init__(self):
+        super(ExplorerRunButton, self).__init__(
+            description = 'Run!',
+            tooltip = 'Run the method with specified arguments',
+            layout = Layout(width='4em', right='0')
+        )
+
+
 class ExplorerOutput(Box):
     r"""
     A text box to output method results
     """
     value = Any() # the explorer value
-    content = Any() # output value
+    new_val = Any() # output value
 
     def __init__(self, obj=None):
         self.value = obj
-        self.output = ExplorableValue()
+        self.output = ExplorableValue(obj, '')
         self.output.add_class('invisible')
-        def content_changed(change):
+        def output_changed(change):
             if change.new:
                 change.owner.remove_class('invisible')
                 change.owner.add_class('visible')
+                change.owner.value = '${}$' .format(math_repr(change.new))
             else:
                 change.owner.remove_class('visible')
                 change.owner.add_class('invisible')
-        self.output.observe(content_changed, names='value')
+        self.output.observe(output_changed, names='value')
         self.clc = Event(source=self.output, watched_events=['click'])
         def propagate_click(event):
-            self.value = self.content
+            self.value = self.new_val
         self.clc.on_dom_event(propagate_click)
         self.error = HTML("")
         self.error.add_class("ansi-red-fg")
@@ -488,7 +516,7 @@ class ExplorerHelp(Accordion):
         super(ExplorerHelp, self).__init__(
             (t,),
             selected_index=None,
-            layout=Layout(width='100%', padding='0')
+            layout=Layout(width='99%', padding='0')
         )
         def content_changed(change):
             self.compute()
@@ -505,48 +533,195 @@ class ExplorerHelp(Accordion):
             self.set_title(0, s[:100])
 
 
+class ExplorerCodeCell(Textarea):
+    r"""
+    TESTS:
+
+        sage: from sage_explorer.sage_explorer import ExplorerCodeCell
+        sage: cc = ExplorerCodeCell()
+    """
+    def __init__(self):
+        super(ExplorerCodeCell, self).__init__(
+            rows = 1,
+            layout=Layout(border='1px solid #eee', width='99%')
+        )
+
+
+"""
+DEFAULT_COMPONENTS = [
+    ExplorerTitle,
+    ExplorerDescription,
+    ExplorerProperties,
+    ExplorerVisual,
+    ExplorerHistory,
+    ExplorerMethodSearch,
+    ExplorerArgs,
+    ExplorerRunButton,
+    ExplorerOutput,
+    ExplorerHelp,
+    ExplorerCodeCell
+]"""
+DEFAULT_COMPONENTS = {
+    'titlebox': ExplorerTitle,
+    'descriptionbox': ExplorerDescription,
+    'propsbox': ExplorerProperties,
+    'visualbox': ExplorerVisual,
+    'histbox': ExplorerHistory,
+    'searchbox': ExplorerMethodSearch,
+    'argsbox': ExplorerArgs,
+    'runbutton': ExplorerRunButton,
+    'outputbox': ExplorerOutput,
+    'helpbox': ExplorerHelp,
+    'codebox': ExplorerCodeCell
+    }
+
 class SageExplorer(VBox):
     """Sage Explorer in Jupyter Notebook"""
 
     value = Any()
     _history = Instance(ExplorableHistory)
+    components = Dict() # A list of widgets
 
-    def __init__(self, obj=None):
+    def __init__(self, obj=None, components=DEFAULT_COMPONENTS, test_mode=False):
         """
         TESTS::
 
             sage: from sage_explorer.sage_explorer import SageExplorer
             sage: t = StandardTableaux(15).random_element()
-            sage: widget = SageExplorer(t)
+            sage: widget = SageExplorer(t, test_mode=True)
             sage: type(widget.value)
             <class 'sage.combinat.tableau.StandardTableaux_all_with_category.element_class'>
             sage: len(widget._history)
             1
-            sage: len(widget.histbox._history)
-            1
         """
-        self.donottrack = True # Prevent any interactivity while drawing the widget
+        self.test_mode = test_mode
+        self.donottrack = True # Prevent any interactivity while creating the widget
         super(SageExplorer, self).__init__()
         self.value = obj
         self._history = ExplorableHistory(obj) #, initial_name=self.initial_name)
-        self.compute()
+        self.components = components
+        #self.compute()
+        if not test_mode:
+            self.create_components()
+            self.implement_interactivity()
+            self.draw()
         self.donottrack = False
+
+    def create_components(self):
+        r"""
+        Create all components for the explorer.
+
+        TESTS:
+            sage: from sage_explorer import SageExplorer
+            sage: e = SageExplorer(42)
+            sage: e.create_components()
+        """
+        for name in self.components:
+            if name in ['runbutton', 'codebox']:
+                setattr(self, name, self.components[name].__call__())
+            else:
+                setattr(self, name, self.components[name].__call__(self.value))
+
+    def implement_interactivity(self):
+        r"""
+        Implement links and observers on explorer components.
+
+        TESTS:
+            sage: from sage_explorer import SageExplorer
+            sage: e = SageExplorer(42)
+            sage: e.create_components()
+            sage: e.implement_interactivity()
+        """
+        if self.test_mode:
+            self.donottrack = True # Prevent any interactivity while installing the links
+        if 'propsbox' in self.components:
+            dlink((self.propsbox, 'value'), (self, 'value')) # Handle the clicks on property values
+        if 'visualbox' in self.components:
+            dlink((self.visualbox, 'new_val'), (self, 'value')) # Handle the visual widget changes
+        if 'histbox' in self.components:
+            link((self, '_history'), (self.histbox, '_history'))
+        if 'searchbox' in self.components and 'argsbox' in self.components:
+            dlink((self.searchbox, 'no_args'), (self.argsbox, 'no_args'))
+        if 'runbutton' in self.components:
+            def compute_selected_method(button):
+                method_name = self.searchbox.content
+                args = self.argsbox.content
+                try:
+                    if AlarmInterrupt:
+                        alarm(TIMEOUT)
+                    out = _eval_in_main("__obj__.{}({})".format(method_name, args), locals={"__obj__": self.value})
+                    if AlarmInterrupt:
+                        cancel_alarm()
+                except AlarmInterrupt:
+                    self.outputbox.error.value = "Timeout!"
+                    self.outputbox.output.value = ''
+                    return
+                except Exception as e:
+                    if AlarmInterrupt:
+                        cancel_alarm()
+                    self.outputbox.error.value = '<span class="ansi-red-fg">Error: {}</span>' .format(e)
+                    self.outputbox.output.value = ''
+                    return
+                self.outputbox.new_val = out
+                self.outputbox.output.value = '${}$' .format(math_repr(out))
+                self.outputbox.error.value = ''
+            self.runbutton.on_click(compute_selected_method)
+        if 'outputbox' in self.components:
+            dlink((self.outputbox, 'value'), (self, 'value')) # Handle the clicks on output values
+        if 'searchbox' in self.components and 'helpbox' in self.components:
+            def selected_method_changed(change):
+                self.helpbox.content = self.searchbox.get_doc()
+            self.searchbox.observe(selected_method_changed, names='content')
+        if self.test_mode:
+            self.donottrack = False
+
+    def draw(self):
+        r"""
+        Setup Sage explorer visual display.
+
+        TESTS:
+            sage: from sage_explorer import SageExplorer
+            sage: e = SageExplorer(42)
+            sage: e.create_components()
+            sage: e.implement_interactivity()
+            sage: e.draw()
+        """
+        propsvbox = VBox([self.descriptionbox, self.propsbox])
+        propsvbox.add_class('explorer-flexitem')
+        topflex = HBox(
+            (propsvbox, Separator(' '), self.visualbox),
+            layout=Layout(margin='10px 0')
+        )
+        topflex.add_class("explorer-flexrow")
+        top = VBox(
+            (self.titlebox, topflex)
+        )
+        middleflex = HBox([
+            self.histbox,
+            Separator('.'),
+            self.searchbox,
+            Separator('('),
+            self.argsbox,
+            Separator(')'),
+            self.runbutton
+        ])
+        middleflex.add_class("explorer-flexrow")
+        bottom = VBox([middleflex, self.outputbox, self.helpbox, self.codebox])
+        self.children = (top, bottom)
 
     def compute(self):
         obj = self.value
         self.titlebox = ExplorerTitle(obj)
-        self.titlebox.add_class('titlebox')
-        self.titlebox.add_class('lightborder')
-        dlink((self, 'value'), (self.titlebox, 'value'))
+        #dlink((self, 'value'), (self.titlebox, 'value'))
         self.description = ExplorerDescription(obj)
-        self.props = ExplorerProperties(obj)
-        dlink((self.props, 'value'), (self, 'value')) # Handle the clicks on property values
-        self.propsbox = VBox([self.description, self.props])
-        self.propsbox.add_class('explorer-flexitem')
+        self.propsbox = ExplorerProperties(obj)
+        #dlink((self.propsbox, 'value'), (self, 'value')) # Handle the clicks on property values
+        propsvbox = VBox([self.description, self.propsbox])
+        propsvbox.add_class('explorer-flexitem')
         self.visualbox = ExplorerVisual(obj)
-        dlink((self.visualbox, 'content'), (self, 'value')) # Handle the visual widget changes
+        #dlink((self.visualbox, 'content'), (self, 'value')) # Handle the visual widget changes
         topflex = HBox(
-            (self.propsbox, Separator(' '), self.visualbox),
+            (propsvbox, Separator(' '), self.visualbox),
             layout=Layout(margin='10px 0')
         )
         topflex.add_class("explorer-flexrow")
@@ -555,17 +730,17 @@ class SageExplorer(VBox):
         )
 
         self.histbox = ExplorerHistory(obj)
-        dlink((self, '_history'), (self.histbox, '_history'))
+        #link((self, '_history'), (self.histbox, '_history'))
         self.searchbox = ExplorerMethodSearch(obj)
         self.argsbox = ExplorerArgs(obj)
-        dlink((self.searchbox, 'no_args'), (self.argsbox, 'no_args'))
+        #dlink((self.searchbox, 'no_args'), (self.argsbox, 'no_args'))
         self.runbutton = Button(
             description='Run!',
             tooltip='Run the method with specified arguments',
             layout = Layout(width='4em', right='0')
         )
-        def compute_selected_method(button):
-            method_name = self.searchbox.selected_method
+        def compute_selection(button):
+            method_name = self.searchbox.selection
             args = self.argsbox.content
             try:
                 if AlarmInterrupt:
@@ -586,7 +761,7 @@ class SageExplorer(VBox):
             self.outputbox.content = out
             self.outputbox.output.value = '${}$' .format(math_repr(out))
             self.outputbox.error.value = ''
-        self.runbutton.on_click(compute_selected_method)
+        #self.runbutton.on_click(compute_selection)
         middleflex = HBox([
             self.histbox,
             Separator('.'),
@@ -598,13 +773,13 @@ class SageExplorer(VBox):
         ])
         middleflex.add_class("explorer-flexrow")
         self.outputbox = ExplorerOutput(obj)
-        dlink((self.outputbox, 'value'), (self, 'value')) # Handle the clicks on output values
-        dlink((self.histbox, '_history'), (self, '_history')) # Handle the history selection
+        #dlink((self.outputbox, 'value'), (self, 'value')) # Handle the clicks on output values
+        #dlink((self.histbox, '_history'), (self, '_history')) # Handle the history selection
         self.helpbox = ExplorerHelp(obj)
 
-        def selected_method_changed(change):
+        def selection_changed(change):
             self.helpbox.content = self.searchbox.get_doc()
-        self.searchbox.observe(selected_method_changed, names='selected_method')
+        #self.searchbox.observe(selection_changed, names='selection')
         self.bottom = VBox([middleflex, self.outputbox, self.helpbox])
 
         self.children = (self.top, self.bottom)
