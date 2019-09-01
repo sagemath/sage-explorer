@@ -383,8 +383,7 @@ class ExplorerMethodSearch(Box):
         self.get_members()
         c = Combobox(
             options=[m.name for m in self.members],
-            placeholder="Enter method name",
-            continuous_update = False
+            placeholder="Enter method name"
         )
         super(ExplorerMethodSearch, self).__init__((c,))
         def method_changed(change):
@@ -400,9 +399,7 @@ class ExplorerMethodSearch(Box):
                     self.args_placeholder = str(defaults)
                 else:
                     self.args_placeholder = "Enter arguments"
-        #dlink((self.children[0], 'value'), (self, 'content'))
-        self.observe(method_changed, names='content') # ici on calcule un éventuel no_args
-        #self.observe(method_changed, names='value') # ici on calcule un éventuel no_args
+        c.observe(method_changed, names='value')
 
     def get_members(self):
         if isclass(self.value):
@@ -485,7 +482,7 @@ class ExplorerOutput(Box):
             if change.new:
                 change.owner.remove_class('invisible')
                 change.owner.add_class('visible')
-                change.owner.value = '${}$' .format(math_repr(change.new))
+                #change.owner.value = '${}$' .format(math_repr(change.new))
             else:
                 change.owner.remove_class('visible')
                 change.owner.add_class('invisible')
