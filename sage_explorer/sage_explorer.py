@@ -600,11 +600,19 @@ class SageExplorer(VBox):
         self.value = obj
         self._history = ExplorableHistory(obj) #, initial_name=self.initial_name)
         self.components = components
-        #self.compute()
         if not test_mode:
+            #self.compute()
             self.create_components()
             self.implement_interactivity()
             self.draw()
+        self.donottrack = False
+
+    def compute(self):
+        self.donottrack = True
+        for name in self.components:
+            if name not in ['runbutton', 'codebox']:
+                setattr(gettattr(self, name), 'value', self.value)
+        #self.draw()
         self.donottrack = False
 
     def create_components(self):
@@ -708,81 +716,6 @@ class SageExplorer(VBox):
         middleflex.add_class("explorer-flexrow")
         bottom = VBox([middleflex, self.outputbox, self.helpbox, self.codebox])
         self.children = (top, bottom)
-
-    def compute(self):
-        obj = self.value
-        self.titlebox = ExplorerTitle(obj)
-        #dlink((self, 'value'), (self.titlebox, 'value'))
-        self.description = ExplorerDescription(obj)
-        self.propsbox = ExplorerProperties(obj)
-        #dlink((self.propsbox, 'value'), (self, 'value')) # Handle the clicks on property values
-        propsvbox = VBox([self.description, self.propsbox])
-        propsvbox.add_class('explorer-flexitem')
-        self.visualbox = ExplorerVisual(obj)
-        #dlink((self.visualbox, 'content'), (self, 'value')) # Handle the visual widget changes
-        topflex = HBox(
-            (propsvbox, Separator(' '), self.visualbox),
-            layout=Layout(margin='10px 0')
-        )
-        topflex.add_class("explorer-flexrow")
-        self.top = VBox(
-            (self.titlebox, topflex)
-        )
-
-        self.histbox = ExplorerHistory(obj)
-        #link((self, '_history'), (self.histbox, '_history'))
-        self.searchbox = ExplorerMethodSearch(obj)
-        self.argsbox = ExplorerArgs(obj)
-        #dlink((self.searchbox, 'no_args'), (self.argsbox, 'no_args'))
-        self.runbutton = Button(
-            description='Run!',
-            tooltip='Run the method with specified arguments',
-            layout = Layout(width='4em', right='0')
-        )
-        def compute_selection(button):
-            method_name = self.searchbox.selection
-            args = self.argsbox.content
-            try:
-                if AlarmInterrupt:
-                    alarm(TIMEOUT)
-                out = _eval_in_main("__obj__.{}({})".format(method_name, args), locals={"__obj__": obj})
-                if AlarmInterrupt:
-                    cancel_alarm()
-            except AlarmInterrupt:
-                self.outputbox.error.value = "Timeout!"
-                self.outputbox.output.value = ''
-                return
-            except Exception as e:
-                if AlarmInterrupt:
-                    cancel_alarm()
-                self.outputbox.error.value = '<span class="ansi-red-fg">Error: {}</span>' .format(e)
-                self.outputbox.output.value = ''
-                return
-            self.outputbox.content = out
-            self.outputbox.output.value = '${}$' .format(math_repr(out))
-            self.outputbox.error.value = ''
-        #self.runbutton.on_click(compute_selection)
-        middleflex = HBox([
-            self.histbox,
-            Separator('.'),
-            self.searchbox,
-            Separator('('),
-            self.argsbox,
-            Separator(')'),
-            self.runbutton
-        ])
-        middleflex.add_class("explorer-flexrow")
-        self.outputbox = ExplorerOutput(obj)
-        #dlink((self.outputbox, 'value'), (self, 'value')) # Handle the clicks on output values
-        #dlink((self.histbox, '_history'), (self, '_history')) # Handle the history selection
-        self.helpbox = ExplorerHelp(obj)
-
-        def selection_changed(change):
-            self.helpbox.content = self.searchbox.get_doc()
-        #self.searchbox.observe(selection_changed, names='selection')
-        self.bottom = VBox([middleflex, self.outputbox, self.helpbox])
-
-        self.children = (self.top, self.bottom)
 
     @observe('value')
     def value_changed(self, change):
