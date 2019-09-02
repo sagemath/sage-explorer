@@ -126,11 +126,12 @@ class Separator(Label):
 
 
 class ExplorableHistory(deque):
-    def __init__(self, obj, initial_name=None):
-        super(ExplorableHistory, self).__init__()
-        self.append(obj)
+    def __init__(self, obj, initial_name=None, previous_history=[]):
+        super(ExplorableHistory, self).__init__(previous_history)
+        if obj:
+            self.append(obj)
         self.initial_name = self.get_initial_name(value=obj)
-        self.current_index = 0
+        self.current_index = len(previous_history)
 
     @staticmethod
     def get_initial_name(value=None, test_sh_hist=[]):
@@ -506,12 +507,22 @@ class ExplorerHistory(ExplorerComponent):
     new_val = Any() # Use selection ?
     _history = Instance(ExplorableHistory)
 
-    def __init__(self, obj): #, history=None):
+    def __init__(self, obj, history=None):
+        r"""
+        Which is the specialized widget class name for viewing this object (if any)
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExplorerHistory, ExplorableHistory
+            sage: h = ExplorerHistory('Initial value')
+            sage: h._history
+            ExplorableHistory(['Initial value'])
+            sage: h._history.push(42)
+            sage: h._history = ExplorableHistory(43, previous_history=list(h._history))
+            sage: h._history
+            ExplorableHistory(['Initial value', 42, 43])
+        """
         self.donottrack = True
-        #if history:
-        #    self._history = history
-        # else
-        self._history = ExplorableHistory(obj)
+        self._history = history or ExplorableHistory(obj)
         super(ExplorerHistory, self).__init__(
             obj,
             children=(Dropdown(
@@ -527,6 +538,11 @@ class ExplorerHistory(ExplorerComponent):
                 return
             self.donottrack = True
             self.new_val = self._history.get_item(change.new)
+            self._history = ExplorableHistory( # Seems to be necessary in order to 'change' _history
+                None,
+                initial_name=self._history.initial_name,
+                previous_history=self._history
+            )
             self._history.set_index(change.new)
             self.donottrack = False
         self.children[0].observe(dropdown_selection, names='value')
@@ -539,6 +555,7 @@ class ExplorerHistory(ExplorerComponent):
     def history_changed(self, change):
         if self.donottrack:
             return
+        #print("ok ")
         self.donottrack = True
         self.compute()
         self.donottrack = False
@@ -799,6 +816,11 @@ class SageExplorer(VBox):
         for name in self.components:
             if name in ['runbutton', 'codebox']:
                 setattr(self, name, self.components[name].__call__())
+            elif name == 'histbox':
+                setattr(self, name, self.components[name].__call__(
+                    self.value,
+                    history=self._history
+                ))
             else:
                 setattr(self, name, self.components[name].__call__(self.value))
 
