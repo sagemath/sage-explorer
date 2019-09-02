@@ -499,50 +499,48 @@ class ExplorerVisual(ExplorerComponent):
         dlink((self.children[0], 'value'), (self, 'new_val'))
 
 
-class ExplorerHistory(Box):
+class ExplorerHistory(ExplorerComponent):
     r"""
     A text input to give a name to a math object
     """
-    value = Any()
     new_val = Any() # Use selection ?
     _history = Instance(ExplorableHistory)
 
-    def __init__(self, obj, history=None):
-        self.value = obj
-        self._history = history or ExplorableHistory(obj)
-        d = Dropdown(
-            options=self._history.make_menu_options(),
-            value = self._history.current_index,
-            layout=Layout(width='5em', padding='0', margin='0')
-        )
+    def __init__(self, obj): #, history=None):
+        self.donottrack = True
+        #if history:
+        #    self._history = history
+        # else
+        self._history = ExplorableHistory(obj)
         super(ExplorerHistory, self).__init__(
-            (d,),
+            obj,
+            children=(Dropdown(
+                layout=Layout(width='5em', padding='0', margin='0')
+            ),),
             layout=Layout(padding='0')
         )
+        self.compute()
+        self.donottrack = False
         # User input
-        def changed(change):
+        def dropdown_selection(change):
             if self.donottrack:
                 return
             self.donottrack = True
             self.new_val = self._history.get_item(change.new)
             self._history.set_index(change.new)
             self.donottrack = False
-        #d.observe(changed, names='value')
-        # History change
-        def history_changed(change):
-            if self.donottrack:
-                return
-            self.donottrack = True
-            self._history = change.new
-            self.children[0].options = self._history.make_menu_options()
-            self.children[0].value = change.new.current_index
-            if change.new == 0:
-                self.new_val = self.initial_name
-                self.children[0].disabled = True
-            else:
-                self.new_val = "Hist[{}]" . format(change.new.current_index)
-            self.donottrack = False
-        #self.observe(history_changed, names='_history')
+        self.children[0].observe(dropdown_selection, names='value')
+
+    def compute(self):
+        self.children[0].options = self._history.make_menu_options()
+        self.children[0].value = self._history.current_index
+
+    @observe('_history')
+    def history_changed(self, change):
+        if self.donottrack:
+            return
+        self.donottrack = True
+        self.compute()
         self.donottrack = False
 
 
@@ -821,6 +819,7 @@ class SageExplorer(VBox):
         if 'visualbox' in self.components:
             dlink((self.visualbox, 'new_val'), (self, 'value')) # Handle the visual widget changes
         if 'histbox' in self.components:
+            dlink((self.histbox, 'new_val'), (self, 'value')) # Handle the history selection
             link((self, '_history'), (self.histbox, '_history'))
         if 'searchbox' in self.components and 'argsbox' in self.components:
             dlink((self.searchbox, 'no_args'), (self.argsbox, 'no_args'))
