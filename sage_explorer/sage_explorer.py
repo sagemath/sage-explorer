@@ -14,6 +14,7 @@ AUTHORS:
 
 """
 import re, warnings
+from abc import abstractmethod
 from cysignals.alarm import alarm, cancel_alarm
 from cysignals.signals import AlarmInterrupt
 from inspect import isclass
@@ -123,22 +124,89 @@ class Separator(Label):
         )
         self.add_class("separator")
 
+class ExplorerComponent(Box):
+    r"""
+    Common methods to all components.
 
-class ExplorerTitle(Box):
-    r"""The sage explorer title bar
+    TESTS::
+        sage: from sage_explorer.sage_explorer import ExplorerComponent
+        sage: c = ExplorerComponent("Initial value")
+        sage: c.value = 42
     """
     value = Any()
+
+    def __init__(self, obj, **kws):
+        r"""
+        Common methods to all components.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExplorerComponent
+            sage: c = ExplorerComponent("Initial value")
+            sage: c.value = 42
+        """
+        super(ExplorerComponent, self).__init__(**kws)
+        self.donottrack = True
+        self.value = obj
+        self.compute()
+        self.donottrack = False
+
+    @abstractmethod
+    def compute(self):
+        r"""
+        Common methods to all components.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExplorerComponent
+            sage: c = ExplorerComponent("Initial value")
+            sage: c.value = 42
+        """
+        pass
+
+    @observe('value')
+    def value_changed(self, change):
+        r"""
+        What to do when the value has been changed.
+
+        INPUT:
+
+            - ``change`` -- a change Bunch
+
+        TESTS ::
+
+            sage: from sage_explorer.sage_explorer import ExplorerComponent
+            sage: obj = Tableau([[1, 2, 5, 6], [3], [4]])
+            sage: new_obj = 42
+            sage: p = ExplorerComponent(obj)
+            sage: p.value = new_obj
+
+        """
+        if self.donottrack:
+            return
+        old_val = change.old
+        new_val = change.new
+        actually_changed = (id(new_val) != id(old_val))
+        if actually_changed:
+            self.compute()
+
+
+class ExplorerTitle(ExplorerComponent):
+    r"""The sage explorer title bar
+    """
     content = Unicode('')
 
     def __init__(self, obj):
-        self.value = obj
-        self.content = "Exploring: {}" . format(math_repr(obj))
-        m = MathTitle(self.content, 2)
+        self.content = math_repr(obj)
+        m = MathTitle("Exploring: {}" . format(self.content), 2)
         super(ExplorerTitle, self).__init__(
-            (m,),
+            obj,
+            children=(m,),
             layout=Layout(padding='5px 10px')
         )
         self.add_class("explorer-title")
+
+    def compute(self):
+        self.content = math_repr(self.value)
+        self.children[0].value = "Exploring: {}" . format(self.content)
 
 
 class ExplorerDescription(Box):
@@ -426,7 +494,6 @@ class ExplorerProperties(GridBox):
             sage: p = ExplorerProperties(obj)
             sage: len(p.children)
             8
-            sage: from traitlets import Bunch
             sage: p.value = new_obj
             sage: len(p.children)
             2
