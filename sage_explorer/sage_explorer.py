@@ -323,6 +323,28 @@ class ExplorableHistory(deque):
         self.current_index = self.current_index - shift
 
 
+class ExplorableValue(HTMLMath):
+    r"""
+    A repr string with a link to a Sage object.
+
+    TESTS:
+        sage: from sage_explorer.sage_explorer import ExplorableValue
+        sage: ev = ExplorableValue("original val", explorable=42)
+    """
+    explorable = Any() # Some computed math object
+    new_val = Any() # Overall value. Will be changed when explorable is clicked
+
+    def __init__(self, obj, explorable):
+        self.new_val = obj
+        self.explorable = explorable
+        super(ExplorableValue, self).__init__(math_repr(explorable), layout=Layout(margin='1px'))
+        self.add_class('explorable-value')
+        self.clc = Event(source=self, watched_events=['click'])
+        def set_new_val(event):
+            self.new_val = self.explorable
+        self.clc.on_dom_event(set_new_val)
+
+
 class ExplorerComponent(Box):
     r"""
     Common methods to all components.
@@ -428,48 +450,17 @@ class ExplorerDescription(ExplorerComponent):
             self.content = ''
 
 
-class ExplorableValue(HTMLMath):
-    r"""
-    A repr string with a link to a Sage object.
-
-    TESTS:
-        sage: from sage_explorer.sage_explorer import ExplorableValue
-        sage: ev = ExplorableValue("original val", explorable=42)
-    """
-    explorable = Any() # Some computed math object
-    new_val = Any() # Overall value. Will be changed when explorable is clicked
-
-    def __init__(self, obj, explorable):
-        self.new_val = obj
-        self.explorable = explorable
-        super(ExplorableValue, self).__init__(math_repr(explorable), layout=Layout(margin='1px'))
-        self.add_class('explorable-value')
-        self.clc = Event(source=self, watched_events=['click'])
-        def set_new_val(event):
-            self.new_val = self.explorable
-        self.clc.on_dom_event(set_new_val)
-
-
-class ExplorerProperties(GridBox):
+class ExplorerProperties(ExplorerComponent, GridBox):
     r"""
     Display object properties as a table.
     """
-    value = Any()
-
     def __init__(self, obj):
-        self.value = obj
-        children = []
-        for p in get_properties(obj):
-            explorable = getattr(obj, p.name).__call__()
-            children.append(Box((Label(p.prop_label),), layout=Layout(border='1px solid #eee')))
-            ev = ExplorableValue(obj, explorable)
-            dlink((ev, 'new_val'), (self, 'value')) # Propagate explorable if clicked
-            children.append(Box((ev,), layout=Layout(border='1px solid #eee')))
         super(ExplorerProperties, self).__init__(
-            children,
+            obj,
             layout=Layout(border='1px solid #eee', width='100%', grid_template_columns='auto auto')
-            )
+        )
         self.add_class("explorer-table")
+        self.compute()
 
     def compute(self):
         children = []
@@ -481,66 +472,31 @@ class ExplorerProperties(GridBox):
             children.append(Box((ev,), layout=Layout(border='1px solid #eee')))
         self.children = children
 
-    @observe('value')
-    def value_changed(self, change):
-        r"""
-        What to do when the value has been changed.
 
-        INPUT:
-
-            - ``change`` -- a change Bunch
-
-        TESTS ::
-
-            sage: from sage_explorer.sage_explorer import ExplorerProperties
-            sage: obj = Tableau([[1, 2, 5, 6], [3], [4]])
-            sage: new_obj = 42
-            sage: p = ExplorerProperties(obj)
-            sage: len(p.children)
-            8
-            sage: p.value = new_obj
-            sage: len(p.children)
-            2
-        """
-        #if self.donottrack:
-        #    return
-        old_val = change.old
-        new_val = change.new
-        actually_changed = (id(new_val) != id(old_val))
-        if actually_changed:
-            self.compute()
-
-
-class ExplorerVisual(Box):
+class ExplorerVisual(ExplorerComponent):
     r"""
     The sage explorer visual representation
     """
-    value = Any()
     new_val = Any() # holds visual widget value
 
     def __init__(self, obj):
-        self.value = obj
         super(ExplorerVisual, self).__init__(
+            obj,
             layout = Layout(right='0')
         )
-        w = _get_visual_widget(obj)
+        self.compute()
+
+    def compute(self):
+        w = _get_visual_widget(self.value)
         if w:
             self.children = [w]
         else:
-            if hasattr(obj, '__ascii_art__'):
-                l = repr(obj._ascii_art_())
+            if hasattr(self.value, '__ascii_art__'):
+                l = repr(self.value._ascii_art_())
             else:
-                l = repr(obj)
+                l = repr(self.value)
                 self.children = [Textarea(l, rows=8)]
         dlink((self.children[0], 'value'), (self, 'new_val'))
-
-    def get_widget(self):
-        if isclass(self.obj):
-            return
-        if hasattr(obj, "_widget_"):
-            return obj._widget_()
-        else:
-            return
 
 
 class ExplorerHistory(Box):
