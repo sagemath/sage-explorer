@@ -399,6 +399,46 @@ class ExplorerProperties(GridBox):
             )
         self.add_class("explorer-table")
 
+    def compute(self):
+        children = []
+        for p in get_properties(self.value):
+            explorable = getattr(self.value, p.name).__call__()
+            children.append(Box((Label(p.prop_label),), layout=Layout(border='1px solid #eee')))
+            ev = ExplorableValue(self.value, explorable)
+            dlink((ev, 'new_val'), (self, 'value')) # Propagate explorable if clicked
+            children.append(Box((ev,), layout=Layout(border='1px solid #eee')))
+        self.children = children
+
+    @observe('value')
+    def value_changed(self, change):
+        r"""
+        What to do when the value has been changed.
+
+        INPUT:
+
+            - ``change`` -- a change Bunch
+
+        TESTS ::
+
+            sage: from sage_explorer.sage_explorer import ExplorerProperties
+            sage: obj = Tableau([[1, 2, 5, 6], [3], [4]])
+            sage: new_obj = 42
+            sage: p = ExplorerProperties(obj)
+            sage: len(p.children)
+            8
+            sage: from traitlets import Bunch
+            sage: p.value = new_obj
+            sage: len(p.children)
+            2
+        """
+        #if self.donottrack:
+        #    return
+        old_val = change.old
+        new_val = change.new
+        actually_changed = (id(new_val) != id(old_val))
+        if actually_changed:
+            self.compute()
+
 
 class ExplorerVisual(Box):
     r"""
