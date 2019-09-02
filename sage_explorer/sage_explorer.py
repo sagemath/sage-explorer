@@ -69,8 +69,17 @@ def _get_visual_widget(obj):
         return
 
 def math_repr(obj):
-    # When Sage LaTeX implementation
-    # applies well to MathJax, use it.
+    r"""
+    When Sage LaTeX implementation
+    applies well to MathJax, use it.
+
+    TESTS::
+        sage: from sage.all import *
+        sage: from sage_explorer.sage_explorer import math_repr
+        sage: t = Tableau([[1,2], [3]])
+        sage: math_repr(t.cocharge())
+        '$1$'
+    """
     if not obj:
         return ''
     if hasattr(obj, '_latex_'):
@@ -203,16 +212,42 @@ class ExplorableHistory(deque):
                         pass
         return initial_name
 
-    def get_index(self, i):
+    def get_index(self):
+        r"""
+        Get current object history index.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExplorableHistory
+            sage: h = ExplorableHistory(42)
+            sage: h.get_index()
+            0
+        """
         return self.current_index
 
     def set_index(self, i):
+        r"""
+        Set current object history index.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExplorableHistory
+            sage: h = ExplorableHistory(42)
+            sage: h.set_index(2)
+            sage: h.get_index()
+            2
+        """
         self.current_index = i
 
     def push(self, obj):
         r"""
         Push the history, ie append
         an object and increment index.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExplorableHistory
+            sage: h = ExplorableHistory(42)
+            sage: h.push("An object")
+            sage: h
+            ExplorableHistory([42, 'An object'])
         """
         self.current_index = self.__len__()
         self.append(obj)
@@ -222,28 +257,103 @@ class ExplorableHistory(deque):
         r"""
         Pop the history, ie pop the list
         and decrement index.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExplorableHistory
+            sage: h = ExplorableHistory("A first value")
+            sage: h.push(42)
+            sage: h.pop()
+            42
+            sage: h
+            ExplorableHistory(['A first value'])
+            sage: h.current_index
+            0
+            sage: h.pop()
+            Traceback (most recent call last):
+            ...
+            Exception: No more history!
         """
         val = super(ExplorableHistory, self).pop()
-        self.current_index = self.__len__() - 1
+        if self.current_index < 1:
+            raise Exception("No more history!")
+        self.current_index -= 1
         return val
 
     def get_item(self, i=None):
-        return self.__getitem__(i or self.current_index)
+        r"""
+        Pop the history, ie pop the list
+        and decrement index.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExplorableHistory
+            sage: h = ExplorableHistory("A first value")
+            sage: h.push(42)
+            sage: h.get_item(1)
+            42
+            sage: h.get_item(0)
+            'A first value'
+            sage: h.get_item()
+            42
+        """
+        if i is None:
+            return self[self.current_index]
+        return self.__getitem__(i)
 
     def get_current_item(self):
+        r"""
+        Get current history item.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExplorableHistory
+            sage: h = ExplorableHistory("A first value")
+            sage: h.push(42)
+            sage: h.get_current_item()
+            42
+            sage: h
+            ExplorableHistory(['A first value', 42])
+            sage: h.current_index
+            1
+        """
         return self.get_item()
 
     def make_menu_options(self):
+        r"""
+        Truncate the history, ie pop values
+        from the start, until list becomes small enough.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExplorableHistory
+            sage: h = ExplorableHistory("A first value")
+            sage: h.make_menu_options()
+            [('Hist[0]', 0)]
+            sage: for i in range(2): h.push(i)
+            sage: h.make_menu_options()
+            [('Hist[0]', 0), ('Hist[1]', 1), ('Hist[2]', 2)]
+        """
         first_label = self.initial_name or "Hist[0]"
         return [(first_label, 0)] + [("Hist[{}]" . format(i+1), i+1) for i in range(self.__len__()-1)]
 
     def truncate(self, max=MAX_LEN_HISTORY):
+        r"""
+        Truncate the history, ie pop values
+        from the start, until list becomes small enough.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExplorableHistory
+            sage: h = ExplorableHistory("A first value")
+            sage: for i in range(55): h.push(i)
+            sage: len(h)
+            50
+            sage: h.truncate(10)
+            sage: h
+            ExplorableHistory([45, 46, 47, 48, 49, 50, 51, 52, 53, 54])
+        """
         shift = self.__len__() - max
         if shift < 1:
             return
         for i in range(shift):
             self.popleft()
-        self.current_index = self.current_index + shift
+        self.current_index = self.current_index - shift
 
 
 class ExplorableValue(HTMLMath):
@@ -608,7 +718,7 @@ class SageExplorer(VBox):
         self.donottrack = True
         for name in self.components:
             if name not in ['runbutton', 'codebox']:
-                setattr(gettattr(self, name), 'value', self.value)
+                setattr(getattr(self, name), 'value', self.value)
         #self.draw()
         self.donottrack = False
 
