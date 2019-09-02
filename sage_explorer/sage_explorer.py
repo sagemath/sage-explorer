@@ -124,107 +124,6 @@ class Separator(Label):
         )
         self.add_class("separator")
 
-class ExplorerComponent(Box):
-    r"""
-    Common methods to all components.
-
-    TESTS::
-        sage: from sage_explorer.sage_explorer import ExplorerComponent
-        sage: c = ExplorerComponent("Initial value")
-        sage: c.value = 42
-    """
-    value = Any()
-
-    def __init__(self, obj, **kws):
-        r"""
-        Common methods to all components.
-
-        TESTS::
-            sage: from sage_explorer.sage_explorer import ExplorerComponent
-            sage: c = ExplorerComponent("Initial value")
-            sage: c.value = 42
-        """
-        super(ExplorerComponent, self).__init__(**kws)
-        self.donottrack = True
-        self.value = obj
-        self.compute()
-        self.donottrack = False
-
-    @abstractmethod
-    def compute(self):
-        r"""
-        Common methods to all components.
-
-        TESTS::
-            sage: from sage_explorer.sage_explorer import ExplorerComponent
-            sage: c = ExplorerComponent("Initial value")
-            sage: c.value = 42
-        """
-        pass
-
-    @observe('value')
-    def value_changed(self, change):
-        r"""
-        What to do when the value has been changed.
-
-        INPUT:
-
-            - ``change`` -- a change Bunch
-
-        TESTS ::
-
-            sage: from sage_explorer.sage_explorer import ExplorerComponent
-            sage: obj = Tableau([[1, 2, 5, 6], [3], [4]])
-            sage: new_obj = 42
-            sage: p = ExplorerComponent(obj)
-            sage: p.value = new_obj
-
-        """
-        if self.donottrack:
-            return
-        old_val = change.old
-        new_val = change.new
-        actually_changed = (id(new_val) != id(old_val))
-        if actually_changed:
-            self.compute()
-
-
-class ExplorerTitle(ExplorerComponent):
-    r"""The sage explorer title bar
-    """
-    content = Unicode('')
-
-    def __init__(self, obj):
-        self.content = math_repr(obj)
-        m = MathTitle("Exploring: {}" . format(self.content), 2)
-        super(ExplorerTitle, self).__init__(
-            obj,
-            children=(m,),
-            layout=Layout(padding='5px 10px')
-        )
-        self.add_class("explorer-title")
-
-    def compute(self):
-        self.content = math_repr(self.value)
-        self.children[0].value = "Exploring: {}" . format(self.content)
-
-
-class ExplorerDescription(Box):
-    r"""The sage explorer object description
-    """
-    value = Any()
-    content = Unicode('')
-
-    def __init__(self, obj):
-        self.value = obj
-        if obj.__doc__:
-            s = [l for l in obj.__doc__.split("\n") if l][0].strip()
-        else:
-            s = ''
-        super(ExplorerDescription, self).__init__((HTMLMath(s),))
-        self.content = s
-        self.add_class("explorer-description")
-
 
 class ExplorableHistory(deque):
     def __init__(self, obj, initial_name=None):
@@ -422,6 +321,111 @@ class ExplorableHistory(deque):
         for i in range(shift):
             self.popleft()
         self.current_index = self.current_index - shift
+
+
+class ExplorerComponent(Box):
+    r"""
+    Common methods to all components.
+
+    TESTS::
+        sage: from sage_explorer.sage_explorer import ExplorerComponent
+        sage: c = ExplorerComponent("Initial value")
+        sage: c.value = 42
+    """
+    value = Any()
+
+    def __init__(self, obj, **kws):
+        r"""
+        Common methods to all components.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExplorerComponent
+            sage: c = ExplorerComponent("Initial value")
+            sage: c.value = 42
+        """
+        self.donottrack = True
+        self.value = obj
+        super(ExplorerComponent, self).__init__(**kws)
+        self.compute()
+        self.donottrack = False
+
+    @abstractmethod
+    def compute(self):
+        r"""
+        Common methods to all components.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExplorerComponent
+            sage: c = ExplorerComponent("Initial value")
+            sage: c.value = 42
+        """
+        pass
+
+    @observe('value')
+    def value_changed(self, change):
+        r"""
+        What to do when the value has been changed.
+
+        INPUT:
+
+            - ``change`` -- a change Bunch
+
+        TESTS ::
+
+            sage: from sage_explorer.sage_explorer import ExplorerComponent
+            sage: obj = Tableau([[1, 2, 5, 6], [3], [4]])
+            sage: new_obj = 42
+            sage: p = ExplorerComponent(obj)
+            sage: p.value = new_obj
+
+        """
+        if self.donottrack:
+            return
+        old_val = change.old
+        new_val = change.new
+        actually_changed = (id(new_val) != id(old_val))
+        if actually_changed:
+            self.compute()
+
+
+class ExplorerTitle(ExplorerComponent):
+    r"""The sage explorer title bar
+    """
+    content = Unicode('')
+
+    def __init__(self, obj):
+        super(ExplorerTitle, self).__init__(
+            obj,
+            children=(MathTitle('', 2),),
+            layout=Layout(padding='5px 10px')
+        )
+        self.compute()
+        self.add_class("explorer-title")
+
+    def compute(self):
+        self.content = math_repr(self.value)
+        self.children[0].value = "Exploring: {}" . format(self.content)
+
+
+class ExplorerDescription(ExplorerComponent):
+    r"""The sage explorer object description
+    """
+    content = Unicode('')
+
+    def __init__(self, obj):
+        super(ExplorerDescription, self).__init__(
+            obj,
+            children=(HTMLMath(),)
+        )
+        self.compute()
+        dlink((self, 'content'), (self.children[0], 'value'))
+        self.add_class("explorer-description")
+
+    def compute(self):
+        if self.value.__doc__:
+            self.content = [l for l in self.value.__doc__.split("\n") if l][0].strip()
+        else:
+            self.content = ''
 
 
 class ExplorableValue(HTMLMath):
