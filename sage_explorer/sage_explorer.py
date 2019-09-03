@@ -345,6 +345,14 @@ class ExplorableValue(HTMLMath):
             self.new_val = self.explorable
         self.clc.on_dom_event(set_new_val)
 
+    def switch_visibility(self, visibility):
+        if visibility:
+            self.remove_class('invisible')
+            self.add_class('visible')
+        else:
+            self.remove_class('visible')
+            self.add_class('invisible')
+
 
 class ExplorerComponent(Box):
     r"""
@@ -561,23 +569,23 @@ class ExplorerHistory(ExplorerComponent):
         self.donottrack = False
 
 
-class ExplorerMethodSearch(Box):
+class ExplorerMethodSearch(ExplorerComponent):
     r"""
     A widget to search a method
     """
-    value = Any()
     content = Unicode('')
     no_args = Bool(False)
     args_placeholder = Unicode("Enter arguments")
 
     def __init__(self, obj):
-        self.value = obj
-        self.get_members()
         c = Combobox(
-            options=[m.name for m in self.members],
             placeholder="Enter method name"
         )
-        super(ExplorerMethodSearch, self).__init__((c,))
+        super(ExplorerMethodSearch, self).__init__(
+            obj,
+            children=(c,)
+        )
+        self.compute()
         def method_changed(change):
             selected_method = change.new
             if selected_method in self.members_dict:
@@ -592,6 +600,10 @@ class ExplorerMethodSearch(Box):
                 else:
                     self.args_placeholder = "Enter arguments"
         c.observe(method_changed, names='value')
+
+    def compute(self):
+        self.get_members()
+        self.children[0].options=[m.name for m in self.members]
 
     def get_members(self):
         if isclass(self.value):
@@ -616,24 +628,29 @@ class ExplorerMethodSearch(Box):
                 m.compute_argspec()
             return m.args, m.defaults
 
-class ExplorerArgs(Box):
+class ExplorerArgs(ExplorerComponent):
     r"""
-    A text input to input method arguments
+    A text box to input method arguments
     """
-    value = Any()
-    content = Unicode()
+    content = Unicode('')
     no_args = Bool(False)
 
     def __init__(self, obj=None):
-        self.value = obj
-        self.content = ''
-        t = Text(
-            self.content,
-            placeholder="Enter arguments",
-            layout=Layout(width="100%")
-        )
+        r"""
+        A text box to input method arguments.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExplorerArgs
+            sage: a = ExplorerArgs()
+            sage: a.value = 'some arguments'
+        """
         super(ExplorerArgs, self).__init__(
-            (t,)
+            obj,
+            children=(Text(
+                '',
+                placeholder="Enter arguments",
+                layout=Layout(width="100%")
+            ),)
         )
         self.add_class("explorer-flexitem")
         def disable(change):
@@ -644,7 +661,11 @@ class ExplorerArgs(Box):
                 change.owner.placeholder = "Enter arguments"
         self.children[0].observe(disable, names='disabled')
         dlink((self, 'no_args'), (self.children[0], 'disabled'))
-        dlink((self.children[0], 'value'), (self, 'content'))
+        link((self, 'content'), (self.children[0], 'value'))
+
+    def compute(self):
+        self.content = ''
+        self.no_args = False
 
 
 class ExplorerRunButton(Button):
@@ -659,25 +680,29 @@ class ExplorerRunButton(Button):
         )
 
 
-class ExplorerOutput(Box):
+class ExplorerOutput(ExplorerComponent):
     r"""
     A text box to output method results
     """
-    value = Any() # the explorer value
     new_val = Any() # output value
 
     def __init__(self, obj=None):
-        self.value = obj
+        r"""
+        Common methods to all components.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExplorerOutput
+            sage: c = ExplorerOutput("Initial value")
+            sage: c.value = 42
+        """
         self.output = ExplorableValue(obj, '')
         self.output.add_class('invisible')
         def output_changed(change):
             if change.new:
-                change.owner.remove_class('invisible')
-                change.owner.add_class('visible')
+                change.owner.switch_visibility(True)
                 #change.owner.value = '${}$' .format(math_repr(change.new))
             else:
-                change.owner.remove_class('visible')
-                change.owner.add_class('invisible')
+                change.owner.switch_visibility(False)
         self.output.observe(output_changed, names='value')
         self.clc = Event(source=self.output, watched_events=['click'])
         def propagate_click(event):
@@ -686,34 +711,49 @@ class ExplorerOutput(Box):
         self.error = HTML("")
         self.error.add_class("ansi-red-fg")
         super(ExplorerOutput, self).__init__(
-            (self.output, self.error),
+            obj,
+            children=(self.output, self.error),
             layout = Layout(padding='2px 50px 2px 2px')
         )
 
+    def compute(self):
+        self.new_val = None
+        self.output.value = ''
+        self.output.switch_visibility(False)
+        self.error.value = ''
 
-class ExplorerHelp(Accordion):
+
+class ExplorerHelp(ExplorerComponent, Accordion):
     r"""
     Contains help, or output + help as expandable
     Contains MathJax
     """
-    value = Any()
     content = Unicode('')
 
     def __init__(self, obj):
-        self.value = obj
-        t = HTMLMath()
+        r"""
+        A box for object or method help text.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExplorerHelp
+            sage: h = ExplorerHelp(42)
+            sage: h.content = "Some help text"
+            sage: h._titles
+            {'0': 'Some help text'}
+        """
         super(ExplorerHelp, self).__init__(
-            (t,),
+            obj,
+            children=(HTMLMath(),),
             selected_index=None,
             layout=Layout(width='99%', padding='0')
         )
         def content_changed(change):
-            self.compute()
+            self.compute_title()
         self.observe(content_changed, names='content')
-        self.content = obj.__doc__ or 'Help'
+        dlink((self, 'content'), (self.children[0], 'value'))
+        self.compute()
 
-    def compute(self):
-        self.children[0].value = self.content
+    def compute_title(self):
         s = self.content.strip()
         end_first_line = max(s.find('.'), s.find('\n'))
         if end_first_line > 0:
@@ -721,18 +761,37 @@ class ExplorerHelp(Accordion):
         else:
             self.set_title(0, s[:100])
 
+    def compute(self):
+        r"""
+        Value has changed.
 
-class ExplorerCodeCell(Textarea):
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExplorerHelp
+            sage: h = ExplorerHelp("Some initial value")
+            sage: h._titles['0'][:15]
+            "str(object='') "
+            sage: h.value = 42
+            sage: h._titles['0']
+            'Integer(x=None, base=0)\nFile: sage/rings/integer'
+        """
+        self.content = self.value.__doc__ or 'Help'
+        self.compute_title()
+
+
+class ExplorerCodeCell(ExplorerComponent):
     r"""
     TESTS:
 
         sage: from sage_explorer.sage_explorer import ExplorerCodeCell
-        sage: cc = ExplorerCodeCell()
+        sage: cc = ExplorerCodeCell(42)
     """
-    def __init__(self):
+    def __init__(self, obj):
         super(ExplorerCodeCell, self).__init__(
-            rows = 1,
-            layout=Layout(border='1px solid #eee', width='99%')
+            obj,
+            children=(Textarea(
+                rows = 1,
+                layout=Layout(border='1px solid #eee', width='99%')
+            ),)
         )
 
 
@@ -814,7 +873,7 @@ class SageExplorer(VBox):
             sage: e.create_components()
         """
         for name in self.components:
-            if name in ['runbutton', 'codebox']:
+            if name == 'runbutton':
                 setattr(self, name, self.components[name].__call__())
             elif name == 'histbox':
                 setattr(self, name, self.components[name].__call__(
