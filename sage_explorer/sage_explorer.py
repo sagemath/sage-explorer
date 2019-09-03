@@ -331,7 +331,7 @@ class ExplorableValue(HTMLMath):
     r"""
     A repr string with a link to a Sage object.
 
-    TESTS:
+    TESTS::
         sage: from sage_explorer.sage_explorer import ExplorableValue
         sage: ev = ExplorableValue("original val", explorable=42)
     """
@@ -343,7 +343,10 @@ class ExplorableValue(HTMLMath):
         self.explorable = explorable
         super(ExplorableValue, self).__init__(math_repr(explorable), layout=Layout(margin='1px'))
         self.add_class('explorable-value')
-        click_event = Event(source=self, watched_events=['click', 'keydown'])
+        click_event = Event(
+            source=self,
+            watched_events=['click', 'keydown']
+        )
         def set_new_val(event):
             if event['type'] == 'click' or event['key'] == 'Enter':
                 self.new_val = self.explorable
@@ -406,7 +409,7 @@ class ExplorerComponent(Box):
 
             - ``change`` -- a change Bunch
 
-        TESTS ::
+        TESTS::
 
             sage: from sage_explorer.sage_explorer import ExplorerComponent
             sage: obj = Tableau([[1, 2, 5, 6], [3], [4]])
@@ -834,11 +837,13 @@ class ExplorerCodeCell(ExplorerComponent):
     r"""
     A box containing a code cell.
 
-    TESTS:
+    TESTS::
 
         sage: from sage_explorer.sage_explorer import ExplorerCodeCell
         sage: cc = ExplorerCodeCell(42)
     """
+    content = Unicode('')
+
     def __init__(self, obj):
         super(ExplorerCodeCell, self).__init__(
             obj,
@@ -847,6 +852,41 @@ class ExplorerCodeCell(ExplorerComponent):
                 layout=Layout(border='1px solid #eee', width='99%')
             ),)
         )
+        dlink((self.children[0], 'value'), (self, 'content'))
+        run_event = Event(
+            source=self.children[0],
+            watched_events=['keyup']
+        )
+        def launch_evaluation(event):
+            if event['key'] == 'Enter' and (event['shiftKey'] or event['ctrlKey']):
+                self.evaluate()
+        run_event.on_dom_event(launch_evaluation) # FIXME trigger that from the explorer
+
+    def evaluate(self, l=None):
+        r"""
+        Evaluate the code cell
+        `l` being a dictionary of locals.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExplorerCodeCell
+            sage: c = ExplorerCodeCell(42)
+            sage: c.content = "a = 1"
+            sage: c.evaluate()
+            sage: c.content = "a + 2"
+            sage: c.evaluate()
+            3
+        """
+        g = globals() # the name space used by the usual Jupyter cells
+        l = l or {"_": self.value} #, "__explorer__": self, "Hist": self._history}
+        local_names = ["_", "__explorer__", "Hist"]
+        code = compile(self.content, '<string>', 'single')
+        result = eval(code, g, l)
+        if result is None: # the code may have triggered some assignments
+            for name, value in l.items():
+                if name not in local_names:
+                    g[name] = value
+        else:
+            self.value = result
 
 
 """
@@ -921,7 +961,7 @@ class SageExplorer(VBox):
         r"""
         Create all components for the explorer.
 
-        TESTS:
+        TESTS::
             sage: from sage_explorer import SageExplorer
             sage: e = SageExplorer(42)
             sage: e.create_components()
@@ -941,7 +981,7 @@ class SageExplorer(VBox):
         r"""
         Implement links and observers on explorer components.
 
-        TESTS:
+        TESTS::
             sage: from sage_explorer import SageExplorer
             sage: e = SageExplorer(42)
             sage: e.create_components()
@@ -1005,7 +1045,7 @@ class SageExplorer(VBox):
         r"""
         Setup Sage explorer visual display.
 
-        TESTS:
+        TESTS::
             sage: from sage_explorer import SageExplorer
             sage: e = SageExplorer(42)
             sage: e.create_components()
@@ -1058,7 +1098,7 @@ class SageExplorer(VBox):
 
             - ``change`` -- a change Bunch
 
-        TESTS ::
+        TESTS::
 
             sage: from sage_explorer import SageExplorer
             sage: t = Tableau([[1, 2, 5, 6], [3], [4]])
