@@ -478,10 +478,12 @@ class ExplorerProperties(ExplorerComponent, GridBox):
 
     def compute(self):
         children = []
+        self.explorables = []
         for p in get_properties(self.value):
             explorable = getattr(self.value, p.name).__call__()
             children.append(Box((Label(p.prop_label),), layout=Layout(border='1px solid #eee')))
             ev = ExplorableValue(self.value, explorable)
+            self.explorables.append(ev)
             dlink((ev, 'new_val'), (self, 'value')) # Propagate explorable if clicked
             children.append(Box((ev,), layout=Layout(border='1px solid #eee')))
         self.children = children
@@ -1009,8 +1011,15 @@ class SageExplorer(VBox):
             sage: e.create_components()
             sage: e.implement_interactivity()
             sage: e.draw()
+            sage: len(e.focuslist)
+            9
         """
+        self.focuslist = [] # Will be used to allocate focus to successive components
+        self.focuslist.append(self.titlebox)
         propsvbox = VBox([self.descriptionbox, self.propsbox])
+        for ev in self.propsbox.explorables:
+            self.focuslist.append(ev)
+        self.focuslist.append(self.visualbox)
         propsvbox.add_class('explorer-flexitem')
         topflex = HBox(
             (propsvbox, Separator(' '), self.visualbox),
@@ -1020,6 +1029,10 @@ class SageExplorer(VBox):
         top = VBox(
             (self.titlebox, topflex)
         )
+        self.focuslist.append(self.histbox)
+        self.focuslist.append(self.searchbox)
+        self.focuslist.append(self.argsbox)
+        self.focuslist.append(self.runbutton)
         middleflex = HBox([
             self.histbox,
             Separator('.'),
@@ -1030,6 +1043,9 @@ class SageExplorer(VBox):
             self.runbutton
         ])
         middleflex.add_class("explorer-flexrow")
+        self.focuslist.append(self.outputbox)
+        self.focuslist.append(self.helpbox)
+        self.focuslist.append(self.codebox)
         bottom = VBox([middleflex, self.outputbox, self.helpbox, self.codebox])
         self.children = (top, bottom)
 
