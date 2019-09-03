@@ -511,7 +511,8 @@ class ExplorerVisual(ExplorerComponent):
                     ),)
             else:
                 self.children = ()
-        dlink((self.children[0], 'value'), (self, 'new_val'))
+        if self.children:
+            dlink((self.children[0], 'value'), (self, 'new_val'))
 
 
 class ExplorerHistory(ExplorerComponent):
@@ -520,6 +521,7 @@ class ExplorerHistory(ExplorerComponent):
     """
     new_val = Any() # Use selection ?
     _history = Instance(ExplorableHistory)
+    _history_len = Integer()
 
     def __init__(self, obj, history=None):
         r"""
@@ -537,6 +539,7 @@ class ExplorerHistory(ExplorerComponent):
         """
         self.donottrack = True
         self._history = history or ExplorableHistory(obj)
+        self._history_len = len(self._history)
         super(ExplorerHistory, self).__init__(
             obj,
             children=(Dropdown(
@@ -544,7 +547,6 @@ class ExplorerHistory(ExplorerComponent):
             ),),
             layout=Layout(padding='0')
         )
-        self.compute()
         self.donottrack = False
         # User input
         def dropdown_selection(change):
@@ -562,22 +564,38 @@ class ExplorerHistory(ExplorerComponent):
         self.children[0].observe(dropdown_selection, names='value')
 
     def compute(self):
+        r"""
+        Value has changed.
+        """
+        self.compute_dropdown()
+
+    def compute_dropdown(self):
+        r"""
+        History has changed
+        """
         self.children[0].options = self._history.make_menu_options()
         self.children[0].value = self._history.current_index
+        if self._history_len > 1:
+            self.children[0].disabled = False
+        else:
+            self.children[0].disabled = True
 
-    @observe('_history')
+    @observe('_history_len')
     def history_changed(self, change):
         if self.donottrack:
             return
-        #print("ok ")
         self.donottrack = True
-        self.compute()
+        self.compute_dropdown()
         self.donottrack = False
 
 
 class ExplorerMethodSearch(ExplorerComponent):
     r"""
     A widget to search a method
+
+    TESTS::
+        sage: from sage_explorer.sage_explorer import ExplorerMethodSearch
+        sage: s = ExplorerMethodSearch(42)
     """
     content = Unicode('')
     no_args = Bool(False)
@@ -634,6 +652,7 @@ class ExplorerMethodSearch(ExplorerComponent):
                 m.compute_argspec()
             return m.args, m.defaults
 
+
 class ExplorerArgs(ExplorerComponent):
     r"""
     A text box to input method arguments
@@ -677,6 +696,10 @@ class ExplorerArgs(ExplorerComponent):
 class ExplorerRunButton(Button):
     r"""
     A button for running methods in the explorer.
+
+    TESTS::
+        sage: from sage_explorer.sage_explorer import ExplorerRunButton
+        sage: b = ExplorerRunButton()
     """
     def __init__(self):
         super(ExplorerRunButton, self).__init__(
@@ -688,18 +711,17 @@ class ExplorerRunButton(Button):
 
 class ExplorerOutput(ExplorerComponent):
     r"""
-    A text box to output method results
+    A text box to output method results.
+
+    TESTS::
+        sage: from sage_explorer.sage_explorer import ExplorerOutput
+        sage: o = ExplorerOutput()
     """
     new_val = Any() # output value
 
     def __init__(self, obj=None):
         r"""
-        Common methods to all components.
-
-        TESTS::
-            sage: from sage_explorer.sage_explorer import ExplorerOutput
-            sage: c = ExplorerOutput("Initial value")
-            sage: c.value = 42
+        A text box to output method results.
         """
         self.output = ExplorableValue(obj, '')
         self.output.add_class('invisible')
@@ -731,21 +753,17 @@ class ExplorerOutput(ExplorerComponent):
 
 class ExplorerHelp(ExplorerComponent, Accordion):
     r"""
-    Contains help, or output + help as expandable
-    Contains MathJax
+    An expandable box for object or method help text.
+
+    TESTS::
+        sage: from sage_explorer.sage_explorer import ExplorerHelp
+        sage: h = ExplorerHelp(42)
     """
     content = Unicode('')
 
     def __init__(self, obj):
         r"""
         A box for object or method help text.
-
-        TESTS::
-            sage: from sage_explorer.sage_explorer import ExplorerHelp
-            sage: h = ExplorerHelp(42)
-            sage: h.content = "Some help text"
-            sage: h._titles
-            {'0': 'Some help text'}
         """
         super(ExplorerHelp, self).__init__(
             obj,
@@ -760,6 +778,18 @@ class ExplorerHelp(ExplorerComponent, Accordion):
         self.compute()
 
     def compute_title(self):
+        r"""
+        Content has changed.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExplorerHelp
+            sage: h = ExplorerHelp("Some initial value")
+            sage: h._titles['0'][:15]
+            "str(object='') "
+            sage: h.content = "Some help text"
+            sage: h._titles['0']
+            'Some help text'
+        """
         s = self.content.strip()
         end_first_line = max(s.find('.'), s.find('\n'))
         if end_first_line > 0:
@@ -786,6 +816,8 @@ class ExplorerHelp(ExplorerComponent, Accordion):
 
 class ExplorerCodeCell(ExplorerComponent):
     r"""
+    A box containing a code cell.
+
     TESTS:
 
         sage: from sage_explorer.sage_explorer import ExplorerCodeCell
@@ -834,6 +866,7 @@ class SageExplorer(VBox):
 
     value = Any()
     _history = Instance(ExplorableHistory)
+    _history_len = Integer()
     components = Dict() # A list of widgets
 
     def __init__(self, obj=None, components=DEFAULT_COMPONENTS, test_mode=False):
@@ -853,9 +886,9 @@ class SageExplorer(VBox):
         super(SageExplorer, self).__init__()
         self.value = obj
         self._history = ExplorableHistory(obj) #, initial_name=self.initial_name)
+        self._history_len = 1 # Needed to activate _history propagation
         self.components = components
         if not test_mode:
-            #self.compute()
             self.create_components()
             self.implement_interactivity()
             self.draw()
@@ -866,7 +899,6 @@ class SageExplorer(VBox):
         for name in self.components:
             if name not in ['runbutton', 'codebox']:
                 setattr(getattr(self, name), 'value', self.value)
-        #self.draw()
         self.donottrack = False
 
     def create_components(self):
@@ -907,7 +939,7 @@ class SageExplorer(VBox):
             dlink((self.visualbox, 'new_val'), (self, 'value')) # Handle the visual widget changes
         if 'histbox' in self.components:
             dlink((self.histbox, 'new_val'), (self, 'value')) # Handle the history selection
-            link((self, '_history'), (self.histbox, '_history'))
+            link((self, '_history_len'), (self.histbox, '_history_len')) # Propagate clicked navigation
         if 'searchbox' in self.components and 'argsbox' in self.components:
             dlink((self.searchbox, 'no_args'), (self.argsbox, 'no_args'))
         if 'runbutton' in self.components:
@@ -938,7 +970,7 @@ class SageExplorer(VBox):
             dlink((self.outputbox, 'value'), (self, 'value')) # Handle the clicks on output values
         if 'searchbox' in self.components and 'helpbox' in self.components:
             def selected_method_changed(change):
-                self.helpbox.content = self.searchbox.get_doc()
+                self.helpbox.content = self.searchbox.get_doc() or 'Help'
             self.searchbox.observe(selected_method_changed, names='content')
         if self.test_mode:
             self.donottrack = False
@@ -1006,6 +1038,7 @@ class SageExplorer(VBox):
         actually_changed = (id(new_val) != id(old_val))
         if actually_changed:
             self._history.push(new_val)
+            self._history_len += 1
             self.compute()
 
     def set_value(self, obj):
@@ -1040,29 +1073,3 @@ class SageExplorer(VBox):
             [3, 3, 2, 1]
         """
         return self.value
-
-    def pop_value(self):
-        r"""
-        Set again previous math object to the explorer.
-
-        TESTS::
-            sage: from sage_explorer.sage_explorer import SageExplorer
-            sage: from sage.combinat.partition import Partition
-            sage: p = Partition([3,3,2,1])
-            sage: e = SageExplorer(p)
-            sage: from sage.combinat.tableau import Tableau
-            sage: t = Tableau([[1,2,3,4], [5,6]])
-            sage: e.set_value(t)
-            sage: e.get_value()
-            [[1, 2, 3, 4], [5, 6]]
-            sage: e.pop_value()
-            sage: e.get_value()
-            [3, 3, 2, 1]
-        """
-        if not self._history:
-            print("No more history!")
-            return
-        self._history.pop()
-        self.value = self._history[-1]
-        self.compute()
-        self.donottrack = False
