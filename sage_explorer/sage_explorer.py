@@ -843,6 +843,7 @@ class ExplorerCodeCell(ExplorerComponent):
         sage: cc = ExplorerCodeCell(42)
     """
     content = Unicode('')
+    new_val = Any()
 
     def __init__(self, obj):
         super(ExplorerCodeCell, self).__init__(
@@ -853,14 +854,10 @@ class ExplorerCodeCell(ExplorerComponent):
             ),)
         )
         dlink((self.children[0], 'value'), (self, 'content'))
-        run_event = Event(
+        self.run_event = Event(
             source=self.children[0],
-            watched_events=['keyup']
+            watched_events=['keydown']
         )
-        def launch_evaluation(event):
-            if event['key'] == 'Enter' and (event['shiftKey'] or event['ctrlKey']):
-                self.evaluate()
-        run_event.on_dom_event(launch_evaluation) # FIXME trigger that from the explorer
 
     def evaluate(self, l=None):
         r"""
@@ -1038,6 +1035,11 @@ class SageExplorer(VBox):
             def selected_method_changed(change):
                 self.helpbox.content = self.searchbox.get_doc() or 'Help'
             self.searchbox.observe(selected_method_changed, names='content')
+        if 'codebox' in self.components:
+            def launch_evaluation(event):
+                if event['key'] == 'Enter' and (event['shiftKey'] or event['ctrlKey']):
+                    self.codebox.evaluate(l = {"_": self.value, "__explorer__": self, "Hist": self._history})
+            self.codebox.run_event.on_dom_event(launch_evaluation)
         if self.test_mode:
             self.donottrack = False
 
