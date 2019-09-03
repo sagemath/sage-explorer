@@ -343,10 +343,10 @@ class ExplorableValue(HTMLMath):
         self.explorable = explorable
         super(ExplorableValue, self).__init__(math_repr(explorable), layout=Layout(margin='1px'))
         self.add_class('explorable-value')
-        self.clc = Event(source=self, watched_events=['click'])
+        click_event = Event(source=self, watched_events=['click'])
         def set_new_val(event):
             self.new_val = self.explorable
-        self.clc.on_dom_event(set_new_val)
+        click_event.on_dom_event(set_new_val)
 
     def switch_visibility(self, visibility):
         if visibility:
@@ -943,7 +943,7 @@ class SageExplorer(VBox):
         if 'searchbox' in self.components and 'argsbox' in self.components:
             dlink((self.searchbox, 'no_args'), (self.argsbox, 'no_args'))
         if 'runbutton' in self.components:
-            def compute_selected_method(button):
+            def compute_selected_method(button=None):
                 method_name = self.searchbox.content
                 args = self.argsbox.content
                 try:
@@ -966,6 +966,11 @@ class SageExplorer(VBox):
                 self.outputbox.output.value = '${}$' .format(math_repr(out))
                 self.outputbox.error.value = ''
             self.runbutton.on_click(compute_selected_method)
+            enter_event = Event(source=self.runbutton, watched_events=['keydown'])
+            def run_button(event):
+                if event['key'] == 'Enter':
+                    compute_selected_method()
+            enter_event.on_dom_event(run_button)
         if 'outputbox' in self.components:
             dlink((self.outputbox, 'value'), (self, 'value')) # Handle the clicks on output values
         if 'searchbox' in self.components and 'helpbox' in self.components:
