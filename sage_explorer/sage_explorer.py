@@ -66,6 +66,9 @@ def _get_visual_widget(obj):
         return
     if hasattr(obj, "_widget_"):
         return obj._widget_()
+    if hasattr(obj, 'plot'):
+        from ._widgets import PlotWidget
+        return PlotWidget(obj)
     else:
         return
 
@@ -498,13 +501,16 @@ class ExplorerVisual(ExplorerComponent):
     def compute(self):
         w = _get_visual_widget(self.value)
         if w:
-            self.children = [w]
+            self.children = (w,)
         else:
             if hasattr(self.value, '__ascii_art__'):
-                l = repr(self.value._ascii_art_())
+                self.children = (
+                    Textarea(
+                        repr(self.value._ascii_art_()),
+                        rows=8
+                    ),)
             else:
-                l = repr(self.value)
-                self.children = [Textarea(l, rows=8)]
+                self.children = ()
         dlink((self.children[0], 'value'), (self, 'new_val'))
 
 

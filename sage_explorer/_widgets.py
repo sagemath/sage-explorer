@@ -32,7 +32,13 @@ class PlotWidget(Box, BindableWidgetClass):
         if not name:
             name = repr(obj)
         svgfilename = path_join(SAGE_TMP, '%s.svg' % name)
-        self.plot = plot(obj, figsize=figsize)
+        try:
+            self.plot = plot(obj, figsize=figsize)
+        except:
+            try:
+                self.plot = obj.plot()
+            except:
+                self.plot = plot(obj)
         self.plot.save(svgfilename)
         self.name = name
         self.children = [HTML(open(svgfilename, 'rb').read())]
