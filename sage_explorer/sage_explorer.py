@@ -602,12 +602,12 @@ class ExplorerMethodSearch(ExplorerComponent):
     args_placeholder = Unicode("Enter arguments")
 
     def __init__(self, obj):
-        c = Combobox(
-            placeholder="Enter method name"
-        )
         super(ExplorerMethodSearch, self).__init__(
             obj,
-            children=(c,)
+            children=(
+                Combobox(
+                    placeholder="Enter method name"
+                ),)
         )
         self.compute()
         def method_changed(change):
@@ -623,11 +623,13 @@ class ExplorerMethodSearch(ExplorerComponent):
                     self.args_placeholder = str(defaults)
                 else:
                     self.args_placeholder = "Enter arguments"
-        c.observe(method_changed, names='value')
+        self.children[0].observe(method_changed, names='value')
+        link((self, 'content'), (self.children[0], 'value'))
 
     def compute(self):
         self.get_members()
         self.children[0].options=[m.name for m in self.members]
+        self.content = ''
 
     def get_members(self):
         if isclass(self.value):
@@ -728,8 +730,8 @@ class ExplorerOutput(ExplorerComponent):
         def output_changed(change):
             if change.new:
                 change.owner.switch_visibility(True)
-                #change.owner.value = '${}$' .format(math_repr(change.new))
             else:
+                self.new_val = None
                 change.owner.switch_visibility(False)
         self.output.observe(output_changed, names='value')
         self.clc = Event(source=self.output, watched_events=['click'])
@@ -749,6 +751,16 @@ class ExplorerOutput(ExplorerComponent):
         self.output.value = ''
         self.output.switch_visibility(False)
         self.error.value = ''
+
+    def set_output(self, obj):
+        self.new_val = obj
+        self.output.value = '${}$' .format(math_repr(obj))
+        self.error.value = ''
+
+    def set_error(self, err):
+        self.new_val = None
+        self.output.value = ''
+        self.error.value = '<span class="ansi-red-fg">Error: {}</span>' .format(err)
 
 
 class ExplorerHelp(ExplorerComponent, Accordion):
@@ -935,6 +947,9 @@ class SageExplorer(VBox):
             self.donottrack = True # Prevent any interactivity while installing the links
         if 'propsbox' in self.components:
             dlink((self.propsbox, 'value'), (self, 'value')) # Handle the clicks on property values
+            enter_props_events = {}
+            #for i in range(len(self.propsbox)):
+                #enter_props_events[Event(source=self.propsbox, watched_events=['keydown'])
         if 'visualbox' in self.components:
             dlink((self.visualbox, 'new_val'), (self, 'value')) # Handle the visual widget changes
         if 'histbox' in self.components:
@@ -959,12 +974,9 @@ class SageExplorer(VBox):
                 except Exception as e:
                     if AlarmInterrupt:
                         cancel_alarm()
-                    self.outputbox.error.value = '<span class="ansi-red-fg">Error: {}</span>' .format(e)
-                    self.outputbox.output.value = ''
+                    self.outputbox.set_error(e)
                     return
-                self.outputbox.new_val = out
-                self.outputbox.output.value = '${}$' .format(math_repr(out))
-                self.outputbox.error.value = ''
+                self.outputbox.set_output(out)
             self.runbutton.on_click(compute_selected_method)
             enter_event = Event(source=self.runbutton, watched_events=['keydown'])
             def run_button(event):
@@ -973,6 +985,11 @@ class SageExplorer(VBox):
             enter_event.on_dom_event(run_button)
         if 'outputbox' in self.components:
             dlink((self.outputbox, 'value'), (self, 'value')) # Handle the clicks on output values
+            enter_output_event = Event(source=self.outputbox, watched_events=['keydown'])
+            def enter_output(event):
+                if event['key'] == 'Enter' and self.outputbox.new_val:
+                    self.value = self.outputbox.new_val
+            enter_output_event.on_dom_event(enter_output)
         if 'searchbox' in self.components and 'helpbox' in self.components:
             def selected_method_changed(change):
                 self.helpbox.content = self.searchbox.get_doc() or 'Help'
