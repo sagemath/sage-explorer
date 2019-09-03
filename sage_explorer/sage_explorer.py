@@ -343,10 +343,12 @@ class ExplorableValue(HTMLMath):
         self.explorable = explorable
         super(ExplorableValue, self).__init__(math_repr(explorable), layout=Layout(margin='1px'))
         self.add_class('explorable-value')
-        click_event = Event(source=self, watched_events=['click'])
+        click_event = Event(source=self, watched_events=['click', 'keydown'])
         def set_new_val(event):
-            self.new_val = self.explorable
+            if event['type'] == 'click' or event['key'] == 'Enter':
+                self.new_val = self.explorable
         click_event.on_dom_event(set_new_val)
+
 
     def switch_visibility(self, visibility):
         if visibility:
@@ -734,10 +736,10 @@ class ExplorerOutput(ExplorerComponent):
                 self.new_val = None
                 change.owner.switch_visibility(False)
         self.output.observe(output_changed, names='value')
-        self.clc = Event(source=self.output, watched_events=['click'])
+        click_event = Event(source=self.output, watched_events=['click'])
         def propagate_click(event):
             self.value = self.new_val
-        self.clc.on_dom_event(propagate_click)
+        click_event.on_dom_event(propagate_click)
         self.error = HTML("")
         self.error.add_class("ansi-red-fg")
         super(ExplorerOutput, self).__init__(
