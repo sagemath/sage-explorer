@@ -20,6 +20,7 @@ from cysignals.signals import AlarmInterrupt
 from inspect import isclass
 from collections import deque
 from ipywidgets import Accordion, Box, Button, Combobox, DOMWidget, Dropdown, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, Textarea, VBox
+from ipywidgets.widgets.widget import LoggingHasTraits
 from ipywidgets.widgets.widget_description import DescriptionStyle
 from traitlets import Any, Bool, Dict, Instance, Integer, Unicode, dlink, link, observe
 from ipywidgets.widgets.trait_types import InstanceDict, Color
@@ -128,13 +129,19 @@ class Separator(Label):
         self.add_class("separator")
 
 
-class ExplorableHistory(deque):
+class ExplorableHistory(LoggingHasTraits, deque):
+    length = Integer()
+
     def __init__(self, obj, initial_name=None, previous_history=[]):
         super(ExplorableHistory, self).__init__(previous_history)
         if obj:
             self.append(obj)
         self.initial_name = self.get_initial_name(value=obj)
         self.current_index = len(previous_history)
+        self.update_length()
+
+    def update_length(self):
+        self.length = self.__len__()
 
     @staticmethod
     def get_initial_name(value=None, test_sh_hist=[]):
@@ -223,8 +230,9 @@ class ExplorableHistory(deque):
         self.current_index = self.__len__()
         self.append(obj)
         self.truncate(MAX_LEN_HISTORY)
+        self.update_length()
 
-    def pop(self):
+    def pop(self, n=1):
         r"""
         Pop the history, ie pop the list
         and decrement index.
@@ -243,11 +251,19 @@ class ExplorableHistory(deque):
             Traceback (most recent call last):
             ...
             Exception: No more history!
+            sage: h = ExplorableHistory(1)
+            sage: for i in range(2,6): h.push(i)
+            sage: h.pop(4)
+            2
+            sage: h
+            ExplorableHistory([1])
         """
-        val = super(ExplorableHistory, self).pop()
-        if self.current_index < 1:
-            raise Exception("No more history!")
-        self.current_index -= 1
+        for i in range(n):
+            val = super(ExplorableHistory, self).pop()
+            if self.current_index < 1:
+                raise Exception("No more history!")
+            self.current_index -= 1
+        self.update_length()
         return val
 
     def get_item(self, i=None):
@@ -325,6 +341,7 @@ class ExplorableHistory(deque):
         for i in range(shift):
             self.popleft()
         self.current_index = self.current_index - shift
+        self.update_length()
 
 
 class ExplorableValue(HTMLMath):
@@ -345,7 +362,7 @@ class ExplorableValue(HTMLMath):
         self.add_class('explorable-value')
         click_event = Event(
             source=self,
-            watched_events=['click', 'keydown']
+            watched_events=['click', 'keyup']
         )
         def set_new_val(event):
             if event['type'] == 'click' or event['key'] == 'Enter':
@@ -546,7 +563,7 @@ class ExplorerHistory(ExplorerComponent):
         """
         self.donottrack = True
         self._history = history or ExplorableHistory(obj)
-        self._history_len = len(self._history)
+        dlink((self._history, 'length'), (self, '_history_len'))
         super(ExplorerHistory, self).__init__(
             obj,
             children=(Dropdown(
@@ -856,7 +873,7 @@ class ExplorerCodeCell(ExplorerComponent):
         dlink((self.children[0], 'value'), (self, 'content'))
         self.run_event = Event(
             source=self.children[0],
-            watched_events=['keydown']
+            watched_events=['keyup']
         )
 
     def evaluate(self, l=None):
@@ -1019,14 +1036,14 @@ class SageExplorer(VBox):
                     return
                 self.outputbox.set_output(out)
             self.runbutton.on_click(compute_selected_method)
-            enter_event = Event(source=self.runbutton, watched_events=['keydown'])
+            enter_event = Event(source=self.runbutton, watched_events=['keyup'])
             def run_button(event):
                 if event['key'] == 'Enter':
                     compute_selected_method()
             enter_event.on_dom_event(run_button)
         if 'outputbox' in self.components:
             dlink((self.outputbox, 'value'), (self, 'value')) # Handle the clicks on output values
-            enter_output_event = Event(source=self.outputbox, watched_events=['keydown'])
+            enter_output_event = Event(source=self.outputbox, watched_events=['keyup'])
             def enter_output(event):
                 if event['key'] == 'Enter' and self.outputbox.new_val:
                     self.value = self.outputbox.new_val
@@ -1120,7 +1137,7 @@ class SageExplorer(VBox):
         actually_changed = (id(new_val) != id(old_val))
         if actually_changed:
             self._history.push(new_val)
-            self._history_len += 1
+            #self._history_len += 1
             self.compute()
 
     def set_value(self, obj):
