@@ -402,11 +402,11 @@ class ExplorerComponent(Box):
         self.donottrack = True
         self.value = obj
         super(ExplorerComponent, self).__init__(**kws)
-        self.compute()
+        self.reset_value()
         self.donottrack = False
 
     @abstractmethod
-    def compute(self):
+    def reset_value(self):
         r"""
         Common methods to all components.
 
@@ -441,7 +441,7 @@ class ExplorerComponent(Box):
         new_val = change.new
         actually_changed = (id(new_val) != id(old_val))
         if actually_changed:
-            self.compute()
+            self.reset_value()
 
 
 class ExplorerTitle(ExplorerComponent):
@@ -455,10 +455,10 @@ class ExplorerTitle(ExplorerComponent):
             children=(MathTitle('', 2),),
             layout=Layout(padding='5px 10px')
         )
-        self.compute()
+        self.reset_value()
         self.add_class("explorer-title")
 
-    def compute(self):
+    def reset_value(self):
         self.content = math_repr(self.value)
         self.children[0].value = "Exploring: {}" . format(self.content)
 
@@ -473,11 +473,11 @@ class ExplorerDescription(ExplorerComponent):
             obj,
             children=(HTMLMath(),)
         )
-        self.compute()
+        self.reset_value()
         dlink((self, 'content'), (self.children[0], 'value'))
         self.add_class("explorer-description")
 
-    def compute(self):
+    def reset_value(self):
         if self.value.__doc__:
             self.content = [l for l in self.value.__doc__.split("\n") if l][0].strip()
         else:
@@ -494,9 +494,9 @@ class ExplorerProperties(ExplorerComponent, GridBox):
             layout=Layout(border='1px solid #eee', width='100%', grid_template_columns='auto auto')
         )
         self.add_class("explorer-table")
-        self.compute()
+        self.reset_value()
 
-    def compute(self):
+    def reset_value(self):
         children = []
         self.explorables = []
         for p in get_properties(self.value):
@@ -520,9 +520,9 @@ class ExplorerVisual(ExplorerComponent):
             obj,
             layout = Layout(right='0')
         )
-        self.compute()
+        self.reset_value()
 
-    def compute(self):
+    def reset_value(self):
         w = _get_visual_widget(self.value)
         if w:
             self.children = (w,)
@@ -543,7 +543,7 @@ class ExplorerHistory(ExplorerComponent):
     r"""
     A text input to give a name to a math object
     """
-    new_val = Any() # Use selection ?
+    new_val = Any() # Use selection ? or just value ?
     _history = Instance(ExplorableHistory)
     _history_len = Integer()
 
@@ -587,7 +587,7 @@ class ExplorerHistory(ExplorerComponent):
             self.donottrack = False
         self.children[0].observe(dropdown_selection, names='value')
 
-    def compute(self):
+    def reset_value(self):
         r"""
         Value has changed.
         """
@@ -631,7 +631,7 @@ class ExplorerMethodSearch(ExplorerComponent):
                     placeholder="Enter method name"
                 ),)
         )
-        self.compute()
+        self.reset_value()
         def method_changed(change):
             selected_method = change.new
             if selected_method in self.members_dict:
@@ -639,7 +639,7 @@ class ExplorerMethodSearch(ExplorerComponent):
         # we do not link directly for not all names deserve a computation
         self.children[0].observe(method_changed, names='value')
 
-    def compute(self):
+    def reset_value(self):
         r"""
         Setup the combobox.
         """
@@ -681,7 +681,7 @@ class ExplorerArgs(ExplorerComponent):
         def explored_changed(change):
             explored = change.new
             if not explored.name:
-                self.compute()
+                self.reset_value()
                 return
             if not hasattr(explored, 'args'):
                 explored.compute_argspec()
@@ -699,7 +699,7 @@ class ExplorerArgs(ExplorerComponent):
         self.observe(explored_changed, names='explored')
         dlink((self.children[0], 'value'), (self, 'content'))
 
-    def compute(self):
+    def reset_value(self):
         self.children[0].value = ''
         self.children[0].disabled = False
         self.children[0].placeholder = "Enter arguments"
@@ -756,7 +756,7 @@ class ExplorerOutput(ExplorerComponent):
             layout = Layout(padding='2px 50px 2px 2px')
         )
 
-    def compute(self):
+    def reset_value(self):
         self.new_val = None
         self.output.value = ''
         self.output.switch_visibility(False)
@@ -805,7 +805,7 @@ class ExplorerHelp(ExplorerComponent, Accordion):
                 self.content = self.value.__doc__ or ''
             self.compute_title()
         self.observe(explored_changed, names='explored')
-        self.compute()
+        self.reset_value()
 
     def compute_title(self):
         r"""
@@ -830,7 +830,7 @@ class ExplorerHelp(ExplorerComponent, Accordion):
         else:
             self.set_title(0, s[:100])
 
-    def compute(self):
+    def reset_value(self):
         r"""
         Value has changed.
 
@@ -934,7 +934,7 @@ class SageExplorer(VBox):
     value = Any()
     _history = Instance(ExplorableHistory)
     _history_len = Integer()
-    components = Dict() # A list of widgets
+    components = Dict() # A list of widgets ; really a trait ?
 
     def __init__(self, obj=None, components=DEFAULT_COMPONENTS, test_mode=False):
         """
@@ -961,7 +961,7 @@ class SageExplorer(VBox):
             self.draw()
         self.donottrack = False
 
-    def compute(self):
+    def reset_value(self):
         self.donottrack = True
         for name in self.components:
             if name not in ['runbutton', 'codebox']:
@@ -1133,7 +1133,7 @@ class SageExplorer(VBox):
         if actually_changed:
             self._history.push(new_val)
             #self._history_len += 1
-            self.compute()
+            self.reset_value()
 
     def set_value(self, obj):
         r"""
