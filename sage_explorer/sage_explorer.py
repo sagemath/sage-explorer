@@ -27,7 +27,7 @@ from ipywidgets.widgets.trait_types import InstanceDict, Color
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=DeprecationWarning)
     from ipyevents import Event
-from .explored_member import _eval_in_main, get_members, get_properties
+from .explored_member import ExploredMember, _eval_in_main, get_members, get_properties
 
 title_layout = Layout(width='100%', padding='12px')
 css_lines = []
@@ -621,9 +621,7 @@ class ExplorerMethodSearch(ExplorerComponent):
         sage: from sage_explorer.sage_explorer import ExplorerMethodSearch
         sage: s = ExplorerMethodSearch(42)
     """
-    content = Unicode('')
-    no_args = Bool(False)
-    args_placeholder = Unicode("Enter arguments")
+    explored = Instance(ExploredMember) # to share with ExplorerArgs and ExplorerHelp
 
     def __init__(self, obj):
         super(ExplorerMethodSearch, self).__init__(
@@ -637,46 +635,23 @@ class ExplorerMethodSearch(ExplorerComponent):
         def method_changed(change):
             selected_method = change.new
             if selected_method in self.members_dict:
-                self.content = selected_method
-                args, defaults = self.get_argspec()
-                if (not args or args == ['self']) and not self.no_args:
-                    self.no_args = True
-                if (args and args != ['self']) and self.no_args:
-                    self.no_args = False
-                if defaults:
-                    self.args_placeholder = str(defaults)
-                else:
-                    self.args_placeholder = "Enter arguments"
+                self.explored = self.members_dict[selected_method]
+        # we do not link directly for not all names deserve a computation
         self.children[0].observe(method_changed, names='value')
-        link((self, 'content'), (self.children[0], 'value'))
 
     def compute(self):
-        self.get_members()
-        self.children[0].options=[m.name for m in self.members]
-        self.content = ''
-
-    def get_members(self):
+        r"""
+        Setup the combobox.
+        """
         if isclass(self.value):
             cls = self.value
         else:
             cls = self.value.__class__
-        self.members = get_members(cls)
+        self.members = get_members(cls) # Here, we both have a list and a dict
         self.members_dict = {m.name: m for m in self.members}
-
-    def get_member(self):
-        if self.content in self.members_dict:
-            return self.members_dict[self.content].member
-
-    def get_doc(self):
-        if self.content in self.members_dict:
-            return self.members_dict[self.content].member.__doc__
-
-    def get_argspec(self):
-        if self.content in self.members_dict:
-            m = self.members_dict[self.content]
-            if not hasattr(m, 'args'):
-                m.compute_argspec()
-            return m.args, m.defaults
+        self.children[0].options=[m.name for m in self.members]
+        self.children[0].value = ''
+        self.explored = ExploredMember('')
 
 
 class ExplorerArgs(ExplorerComponent):
@@ -684,7 +659,7 @@ class ExplorerArgs(ExplorerComponent):
     A text box to input method arguments
     """
     content = Unicode('')
-    no_args = Bool(False)
+    explored = Instance(ExploredMember) # shared by ExplorerMethodSearch
 
     def __init__(self, obj=None):
         r"""
@@ -692,8 +667,7 @@ class ExplorerArgs(ExplorerComponent):
 
         TESTS::
             sage: from sage_explorer.sage_explorer import ExplorerArgs
-            sage: a = ExplorerArgs()
-            sage: a.value = 'some arguments'
+            sage: a = ExplorerArgs(42)
         """
         super(ExplorerArgs, self).__init__(
             obj,
@@ -704,19 +678,31 @@ class ExplorerArgs(ExplorerComponent):
             ),)
         )
         self.add_class("explorer-flexitem")
-        def disable(change):
-            if change.new == True:
-                change.owner.value = ""
-                change.owner.placeholder = ""
-            elif change.new == False:
-                change.owner.placeholder = "Enter arguments"
-        self.children[0].observe(disable, names='disabled')
-        dlink((self, 'no_args'), (self.children[0], 'disabled'))
-        link((self, 'content'), (self.children[0], 'value'))
+        def explored_changed(change):
+            explored = change.new
+            if not explored.name:
+                self.compute()
+                return
+            if not hasattr(explored, 'args'):
+                explored.compute_argspec()
+            args, defaults = explored.args, explored.defaults
+            if args and args != ['self']:
+                self.children[0].disabled = False
+                if defaults:
+                    self.children[0].placeholder = str(defaults)
+                else:
+                    self.children[0].placeholder = "Enter arguments"
+            else:
+                self.children[0].value = ''
+                self.children[0].placeholder = ''
+                self.children[0].disabled = True
+        self.observe(explored_changed, names='explored')
+        dlink((self.children[0], 'value'), (self, 'content'))
 
     def compute(self):
-        self.content = ''
-        self.no_args = False
+        self.children[0].value = ''
+        self.children[0].disabled = False
+        self.children[0].placeholder = "Enter arguments"
 
 
 class ExplorerRunButton(Button):
@@ -796,6 +782,7 @@ class ExplorerHelp(ExplorerComponent, Accordion):
         sage: h = ExplorerHelp(42)
     """
     content = Unicode('')
+    explored = Instance(ExploredMember) # shared by ExplorerMethodSearch
 
     def __init__(self, obj):
         r"""
@@ -807,10 +794,17 @@ class ExplorerHelp(ExplorerComponent, Accordion):
             selected_index=None,
             layout=Layout(width='99%', padding='0')
         )
-        def content_changed(change):
-            self.compute_title()
-        self.observe(content_changed, names='content')
         dlink((self, 'content'), (self.children[0], 'value'))
+        def explored_changed(change):
+            explored = change.new
+            if explored.name:
+                if not hasattr(explored, 'doc'):
+                    explored.compute_doc()
+                self.content = explored.doc
+            else:
+                self.content = self.value.__doc__ or ''
+            self.compute_title()
+        self.observe(explored_changed, names='explored')
         self.compute()
 
     def compute_title(self):
@@ -827,6 +821,9 @@ class ExplorerHelp(ExplorerComponent, Accordion):
             'Some help text'
         """
         s = self.content.strip()
+        if not s:
+            self.set_title(0, 'Help')
+            return
         end_first_line = max(s.find('.'), s.find('\n'))
         if end_first_line > 0:
             self.set_title(0, s[:end_first_line])
@@ -846,7 +843,7 @@ class ExplorerHelp(ExplorerComponent, Accordion):
             sage: h._titles['0']
             'Integer(x=None, base=0)\nFile: sage/rings/integer'
         """
-        self.content = self.value.__doc__ or 'Help'
+        self.content = self.value.__doc__ or ''
         self.compute_title()
 
 
@@ -1014,10 +1011,10 @@ class SageExplorer(VBox):
             dlink((self.histbox, 'new_val'), (self, 'value')) # Handle the history selection
             link((self, '_history_len'), (self.histbox, '_history_len')) # Propagate clicked navigation
         if 'searchbox' in self.components and 'argsbox' in self.components:
-            dlink((self.searchbox, 'no_args'), (self.argsbox, 'no_args'))
+            dlink((self.searchbox, 'explored'), (self.argsbox, 'explored'))
         if 'runbutton' in self.components:
             def compute_selected_method(button=None):
-                method_name = self.searchbox.content
+                method_name = self.searchbox.explored.name
                 args = self.argsbox.content
                 try:
                     if AlarmInterrupt:
@@ -1049,9 +1046,7 @@ class SageExplorer(VBox):
                     self.value = self.outputbox.new_val
             enter_output_event.on_dom_event(enter_output)
         if 'searchbox' in self.components and 'helpbox' in self.components:
-            def selected_method_changed(change):
-                self.helpbox.content = self.searchbox.get_doc() or 'Help'
-            self.searchbox.observe(selected_method_changed, names='content')
+            dlink((self.searchbox, 'explored'), (self.helpbox, 'explored'))
         if 'codebox' in self.components:
             def launch_evaluation(event):
                 if event['key'] == 'Enter' and (event['shiftKey'] or event['ctrlKey']):
