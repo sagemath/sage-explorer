@@ -79,11 +79,11 @@ def math_repr(obj):
     applies well to MathJax, use it.
 
     TESTS::
-        sage: from sage.all import *
         sage: from sage_explorer.sage_explorer import math_repr
-        sage: t = Tableau([[1,2], [3]])
-        sage: math_repr(t.cocharge())
-        '$1$'
+        sage: math_repr(42)
+        '$42$'
+        sage: math_repr(ZZ)
+        '$\\Bold{Z}$'
     """
     if not obj:
         return ''
