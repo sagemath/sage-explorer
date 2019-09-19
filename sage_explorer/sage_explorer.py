@@ -656,13 +656,8 @@ class ExplorerHistory(ExplorerComponent):
             if self.donottrack:
                 return
             self.donottrack = True
-            self.new_val = self._history.get_item(change.new)
-            self._history = ExplorableHistory( # Seems to be necessary in order to 'change' _history
-                None,
-                initial_name=self._history.initial_name,
-                previous_history=self._history
-            )
             self._history.set_index(change.new)
+            self.new_val = self._history.get_item(change.new)
             self.donottrack = False
         self.children[0].observe(dropdown_selection, names='value')
 
