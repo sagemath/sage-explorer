@@ -350,25 +350,76 @@ class ExplorableValue(HTMLMath):
 
     TESTS::
         sage: from sage_explorer.sage_explorer import ExplorableValue
-        sage: ev = ExplorableValue("original val", explorable=42)
+        sage: ev = ExplorableValue(42)
     """
     explorable = Any() # Some computed math object
-    new_val = Any() # Overall value. Will be changed when explorable is clicked
+    new_val = Any() # Overall value. Will be changed when explorable is clicked. `value` being reserved by ipywidgets.
 
-    def __init__(self, obj, explorable):
-        self.new_val = obj
+    def __init__(self, explorable, initial_value=None):
         self.explorable = explorable
+        if initial_value:
+            self.new_val = initial_value
         super(ExplorableValue, self).__init__(math_repr(explorable), layout=Layout(margin='1px'))
         self.add_class('explorable-value')
         click_event = Event(
             source=self,
             watched_events=['click', 'keyup']
         )
-        def set_new_val(event):
+        def set_value(event):
             if event['type'] == 'click' or event['key'] == 'Enter':
                 self.new_val = self.explorable
-        click_event.on_dom_event(set_new_val)
+        click_event.on_dom_event(set_value)
 
+
+class ExplorableCell(Box):
+    r"""
+    A text box that contains one or several explorable value(s).
+
+    TESTS::
+        sage: from sage_explorer.sage_explorer import ExplorableCell
+        sage: c = ExplorableCell(42)
+        sage: len(c.children)
+        1
+        sage: c = ExplorableCell(ZZ)
+        sage: len(c.children)
+        1
+        sage: c = ExplorableCell([42, 'a string', ZZ])
+        sage: len(c.children)
+        7
+    """
+    explorable = Any() # can be a single value or a list or a tuple
+    new_val = Any() # when [one of] the value(s) is clicked
+
+    def __init__(self, explorable, initial_value=None):
+        r"""
+        A text box to display explorable value(s).
+        """
+        self.explorable = explorable or ''
+        if initial_value:
+            self.new_val = initial_value
+        children = []
+        if type(explorable) == type([]) or type(explorable) == type(()):
+            if type(explorable) == type([]):
+                children.append(Separator('['))
+            elif type(explorable) == type(()):
+                children.append(Separator('('))
+            for e in explorable:
+                ev = ExplorableValue(e, initial_value=initial_value)
+                dlink((ev, 'new_val'), (self, 'new_val')) # Propagate click
+                children.append(ev)
+                children.append(Separator(','))
+            children.pop()
+            if type(explorable) == type([]):
+                children.append(Separator(']'))
+            elif type(explorable) == type(()):
+                children.append(Separator(')'))
+        elif explorable: # treated as a single value
+            ev = ExplorableValue(explorable, initial_value=initial_value)
+            dlink((ev, 'new_val'), (self, 'new_val')) # Propagate click
+            children.append(ev)
+        super(ExplorableCell, self).__init__(
+            children=children
+        )
 
     def switch_visibility(self, visibility):
         if visibility:
@@ -487,6 +538,10 @@ class ExplorerDescription(ExplorerComponent):
 class ExplorerProperties(ExplorerComponent, GridBox):
     r"""
     Display object properties as a table.
+
+    TESTS::
+        sage: from sage_explorer.sage_explorer import ExplorerProperties
+        sage: p = ExplorerProperties(42)
     """
     def __init__(self, obj):
         super(ExplorerProperties, self).__init__(
@@ -502,10 +557,10 @@ class ExplorerProperties(ExplorerComponent, GridBox):
         for p in get_properties(self.value):
             explorable = getattr(self.value, p.name).__call__()
             children.append(Box((Label(p.prop_label),), layout=Layout(border='1px solid #eee')))
-            ev = ExplorableValue(self.value, explorable)
-            self.explorables.append(ev)
-            dlink((ev, 'new_val'), (self, 'value')) # Propagate explorable if clicked
-            children.append(Box((ev,), layout=Layout(border='1px solid #eee')))
+            e = ExplorableCell(explorable, initial_value=self.value)
+            self.explorables.append(e)
+            dlink((e, 'new_val'), (self, 'value')) # Propagate explorable if clicked
+            children.append(e) #, layout=Layout(border='1px solid #eee')))
         self.children = children
 
 
@@ -727,15 +782,13 @@ class ExplorerOutput(ExplorerComponent):
 
     TESTS::
         sage: from sage_explorer.sage_explorer import ExplorerOutput
-        sage: o = ExplorerOutput()
+        sage: o = ExplorerOutput(42)
     """
-    new_val = Any() # output value
-
-    def __init__(self, obj=None):
+    def __init__(self, obj=None, explorable=None):
         r"""
         A text box to output method results.
         """
-        self.output = ExplorableValue(obj, '')
+        self.output = ExplorableCell(explorable, initial_value=obj)
         self.output.add_class('invisible')
         def output_changed(change):
             if change.new:
@@ -859,7 +912,7 @@ class ExplorerCodeCell(ExplorerComponent):
     content = Unicode('')
     new_val = Any()
 
-    def __init__(self, obj):
+    def __init__(self, obj, standalone=False):
         super(ExplorerCodeCell, self).__init__(
             obj,
             children=(Textarea(
@@ -867,11 +920,17 @@ class ExplorerCodeCell(ExplorerComponent):
                 layout=Layout(border='1px solid #eee', width='99%')
             ),)
         )
-        dlink((self.children[0], 'value'), (self, 'content'))
+        link((self.children[0], 'value'), (self, 'content'))
         self.run_event = Event(
             source=self.children[0],
             watched_events=['keyup']
         )
+        def launch_evaluation(event):
+            if event['key'] == 'Enter' and (event['shiftKey'] or event['ctrlKey']):
+                self.evaluate()
+                #self.children[0].value = str(self.new_val)
+        if standalone: # actually we want to trigger that from the explorer
+            self.run_event.on_dom_event(launch_evaluation)
 
     def evaluate(self, l=None):
         r"""
@@ -881,23 +940,24 @@ class ExplorerCodeCell(ExplorerComponent):
         TESTS::
             sage: from sage_explorer.sage_explorer import ExplorerCodeCell
             sage: c = ExplorerCodeCell(42)
-            sage: c.content = "a = 1"
+            sage: c.content = "1 + 2"
             sage: c.evaluate()
-            sage: c.content = "a + 2"
-            sage: c.evaluate()
+            sage: c.new_val
             3
         """
         g = globals() # the name space used by the usual Jupyter cells
         l = l or {"_": self.value} #, "__explorer__": self, "Hist": self._history}
         local_names = ["_", "__explorer__", "Hist"]
-        code = compile(self.content, '<string>', 'single')
+        code = compile(self.content, '<string>', 'eval')
         result = eval(code, g, l)
         if result is None: # the code may have triggered some assignments
+            self.content = "result is None"
             for name, value in l.items():
                 if name not in local_names:
                     g[name] = value
         else:
-            self.value = result
+            self.content = "OK"
+            self.new_val = result
 
 
 """
@@ -1002,14 +1062,12 @@ class SageExplorer(VBox):
             self.donottrack = True # Prevent any interactivity while installing the links
         if 'propsbox' in self.components:
             dlink((self.propsbox, 'value'), (self, 'value')) # Handle the clicks on property values
-            enter_props_events = {}
-            #for i in range(len(self.propsbox)):
-                #enter_props_events[Event(source=self.propsbox, watched_events=['keydown'])
         if 'visualbox' in self.components:
-            dlink((self.visualbox, 'new_val'), (self, 'value')) # Handle the visual widget changes
+            dlink((self.visualbox, 'value'), (self, 'value')) # Handle the visual widget changes
         if 'histbox' in self.components:
-            dlink((self.histbox, 'new_val'), (self, 'value')) # Handle the history selection
-            link((self, '_history_len'), (self.histbox, '_history_len')) # Propagate clicked navigation
+            pass
+            #dlink((self.histbox, 'new_val'), (self, 'value')) # Handle the history selection
+            #link((self, '_history_len'), (self.histbox, '_history_len')) # Propagate clicked navigation
         if 'searchbox' in self.components and 'argsbox' in self.components:
             dlink((self.searchbox, 'explored'), (self.argsbox, 'explored'))
         if 'runbutton' in self.components:
@@ -1066,7 +1124,7 @@ class SageExplorer(VBox):
             sage: e.implement_interactivity()
             sage: e.draw()
             sage: len(e.focuslist)
-            9
+            10
         """
         self.focuslist = [] # Will be used to allocate focus to successive components
         self.focuslist.append(self.titlebox)
