@@ -414,11 +414,13 @@ class ExplorableCell(Box):
         """
         children = []
         self.explorables = []
-        if type(self.explorable) == type([]) or type(self.explorable) == type(()):
+        if type(self.explorable) in [type([]), type(()), set, frozenset]:
             if type(self.explorable) == type([]):
                 children.append(Separator('['))
             elif type(self.explorable) == type(()):
                 children.append(Separator('('))
+            else:
+                children.append(Separator('{'))
             for e in self.explorable:
                 ev = ExplorableValue(e, initial_value=self.new_val)
                 dlink((ev, 'new_val'), (self, 'new_val')) # Propagate click
@@ -430,6 +432,8 @@ class ExplorableCell(Box):
                 children.append(Separator(']'))
             elif type(self.explorable) == type(()):
                 children.append(Separator(')'))
+            else:
+                children.append(Separator('}'))
         elif self.explorable: # treated as a single value
             ev = ExplorableValue(self.explorable, initial_value=self.new_val)
             self.explorables.append(ev)
