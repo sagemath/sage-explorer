@@ -1085,8 +1085,7 @@ class SageExplorer(VBox):
         if 'visualbox' in self.components:
             dlink((self.visualbox, 'value'), (self, 'value')) # Handle the visual widget changes
         if 'histbox' in self.components:
-            pass
-            #dlink((self.histbox, 'new_val'), (self, 'value')) # Handle the history selection
+            dlink((self.histbox, 'new_val'), (self, 'value')) # Handle the history selection
             #link((self, '_history_len'), (self.histbox, '_history_len')) # Propagate clicked navigation
         if 'searchbox' in self.components and 'argsbox' in self.components:
             dlink((self.searchbox, 'explored'), (self.argsbox, 'explored'))
