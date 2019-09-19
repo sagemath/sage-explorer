@@ -31,7 +31,7 @@ from .explored_member import ExploredMember, _eval_in_main, get_members, get_pro
 
 title_layout = Layout(width='100%', padding='12px')
 css_lines = []
-css_lines.append(".visible {visibility: visible; display: inline}")
+css_lines.append(".visible {visibility: visible; display: table}")
 css_lines.append(".invisible {visibility: hidden; display: none}")
 css_lines.append(".title-level2 {font-size: 150%}")
 css_lines.append('.explorer-title {background-color: teal; background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAQAAACROWYpAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAAAHdElNRQfjCBQVGx7629/nAAAB60lEQVQ4y5WUQU8aQRSAv0UPGDcaJYKaCISj6VFJ6skfoEc5EUhIvWniTzFpjyb2ZJB/UBtMf0BvwA0WIfFAemqRSGJ2xwPDMLuz227nXd68ed/uvDfvPYhaZTwEAo9ylEsiEs5iAWCRjQOvs6ntCiEabLIeBqe4pkFR7mwfbEvtgDqf2QreIMVXXARP1MhQosEYIWVMgxJpKjgIPO5I6+gat7jKtcOrAufySos/UveoswGwDMASuyoAm/2Q3CT5oHSLjOTkOsQx/hYlQ46C365oUf5NJpybF9uh5XN6o0uTJl3efPYOuyZcYqq59LkkS5IkWS7oaydTSn7QYpWGDz32nR/78HvsWfVZlNmjQIGiKgWXK74E7nXBNUtSf+EnDg4D1PsupEveCCpPz/BzEyGtMWBk2EYMDFsiuqtirASeYcuRMWwZcobNW6ZqJCzPiZGwUw3WEjZ/qvv/f6rFMoskxwor5P5VJAA7tAPl2aNJk16gPFtsm3CNSazGeKEaRIs8xW5Jh0Md3eAhNioQfJtNklmRuDyr9x7TZmoENaXDROqCEa5+OB+AfSqkOQsZgNt8YigHYMj8vOW7isbmUcGPqnw+8oN6SP0RHPo3Cr7RrFukFht9Cv72fcoJ0eCX7hLdVUOETM8wyuUdTAVXcgNG490AAAAldEVYdGRhdGU6Y3JlYXRlADIwMTktMDgtMjBUMTk6Mjc6MzArMDI6MDCNIxYDAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDE5LTA4LTIwVDE5OjI3OjMwKzAyOjAw/H6uvwAAAABJRU5ErkJggg=="); background-repeat: no-repeat; background-position: right;background-origin: content-box; border-radius: 4px}')
@@ -359,16 +359,24 @@ class ExplorableValue(HTMLMath):
         self.explorable = explorable
         if initial_value:
             self.new_val = initial_value
-        super(ExplorableValue, self).__init__(math_repr(explorable), layout=Layout(margin='1px'))
+        super(ExplorableValue, self).__init__(layout=Layout(margin='1px'))
         self.add_class('explorable-value')
+        self.reset_value()
         click_event = Event(
             source=self,
             watched_events=['click', 'keyup']
         )
-        def set_value(event):
+        def set_new_val(event):
             if event['type'] == 'click' or event['key'] == 'Enter':
                 self.new_val = self.explorable
-        click_event.on_dom_event(set_value)
+        click_event.on_dom_event(set_new_val) # Handle clicking
+
+
+    def reset_value(self):
+        r"""
+        `explorable` has changed: compute HTML value.
+        """
+        self.value = math_repr(self.explorable)
 
 
 class ExplorableCell(Box):
@@ -390,38 +398,49 @@ class ExplorableCell(Box):
     explorable = Any() # can be a single value or a list or a tuple
     new_val = Any() # when [one of] the value(s) is clicked
 
-    def __init__(self, explorable, initial_value=None):
+    def __init__(self, explorable, initial_value=None, **kws):
         r"""
         A text box to display explorable value(s).
         """
         self.explorable = explorable or ''
         if initial_value:
             self.new_val = initial_value
+        super(ExplorableCell, self).__init__(**kws)
+        self.reset_value()
+
+    def reset_value(self):
+        r"""
+        `explorable` has changed: compute all content.
+        """
         children = []
-        if type(explorable) == type([]) or type(explorable) == type(()):
-            if type(explorable) == type([]):
+        self.explorables = []
+        if type(self.explorable) == type([]) or type(self.explorable) == type(()):
+            if type(self.explorable) == type([]):
                 children.append(Separator('['))
-            elif type(explorable) == type(()):
+            elif type(self.explorable) == type(()):
                 children.append(Separator('('))
-            for e in explorable:
-                ev = ExplorableValue(e, initial_value=initial_value)
+            for e in self.explorable:
+                ev = ExplorableValue(e, initial_value=self.new_val)
                 dlink((ev, 'new_val'), (self, 'new_val')) # Propagate click
+                self.explorables.append(ev)
                 children.append(ev)
                 children.append(Separator(','))
             children.pop()
-            if type(explorable) == type([]):
+            if type(self.explorable) == type([]):
                 children.append(Separator(']'))
-            elif type(explorable) == type(()):
+            elif type(self.explorable) == type(()):
                 children.append(Separator(')'))
-        elif explorable: # treated as a single value
-            ev = ExplorableValue(explorable, initial_value=initial_value)
+        elif self.explorable: # treated as a single value
+            ev = ExplorableValue(self.explorable, initial_value=self.new_val)
+            self.explorables.append(ev)
             dlink((ev, 'new_val'), (self, 'new_val')) # Propagate click
             children.append(ev)
-        super(ExplorableCell, self).__init__(
-            children=children
-        )
+        self.children = children
 
     def switch_visibility(self, visibility):
+        r"""
+        Display/hide cell with CSS.
+        """
         if visibility:
             self.remove_class('invisible')
             self.add_class('visible')
@@ -560,7 +579,7 @@ class ExplorerProperties(ExplorerComponent, GridBox):
             e = ExplorableCell(explorable, initial_value=self.value)
             self.explorables.append(e)
             dlink((e, 'new_val'), (self, 'value')) # Propagate explorable if clicked
-            children.append(e) #, layout=Layout(border='1px solid #eee')))
+            children.append(e)
         self.children = children
 
 
@@ -789,16 +808,12 @@ class ExplorerOutput(ExplorerComponent):
         self.output = ExplorableCell(explorable, initial_value=obj)
         self.output.add_class('invisible')
         def output_changed(change):
+            change.owner.reset_value()
             if change.new:
                 change.owner.switch_visibility(True)
             else:
-                self.new_val = None
                 change.owner.switch_visibility(False)
-        self.output.observe(output_changed, names='value')
-        click_event = Event(source=self.output, watched_events=['click'])
-        def propagate_click(event):
-            self.value = self.new_val
-        click_event.on_dom_event(propagate_click)
+        self.output.observe(output_changed, names='explorable') # display/hide output
         self.error = HTML("")
         self.error.add_class("ansi-red-fg")
         super(ExplorerOutput, self).__init__(
@@ -806,20 +821,23 @@ class ExplorerOutput(ExplorerComponent):
             children=(self.output, self.error),
             layout = Layout(padding='2px 50px 2px 2px')
         )
+        self.reset_value()
 
     def reset_value(self):
-        self.new_val = None
-        self.output.value = ''
+        self.output.new_val = self.value
+        self.output.explorable = None
         self.output.switch_visibility(False)
         self.error.value = ''
+        dlink((self.output, 'new_val'), (self, 'value')) # propagate if output is clicked
 
     def set_output(self, obj):
-        self.new_val = obj
+        self.output.explorable = obj
         self.output.value = '${}$' .format(math_repr(obj))
         self.error.value = ''
+        #self.output.switch_visibility(True)
 
     def set_error(self, err):
-        self.new_val = None
+        self.output.explorable = None
         self.output.value = ''
         self.error.value = '<span class="ansi-red-fg">Error: {}</span>' .format(err)
 
@@ -1079,8 +1097,7 @@ class SageExplorer(VBox):
                     if AlarmInterrupt:
                         cancel_alarm()
                 except AlarmInterrupt:
-                    self.outputbox.error.value = "Timeout!"
-                    self.outputbox.output.value = ''
+                    self.outputbox.set_error("Timeout!")
                     return
                 except Exception as e:
                     if AlarmInterrupt:
@@ -1096,11 +1113,14 @@ class SageExplorer(VBox):
             enter_event.on_dom_event(run_button)
         if 'outputbox' in self.components:
             dlink((self.outputbox, 'value'), (self, 'value')) # Handle the clicks on output values
+            #def new_clicked_value(change):
+            #    self.push_value(change.new)
+            #self.outputbox.observe(new_clicked_value, names='value')
             enter_output_event = Event(source=self.outputbox, watched_events=['keyup'])
             def enter_output(event):
-                if event['key'] == 'Enter' and self.outputbox.new_val:
-                    self.value = self.outputbox.new_val
-            enter_output_event.on_dom_event(enter_output)
+                if event['key'] == 'Enter' and self.outputbox.output.explorable:
+                    self.value = self.outputbox.output.explorable
+            enter_output_event.on_dom_event(enter_output) # Enter-key triggered shortcut on all the output line
         if 'searchbox' in self.components and 'helpbox' in self.components:
             dlink((self.searchbox, 'explored'), (self.helpbox, 'explored'))
         if 'codebox' in self.components:
