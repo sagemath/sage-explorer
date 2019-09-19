@@ -1,0 +1,133 @@
+\documentclass[a4paper,11pt, svgnames]{article}
+
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+
+\usepackage{tikz-uml}
+%\usetikzlibrary{positioning}
+
+\begin{document}
+
+%\begin{center}
+\begin{tikzpicture}
+
+\umlclass[x=-1.5,y=0]{ExplorerTitle}{
+  value: object \\
+  content: string
+}{}
+
+%\umlclass[x=0,y=-2]{ExplorerDescription}{
+%  value: object \\
+%  content: string
+%}{}
+
+\umlclass[x=-2,y=-5,fill=purple!10]{ExplorerHistory}{
+  value: object \\
+  \_history: ExplorableHistory \\
+  \_history\_len: int \\
+  new\_val: object \\
+}{}
+
+\umlclass[x=-1,y=-9,fill=orange!20,anchor=east]{ExplorerOutput}{
+  value: object \\
+}{}
+\umlclass[x=-1,y=-11.2,anchor=east]{ExplorableCell1}{
+  explorable: object \\
+  new\_val: object \\
+}{}
+\umlclass[x=-1,y=-13.5,anchor=east]{ExplorableValue1}{
+  explorable: object \\
+  new\_val: object \\
+}{}
+
+
+\umlclass[x=6,y=1.5,fill=orange!20,anchor=east]{ExplorerProperties}{
+  value: object \\
+
+}{}
+\umlclass[x=6,y=-1,anchor=east]{ExplorableCell}{
+  explorable: object \\
+  new\_val: object \\
+}{}
+\umlclass[x=6,y=-3.4,anchor=east]{ExplorableValue}{
+  explorable: object \\
+  new\_val: object \\
+}{}
+
+\umlclass[x=3.9,y=-8,fill=blue!15]{SageExplorer}{
+  value: object \\
+  \_history: ExplorableHistory \\
+  \_history\_len: int
+}{}
+
+\umlclass[x=3,y=-12]{ExplorerHelp}{
+  value: object \\
+  content: string \\
+  explored: ExploredMember
+}{}
+
+\umlclass[x=2.4,y=-15,fill=green!15]{ExplorerCodeCell}{
+  value: object \\
+  content: string \\
+  new\_val: object
+}{}
+
+\umlclass[x=9,y=0,fill=orange!20]{ExplorerVisual}{
+  value: object \\
+  new\_val: object \\
+
+}{}
+
+\umlclass[x=9,y=-5.4]{ExplorerMethodSearch}{
+  value: object \\
+  explored: ExploredMember
+}{}
+
+\umlclass[x=9,y=-11]{ExplorerArgs}{
+  value: object \\
+  content: string \\
+  explored: ExploredMember
+  %no\_args: bool \\
+}{}
+
+%\umluniassoc [ geometry =−|−, a r g1=x ,
+%mult 1=1 , pos 1=1.9 , a r g2=y , mult 2=∗ ,
+%pos 2=0.2 ] {ExplorerMethodSearch}{ExplorerArgs}
+%\umluniassoc{ExplorerMethodSearch}{ExplorerArgs}
+%\umluniassoc{ExplorerMethodSearch}{ExplorerHelp}
+\umluniassoc[geometry=-|-,arm1=-2.6cm,arm2=0.1cm,weight=0.1]{ExplorableValue}{ExplorableCell}
+\umluniassoc[geometry=-|-,arm1=-2.8cm,arm2=0.1cm,weight=0.3]{ExplorableCell}{ExplorerProperties}
+\umluniassoc[geometry=-|-,arm1=-3cm,arm2=0.1cm,weight=0.6]{ExplorerProperties}{SageExplorer}
+\umluniassoc[geometry=-|-,arm1=-2.6cm,arm2=0.1cm,weight=0.1]{ExplorableValue1}{ExplorableCell1}
+\umluniassoc[geometry=-|-,arm1=-2.8cm,arm2=0.1cm,weight=0.3]{ExplorableCell1}{ExplorerOutput}
+\umluniassoc{ExplorerOutput}{SageExplorer}
+\umluniassoc{ExplorerVisual}{SageExplorer}
+
+\end{tikzpicture}
+%\end{center}
+
+\vspace{1cm}
+
+
+%\begin{tikzpicture}
+
+%  \umlclass{ExplorableHistory(deque)}{
+%    length: int \\
+%    current\_index: int \\
+%    initial\_name: string 
+%  }{
+%    push(object) \\
+%    pop(int=1) \\
+%    truncate()
+%  }
+
+%  \umlclass[x=7, y=0, name=ExplorableValue]{ExplorableValue}{
+%    explorable: object \\
+%    new\_val: object
+%  }{}
+
+%  \umluniassoc{ExplorableValue}{ExplorableValue}
+  
+%\end{tikzpicture}
+  
+\end{document}
