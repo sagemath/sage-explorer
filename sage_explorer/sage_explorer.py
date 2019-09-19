@@ -459,7 +459,7 @@ class ExplorerComponent(Box):
     @abstractmethod
     def reset_value(self):
         r"""
-        Common methods to all components.
+        Reset component when `value` is changed.
 
         TESTS::
             sage: from sage_explorer.sage_explorer import ExplorerComponent
@@ -568,8 +568,6 @@ class ExplorerVisual(ExplorerComponent):
     r"""
     The sage explorer visual representation
     """
-    new_val = Any() # holds visual widget value
-
     def __init__(self, obj):
         super(ExplorerVisual, self).__init__(
             obj,
@@ -591,7 +589,7 @@ class ExplorerVisual(ExplorerComponent):
             else:
                 self.children = ()
         if self.children:
-            dlink((self.children[0], 'value'), (self, 'new_val'))
+            dlink((self.children[0], 'value'), (self, 'value'))
 
 
 class ExplorerHistory(ExplorerComponent):
