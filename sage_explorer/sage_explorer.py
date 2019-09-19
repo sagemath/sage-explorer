@@ -131,6 +131,7 @@ class Separator(Label):
 
 class ExplorableHistory(LoggingHasTraits, deque):
     length = Integer()
+    current_index = Integer()
 
     def __init__(self, obj, initial_name=None, previous_history=[]):
         super(ExplorableHistory, self).__init__(previous_history)
@@ -622,6 +623,7 @@ class ExplorerHistory(ExplorerComponent):
     new_val = Any() # Use selection ? or just value ?
     _history = Instance(ExplorableHistory)
     _history_len = Integer()
+    _history_index = Integer()
 
     def __init__(self, obj, history=None):
         r"""
@@ -640,6 +642,7 @@ class ExplorerHistory(ExplorerComponent):
         self.donottrack = True
         self._history = history or ExplorableHistory(obj)
         dlink((self._history, 'length'), (self, '_history_len'))
+        dlink((self._history, 'current_index'), (self, '_history_index'))
         super(ExplorerHistory, self).__init__(
             obj,
             children=(Dropdown(
@@ -682,6 +685,9 @@ class ExplorerHistory(ExplorerComponent):
 
     @observe('_history_len')
     def history_changed(self, change):
+        r"""
+        _history_len was changed by means of explorer navigation (click)
+        """
         if self.donottrack:
             return
         self.donottrack = True
@@ -1014,6 +1020,7 @@ class SageExplorer(VBox):
     value = Any()
     _history = Instance(ExplorableHistory)
     _history_len = Integer()
+    _history_index = Integer()
     components = Dict() # A list of widgets ; really a trait ?
 
     def __init__(self, obj=None, components=DEFAULT_COMPONENTS, test_mode=False):
@@ -1034,6 +1041,7 @@ class SageExplorer(VBox):
         self.value = obj
         self._history = ExplorableHistory(obj) #, initial_name=self.initial_name)
         self._history_len = 1 # Needed to activate _history propagation
+        self._history_index = 0
         self.components = components
         if not test_mode:
             self.create_components()
@@ -1085,8 +1093,9 @@ class SageExplorer(VBox):
         if 'visualbox' in self.components:
             dlink((self.visualbox, 'value'), (self, 'value')) # Handle the visual widget changes
         if 'histbox' in self.components:
+            dlink((self, '_history_len'), (self.histbox, '_history_len')) # Propagate clicked navigation
             dlink((self.histbox, 'new_val'), (self, 'value')) # Handle the history selection
-            #link((self, '_history_len'), (self.histbox, '_history_len')) # Propagate clicked navigation
+            dlink((self.histbox, '_history_index'), (self, '_history_index')) # Handle the history selection
         if 'searchbox' in self.components and 'argsbox' in self.components:
             dlink((self.searchbox, 'explored'), (self.argsbox, 'explored'))
         if 'runbutton' in self.components:
@@ -1211,7 +1220,7 @@ class SageExplorer(VBox):
         actually_changed = (id(new_val) != id(old_val))
         if actually_changed:
             self._history.push(new_val)
-            #self._history_len += 1
+            self._history_len = self._history.length
             self.reset_value()
 
     def set_value(self, obj):

@@ -21,21 +21,27 @@
 %  content: string
 %}{}
 
-\umlclass[x=-2,y=-5,fill=purple!10]{ExplorerHistory}{
+\umlclass[x=0,y=-5,fill=purple!10,anchor=east]{ExplorerHistory}{
   value: object \\
   \_history: ExplorableHistory \\
   \_history\_len: int \\
+  \_history\_index: int \\
   new\_val: object \\
 }{}
+\umlclass[x=0,y=-8.4,fill=gray!10,anchor=east]{ExplorableHistory(deque)}{
+    length: int \\
+    current\_index: int \\
+    initial\_name: string 
+  }{}
 
-\umlclass[x=-1,y=-9,fill=orange!20,anchor=east]{ExplorerOutput}{
+\umlclass[x=-1,y=-12,fill=orange!20,anchor=east]{ExplorerOutput}{
   value: object \\
 }{}
-\umlclass[x=-1,y=-11.2,anchor=east]{ExplorableCell1}{
+\umlclass[x=-1,y=-14.2,anchor=east]{ExplorableCell1}{
   explorable: object \\
   new\_val: object \\
 }{}
-\umlclass[x=-1,y=-13.5,anchor=east]{ExplorableValue1}{
+\umlclass[x=-1,y=-16.5,anchor=east]{ExplorableValue1}{
   explorable: object \\
   new\_val: object \\
 }{}
@@ -57,16 +63,17 @@
 \umlclass[x=3.9,y=-8,fill=blue!15]{SageExplorer}{
   value: object \\
   \_history: ExplorableHistory \\
-  \_history\_len: int
+  \_history\_len: int \\
+  \_history\_index: int
 }{}
 
-\umlclass[x=3,y=-12]{ExplorerHelp}{
+\umlclass[x=3,y=-14]{ExplorerHelp}{
   value: object \\
   content: string \\
   explored: ExploredMember
 }{}
 
-\umlclass[x=2.4,y=-15,fill=green!15]{ExplorerCodeCell}{
+\umlclass[x=2.4,y=-17,fill=green!15]{ExplorerCodeCell}{
   value: object \\
   content: string \\
   new\_val: object
@@ -100,7 +107,7 @@
 \umluniassoc[geometry=-|-,arm1=-3cm,arm2=0.1cm,weight=0.6]{ExplorerProperties}{SageExplorer}
 \umluniassoc[geometry=-|-,arm1=-2.6cm,arm2=0.1cm,weight=0.1]{ExplorableValue1}{ExplorableCell1}
 \umluniassoc[geometry=-|-,arm1=-2.8cm,arm2=0.1cm,weight=0.3]{ExplorableCell1}{ExplorerOutput}
-\umluniassoc[geometry=|-]{ExplorerHistory}{SageExplorer}
+\umluniassoc[geometry=-|]{ExplorerHistory}{SageExplorer}
 \umluniassoc{ExplorerOutput}{SageExplorer}
 \umluniassoc{ExplorerVisual}{SageExplorer}
 
