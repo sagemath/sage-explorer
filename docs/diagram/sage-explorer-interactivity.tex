@@ -16,21 +16,13 @@
   content: string
 }{}
 
-%\umlclass[x=0,y=-2]{ExplorerDescription}{
-%  value: object \\
-%  content: string
-%}{}
-
 \umlclass[x=0,y=-5,fill=purple!10,anchor=east]{ExplorerHistory}{
   value: object \\
   \_history: ExplorableHistory \\
   \_history\_len: int \\
   \_history\_index: int \\
-  new\_val: object \\
 }{}
-\umlclass[x=0,y=-8.4,fill=gray!10,anchor=east]{ExplorableHistory(deque)}{
-    length: int \\
-    current\_index: int \\
+\umlclass[x=0,y=-7.8,fill=gray!10,anchor=east]{ExplorableHistory(deque)}{
     initial\_name: string 
   }{}
 
@@ -107,9 +99,12 @@
 \umluniassoc[geometry=-|-,arm1=-3cm,arm2=0.1cm,weight=0.6]{ExplorerProperties}{SageExplorer}
 \umluniassoc[geometry=-|-,arm1=-2.6cm,arm2=0.1cm,weight=0.1]{ExplorableValue1}{ExplorableCell1}
 \umluniassoc[geometry=-|-,arm1=-2.8cm,arm2=0.1cm,weight=0.3]{ExplorableCell1}{ExplorerOutput}
-\umluniassoc[geometry=-|]{ExplorerHistory}{SageExplorer}
+\umlassoc[geometry=-|-,arm1=0.4cm,anchor1=-20,anchor2=199]{ExplorerHistory}{SageExplorer}
+\umluniassoc[geometry=-|-,anchor1=190,anchor2=-10]{SageExplorer}{ExplorerHistory}
 \umluniassoc{ExplorerOutput}{SageExplorer}
 \umluniassoc{ExplorerVisual}{SageExplorer}
+\umluniassoc[pos=0.6,recursive=-20|11|1cm]{SageExplorer}{SageExplorer}
+\umluniassoc[pos=0.6,recursive=198|170|1cm]{ExplorerHistory}{ExplorerHistory}
 
 \end{tikzpicture}
 %\end{center}

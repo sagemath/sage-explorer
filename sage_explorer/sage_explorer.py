@@ -129,20 +129,13 @@ class Separator(Label):
         self.add_class("separator")
 
 
-class ExplorableHistory(LoggingHasTraits, deque):
-    length = Integer()
-    current_index = Integer()
+class ExplorableHistory(deque):
 
     def __init__(self, obj, initial_name=None, previous_history=[]):
         super(ExplorableHistory, self).__init__(previous_history)
         if obj:
             self.append(obj)
         self.initial_name = self.get_initial_name(value=obj)
-        self.current_index = len(previous_history)
-        self.update_length()
-
-    def update_length(self):
-        self.length = self.__len__()
 
     @staticmethod
     def get_initial_name(value=None, test_sh_hist=[]):
@@ -191,31 +184,6 @@ class ExplorableHistory(LoggingHasTraits, deque):
                         pass
         return initial_name
 
-    def get_index(self):
-        r"""
-        Get current object history index.
-
-        TESTS::
-            sage: from sage_explorer.sage_explorer import ExplorableHistory
-            sage: h = ExplorableHistory(42)
-            sage: h.get_index()
-            0
-        """
-        return self.current_index
-
-    def set_index(self, i):
-        r"""
-        Set current object history index.
-
-        TESTS::
-            sage: from sage_explorer.sage_explorer import ExplorableHistory
-            sage: h = ExplorableHistory(42)
-            sage: h.set_index(2)
-            sage: h.get_index()
-            2
-        """
-        self.current_index = i
-
     def push(self, obj):
         r"""
         Push the history, ie append
@@ -228,10 +196,8 @@ class ExplorableHistory(LoggingHasTraits, deque):
             sage: h
             ExplorableHistory([42, 'An object'])
         """
-        self.current_index = self.__len__()
         self.append(obj)
         self.truncate(MAX_LEN_HISTORY)
-        self.update_length()
 
     def pop(self, n=1):
         r"""
@@ -261,10 +227,8 @@ class ExplorableHistory(LoggingHasTraits, deque):
         """
         for i in range(n):
             val = super(ExplorableHistory, self).pop()
-            if self.current_index < 1:
+            if not self:
                 raise Exception("No more history!")
-            self.current_index -= 1
-        self.update_length()
         return val
 
     def get_item(self, i=None):
@@ -284,25 +248,8 @@ class ExplorableHistory(LoggingHasTraits, deque):
             42
         """
         if i is None:
-            return self[self.current_index]
+            return self[-1]
         return self.__getitem__(i)
-
-    def get_current_item(self):
-        r"""
-        Get current history item.
-
-        TESTS::
-            sage: from sage_explorer.sage_explorer import ExplorableHistory
-            sage: h = ExplorableHistory("A first value")
-            sage: h.push(42)
-            sage: h.get_current_item()
-            42
-            sage: h
-            ExplorableHistory(['A first value', 42])
-            sage: h.current_index
-            1
-        """
-        return self.get_item()
 
     def make_menu_options(self):
         r"""
@@ -341,8 +288,6 @@ class ExplorableHistory(LoggingHasTraits, deque):
             return
         for i in range(shift):
             self.popleft()
-        self.current_index = self.current_index - shift
-        self.update_length()
 
 
 class ExplorableValue(HTMLMath):
@@ -620,7 +565,6 @@ class ExplorerHistory(ExplorerComponent):
     r"""
     A text input to give a name to a math object
     """
-    new_val = Any() # Use selection ? or just value ?
     _history = Instance(ExplorableHistory)
     _history_len = Integer()
     _history_index = Integer()
@@ -641,8 +585,6 @@ class ExplorerHistory(ExplorerComponent):
         """
         self.donottrack = True
         self._history = history or ExplorableHistory(obj)
-        dlink((self._history, 'length'), (self, '_history_len'))
-        dlink((self._history, 'current_index'), (self, '_history_index'))
         super(ExplorerHistory, self).__init__(
             obj,
             children=(Dropdown(
@@ -656,8 +598,8 @@ class ExplorerHistory(ExplorerComponent):
             if self.donottrack:
                 return
             self.donottrack = True
-            self._history.set_index(change.new)
-            self.new_val = self._history.get_item(change.new)
+            self._history_index = change.new
+            self.value = self._history.get_item(change.new)
             self.donottrack = False
         self.children[0].observe(dropdown_selection, names='value')
 
@@ -672,7 +614,7 @@ class ExplorerHistory(ExplorerComponent):
         History has changed
         """
         self.children[0].options = self._history.make_menu_options()
-        self.children[0].value = self._history.current_index
+        self.children[0].value = self._history_index
         if self._history_len > 1:
             self.children[0].disabled = False
         else:
@@ -1035,7 +977,7 @@ class SageExplorer(VBox):
         super(SageExplorer, self).__init__()
         self.value = obj
         self._history = ExplorableHistory(obj) #, initial_name=self.initial_name)
-        self._history_len = 1 # Needed to activate _history propagation
+        self._history_len = 1 # Needed to activate history propagation
         self._history_index = 0
         self.components = components
         if not test_mode:
@@ -1089,8 +1031,13 @@ class SageExplorer(VBox):
             dlink((self.visualbox, 'value'), (self, 'value')) # Handle the visual widget changes
         if 'histbox' in self.components:
             dlink((self, '_history_len'), (self.histbox, '_history_len')) # Propagate clicked navigation
-            dlink((self.histbox, 'new_val'), (self, 'value')) # Handle the history selection
-            dlink((self.histbox, '_history_index'), (self, '_history_index')) # Handle the history selection
+            link((self.histbox, '_history_index'), (self, '_history_index')) # Handle history selection and propagate clicked navigation
+            def handle_history_selection(change):
+                self.donottrack = True # so we do not push history
+                self.value = self._history.get_item(self._history_index)
+                self.reset_value()
+                self.donottrack = False
+            self.observe(handle_history_selection, names='_history_index')
         if 'searchbox' in self.components and 'argsbox' in self.components:
             dlink((self.searchbox, 'explored'), (self.argsbox, 'explored'))
         if 'runbutton' in self.components:
@@ -1186,10 +1133,20 @@ class SageExplorer(VBox):
         bottom = VBox([middleflex, self.outputbox, self.helpbox, self.codebox])
         self.children = (top, bottom)
 
+    @observe('_history_index')
+    def history_selection(self, change):
+        if self.donottrack:
+            return
+        self.donottrack = True
+        self.value = self._history.get_item(change.new)
+        self.donottrack = False
+
     @observe('value')
     def value_changed(self, change):
         r"""
         What to do when the value has been changed.
+        (Do not use this function if the value change
+        was made by a history selection).
 
         INPUT:
 
@@ -1207,16 +1164,32 @@ class SageExplorer(VBox):
             sage: e.value_changed(Bunch({'name': 'value', 'old': t, 'new': new_t, 'owner': e, 'type': 'change'}))
             sage: e._history
             ExplorableHistory([[[1, 2, 5, 6], [3], [4]], [[1, 2, 7, 6], [3], [4]]])
+            sage: e._history_index = int(0)
+            sage: e.value = 42
+            sage: e._history
+            ExplorableHistory([[[1, 2, 5, 6], [3], [4]], 42])
+            sage: e._history_index
+            1
+            sage: e._history_len
+            2
         """
         if self.donottrack:
             return
         old_val = change.old
         new_val = change.new
         actually_changed = (id(new_val) != id(old_val))
-        if actually_changed:
-            self._history.push(new_val)
-            self._history_len = self._history.length
-            self.reset_value()
+        if not actually_changed:
+            return
+        self.donottrack = True
+        need_to_cut = (self._history_len > self._history_index + 1)
+        if need_to_cut: # First click navigation after a history selection
+            shift = self._history_len - self._history_index - 1
+            self._history.pop(shift)
+        self._history.push(new_val)
+        self._history_len = len(self._history)
+        self._history_index += 1
+        self.reset_value()
+        self.donottrack = False
 
     def set_value(self, obj):
         r"""
