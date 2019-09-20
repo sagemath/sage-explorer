@@ -14,12 +14,11 @@ AUTHORS:
 
 """
 import yaml, os, re, six, types, operator as OP
-from inspect import getargspec, getmro, isclass, isfunction, ismethod, ismethoddescriptor, isabstract
+from inspect import getargspec, getmro, isclass, isabstract
 from functools import lru_cache
 try: # Are we in a Sage environment?
     import sage.all
     from sage.misc.sageinspect import sage_getargspec as getargspec
-    #from sage.misc.sphinxify import sphinxify
 except:
     pass
 
@@ -269,8 +268,6 @@ class ExploredMember(object):
             sage: m.args, m.defaults
             (['self', 'i', 'j'], (None,))
         """
-        args = None
-        defaults = None
         try:
             argspec = getargspec(self.member)
             if hasattr(argspec, 'args'):

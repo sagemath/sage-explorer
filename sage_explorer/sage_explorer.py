@@ -19,11 +19,8 @@ from cysignals.alarm import alarm, cancel_alarm
 from cysignals.signals import AlarmInterrupt
 from inspect import isclass
 from collections import deque
-from ipywidgets import Accordion, Box, Button, Combobox, DOMWidget, Dropdown, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, Textarea, VBox
-from ipywidgets.widgets.widget import LoggingHasTraits
-from ipywidgets.widgets.widget_description import DescriptionStyle
-from traitlets import Any, Bool, Dict, Instance, Integer, Unicode, dlink, link, observe
-from ipywidgets.widgets.trait_types import InstanceDict, Color
+from ipywidgets import Accordion, Box, Button, Combobox, Dropdown, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, Textarea, VBox
+from traitlets import Any, Dict, Instance, Integer, Unicode, dlink, link, observe
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=DeprecationWarning)
     from ipyevents import Event
