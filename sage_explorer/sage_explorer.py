@@ -692,6 +692,9 @@ class ExplorerMethodSearch(ExplorerComponent):
         # we do not link directly for not all names deserve a computation
         self.children[0].observe(method_changed, names='value')
 
+    def set_display(self, s):
+        self.children[0].value = s
+
     def reset(self):
         r"""
         Setup the combobox.
@@ -1065,7 +1068,7 @@ class SageExplorer(VBox):
             self.observe(handle_history_selection, names='_history_index')
         if 'searchbox' in self.components and 'argsbox' in self.components:
             dlink((self.searchbox, 'explored'), (self.argsbox, 'explored'))
-        if 'runbutton' in self.components:
+        if 'searchbox' in self.components and 'argsbox' in self.components and 'outputbox' in self.components:
             def compute_selected_method(button=None):
                 method_name = self.searchbox.explored.name
                 args = self.argsbox.content
@@ -1084,6 +1087,10 @@ class SageExplorer(VBox):
                     self.outputbox.set_error(e)
                     return
                 self.outputbox.set_output(out)
+                self.searchbox.set_display(method_name) # avoid any trailing '?'
+                if 'helpbox' in self.components:
+                    self.helpbox.reset() # empty help box
+        if 'runbutton' in self.components:
             self.runbutton.on_click(compute_selected_method)
             enter_event = Event(source=self.runbutton, watched_events=['keyup'])
             def run_button(event):
@@ -1102,6 +1109,9 @@ class SageExplorer(VBox):
             enter_output_event.on_dom_event(enter_output) # Enter-key triggered shortcut on all the output line
         if 'searchbox' in self.components and 'helpbox' in self.components:
             self.searchbox.set_help_target(self.helpbox)
+            def empty_helpbox(change):
+                self.helpbox.reset()
+            self.searchbox.observe(empty_helpbox, names='explored')
         if 'codebox' in self.components:
             def launch_evaluation(event):
                 if event['key'] == 'Enter' and (event['shiftKey'] or event['ctrlKey']):
