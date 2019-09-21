@@ -513,21 +513,20 @@ class ExplorerDescription(ExplorerComponent):
     """
     content = Unicode('')
 
-    def __init__(self, obj, target=None):
+    def __init__(self, obj, help_target=None):
         super(ExplorerDescription, self).__init__(
             obj,
             children=(
                 HTMLMath(),
-                HelpButton(obj, target)
+                HelpButton(obj, help_target)
             )
         )
         self.add_class("explorer-description")
-        self.reset_value()
-        if target:
-            self.set_target(target)
+        if help_target:
+            self.set_help_target(help_target)
         dlink((self, 'content'), (self.children[0], 'value'))
 
-    def set_target(self, target):
+    def set_help_target(self, target):
         self.children[1].set_target(self.value, target)
 
     def reset_value(self):
@@ -1031,7 +1030,7 @@ class SageExplorer(VBox):
         if self.test_mode:
             self.donottrack = True # Prevent any interactivity while installing the links
         if 'descriptionbox' in self.components and 'helpbox' in self.components:
-            self.descriptionbox.set_target(self.helpbox)
+            self.descriptionbox.set_help_target(self.helpbox)
         if 'propsbox' in self.components:
             dlink((self.propsbox, 'value'), (self, 'value')) # Handle the clicks on property values
         if 'visualbox' in self.components:
