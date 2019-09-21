@@ -1,7 +1,7 @@
 \documentclass[a4paper,11pt, svgnames]{article}
 
 \usepackage{geometry}
-\geometry{a4paper, margin=1in}
+\geometry{a4paper, margin=.5in}
 
 \usepackage{tikz-uml}
 %\usetikzlibrary{positioning}
@@ -96,17 +96,21 @@
 %\umluniassoc [ geometry =−|−, a r g1=x ,
 %mult 1=1 , pos 1=1.9 , a r g2=y , mult 2=∗ ,
 %pos 2=0.2 ] {ExplorerMethodSearch}{ExplorerArgs}
-%\umluniassoc{ExplorerMethodSearch}{ExplorerArgs}
-\umluniassoc{ExplorerDescription}{ExplorerHelp}%clic
-%\umluniassoc{ExplorerMethodSearch}{ExplorerHelp}
-\umluniassoc[geometry=-|-,arm1=-2.6cm,arm2=0.1cm,weight=0.1]{ExplorableValue}{ExplorableCell}%clic
-\umluniassoc[geometry=-|-,arm1=-2.8cm,arm2=0.1cm,weight=0.3]{ExplorableCell}{ExplorerProperties}
+\umluniassoc[geometry=-|-,arm1=0.2cm,anchor1=-9,anchor2=-14]{ExplorerMethodSearch}{ExplorerArgs}
+\umluniassoc[geometry=|-,anchor1=-32,anchor2=185,arg2=?]{ExplorerDescription}{ExplorerHelp}
+\umluniassoc[geometry=|-,anchor1=-145,anchor2=-5,arg2=?]{ExplorerMethodSearch}{ExplorerHelp}
+
+\umluniassoc[pos=0.6,recursive=178|192|1.5cm,arg2=click]{ExplorableValue}{ExplorableValue}
+\umluniassoc[geometry=-|-,arm1=-1cm,arm2=0.1cm,weight=0.1,anchor1=192,anchor2=194]{ExplorableValue}{ExplorableCell}
+\umluniassoc[geometry=-|-,arm1=-1cm,arm2=0.1cm,weight=0.3,anchor1=190,anchor2=185]{ExplorableCell}{ExplorerProperties}
 \umluniassoc[geometry=-|-,arm1=-3cm,arm2=0.1cm,weight=0.6]{ExplorerProperties}{SageExplorer}
-\umluniassoc[geometry=-|-,arm1=-2.6cm,arm2=0.1cm,weight=0.1]{ExplorableValue1}{ExplorableCell1}%clic
-\umluniassoc[geometry=-|-,arm1=-2.8cm,arm2=0.1cm,weight=0.3]{ExplorableCell1}{ExplorerOutput}
+
+\umluniassoc[pos=0.6,recursive=178|192|1.5cm,arg2=click]{ExplorableValue1}{ExplorableValue1}
+\umluniassoc[geometry=-|-,arm1=-1cm,arm2=0.1cm,weight=0.1,anchor1=192,anchor2=194]{ExplorableValue1}{ExplorableCell1}
+\umluniassoc[geometry=-|-,arm1=-1cm,arm2=0.1cm,weight=0.3,anchor1=190,anchor2=185]{ExplorableCell1}{ExplorerOutput}
 \umlassoc[geometry=-|-,arm1=0.4cm,anchor1=-20,anchor2=199]{ExplorerHistory}{SageExplorer}
 \umluniassoc[geometry=-|-,anchor1=190,anchor2=-10]{SageExplorer}{ExplorerHistory}
-\umluniassoc{ExplorerOutput}{SageExplorer}
+\umluniassoc[geometry=-|,anchor1=-4]{ExplorerOutput}{SageExplorer}
 \umluniassoc{ExplorerVisual}{SageExplorer}
 \umluniassoc[pos=0.6,recursive=-20|11|1cm]{SageExplorer}{SageExplorer}
 \umluniassoc[pos=0.6,recursive=198|170|1cm]{ExplorerHistory}{ExplorerHistory}
