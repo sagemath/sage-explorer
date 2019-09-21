@@ -486,13 +486,22 @@ class ExplorerTitle(ExplorerComponent):
     content = Unicode('')
 
     def __init__(self, obj):
+        self.donottrack = True
         super(ExplorerTitle, self).__init__(
             obj,
             children=(MathTitle('', 2),),
             layout=Layout(padding='5px 10px')
         )
         self.reset_value()
+        self.donottrack = False
         self.add_class("explorer-title")
+
+    @observe('value')
+    def value_changed(self, change):
+        if self.donottrack:
+            return
+        self.value = change.new
+        self.reset_value()
 
     def reset_value(self):
         self.content = math_repr(self.value)
