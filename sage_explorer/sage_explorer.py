@@ -31,6 +31,7 @@ css_lines = []
 css_lines.append(".visible {visibility: visible; display: table}")
 css_lines.append(".invisible {visibility: hidden; display: none}")
 css_lines.append(".title-level2 {font-size: 150%}")
+css_lines.append(".separator {width: 1em}")
 css_lines.append('.explorer-title {background-color: teal; background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAQAAACROWYpAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAAAHdElNRQfjCBQVGx7629/nAAAB60lEQVQ4y5WUQU8aQRSAv0UPGDcaJYKaCISj6VFJ6skfoEc5EUhIvWniTzFpjyb2ZJB/UBtMf0BvwA0WIfFAemqRSGJ2xwPDMLuz227nXd68ed/uvDfvPYhaZTwEAo9ylEsiEs5iAWCRjQOvs6ntCiEabLIeBqe4pkFR7mwfbEvtgDqf2QreIMVXXARP1MhQosEYIWVMgxJpKjgIPO5I6+gat7jKtcOrAufySos/UveoswGwDMASuyoAm/2Q3CT5oHSLjOTkOsQx/hYlQ46C365oUf5NJpybF9uh5XN6o0uTJl3efPYOuyZcYqq59LkkS5IkWS7oaydTSn7QYpWGDz32nR/78HvsWfVZlNmjQIGiKgWXK74E7nXBNUtSf+EnDg4D1PsupEveCCpPz/BzEyGtMWBk2EYMDFsiuqtirASeYcuRMWwZcobNW6ZqJCzPiZGwUw3WEjZ/qvv/f6rFMoskxwor5P5VJAA7tAPl2aNJk16gPFtsm3CNSazGeKEaRIs8xW5Jh0Md3eAhNioQfJtNklmRuDyr9x7TZmoENaXDROqCEa5+OB+AfSqkOQsZgNt8YigHYMj8vOW7isbmUcGPqnw+8oN6SP0RHPo3Cr7RrFukFht9Cv72fcoJ0eCX7hLdVUOETM8wyuUdTAVXcgNG490AAAAldEVYdGRhdGU6Y3JlYXRlADIwMTktMDgtMjBUMTk6Mjc6MzArMDI6MDCNIxYDAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDE5LTA4LTIwVDE5OjI3OjMwKzAyOjAw/H6uvwAAAABJRU5ErkJggg=="); background-repeat: no-repeat; background-position: right;background-origin: content-box; border-radius: 4px}')
 css_lines.append(".explorer-table {border-collapse: collapse}")
 css_lines.append(".explorer-flexrow {padding:0; display:flex; flex-flow:row wrap; width:99%}")
@@ -41,6 +42,7 @@ css = HTML("<style>%s</style>" % '\n'.join(css_lines))
 try:
     ip = get_ipython()
     ip.display_formatter.format(css)
+    oi = ip.inspector
 except:
     pass # We are in the test environment
 
@@ -126,6 +128,25 @@ class Separator(Label):
         self.add_class("separator")
 
 
+class HelpButton(Button):
+    r"""
+    """
+    def __init__(self, obj=None, target=None):
+        super(HelpButton, self).__init__(description='?')
+        self.add_class("separator")
+        self.set_target(obj, target)
+
+    def set_target(self, obj, target):
+        def open_help(event):
+            if obj and target:
+                target.content = obj.__doc__
+        click_event = Event(
+            source=self,
+            watched_events=['click']
+        )
+        click_event.on_dom_event(open_help) # Display `obj` help on click
+
+
 class ExplorableHistory(deque):
 
     def __init__(self, obj, initial_name=None, previous_history=[]):
@@ -209,8 +230,6 @@ class ExplorableHistory(deque):
             42
             sage: h
             ExplorableHistory(['A first value'])
-            sage: h.current_index
-            0
             sage: h.pop()
             Traceback (most recent call last):
             ...
@@ -485,14 +504,22 @@ class ExplorerDescription(ExplorerComponent):
     """
     content = Unicode('')
 
-    def __init__(self, obj):
+    def __init__(self, obj, target=None):
         super(ExplorerDescription, self).__init__(
             obj,
-            children=(HTMLMath(),)
+            children=(
+                HTMLMath(),
+                HelpButton(obj, target)
+            )
         )
-        self.reset_value()
-        dlink((self, 'content'), (self.children[0], 'value'))
         self.add_class("explorer-description")
+        self.reset_value()
+        if target:
+            self.set_target(target)
+        dlink((self, 'content'), (self.children[0], 'value'))
+
+    def set_target(self, target):
+        self.children[1].set_target(self.value, target)
 
     def reset_value(self):
         if self.value.__doc__:
@@ -786,7 +813,7 @@ class ExplorerOutput(ExplorerComponent):
         self.error.value = '<span class="ansi-red-fg">Error: {}</span>' .format(err)
 
 
-class ExplorerHelp(ExplorerComponent, Accordion):
+class ExplorerHelp(ExplorerComponent):
     r"""
     An expandable box for object or method help text.
 
@@ -804,8 +831,7 @@ class ExplorerHelp(ExplorerComponent, Accordion):
         super(ExplorerHelp, self).__init__(
             obj,
             children=(HTMLMath(),),
-            selected_index=None,
-            layout=Layout(width='99%', padding='0')
+            layout=Layout(width='99%', padding='0', border='1px solid grey')
         )
         dlink((self, 'content'), (self.children[0], 'value'))
         def explored_changed(change):
@@ -815,49 +841,22 @@ class ExplorerHelp(ExplorerComponent, Accordion):
                     explored.compute_doc()
                 self.content = explored.doc
             else:
-                self.content = self.value.__doc__ or ''
-            self.compute_title()
+                self.content = ''
         self.observe(explored_changed, names='explored')
-        self.reset_value()
 
-    def compute_title(self):
-        r"""
-        Content has changed.
-
-        TESTS::
-            sage: from sage_explorer.sage_explorer import ExplorerHelp
-            sage: h = ExplorerHelp("Some initial value")
-            sage: h._titles['0'][:15]
-            "str(object='') "
-            sage: h.content = "Some help text"
-            sage: h._titles['0']
-            'Some help text'
-        """
-        s = self.content.strip()
-        if not s:
-            self.set_title(0, 'Help')
-            return
-        end_first_line = max(s.find('.'), s.find('\n'))
-        if end_first_line > 0:
-            self.set_title(0, s[:end_first_line])
-        else:
-            self.set_title(0, s[:100])
-
-    def reset_value(self):
+    @observe('value')
+    def value_changed(self, change):
         r"""
         Value has changed.
 
         TESTS::
             sage: from sage_explorer.sage_explorer import ExplorerHelp
             sage: h = ExplorerHelp("Some initial value")
-            sage: h._titles['0'][:15]
-            "str(object='') "
             sage: h.value = 42
-            sage: h._titles['0']
-            'Integer(x=None, base=0)\nFile: sage/rings/integer'
+            sage: h.content
+            ''
         """
-        self.content = self.value.__doc__ or ''
-        self.compute_title()
+        self.content = ''
 
 
 class ExplorerCodeCell(ExplorerComponent):
@@ -1022,6 +1021,8 @@ class SageExplorer(VBox):
         """
         if self.test_mode:
             self.donottrack = True # Prevent any interactivity while installing the links
+        if 'descriptionbox' in self.components and 'helpbox' in self.components:
+            self.descriptionbox.set_target(self.helpbox)
         if 'propsbox' in self.components:
             dlink((self.propsbox, 'value'), (self, 'value')) # Handle the clicks on property values
         if 'visualbox' in self.components:
@@ -1125,9 +1126,9 @@ class SageExplorer(VBox):
         ])
         middleflex.add_class("explorer-flexrow")
         self.focuslist.append(self.outputbox)
-        self.focuslist.append(self.helpbox)
         self.focuslist.append(self.codebox)
-        bottom = VBox([middleflex, self.outputbox, self.helpbox, self.codebox])
+        self.focuslist.append(self.helpbox)
+        bottom = VBox([middleflex, self.outputbox, self.codebox, self.helpbox])
         self.children = (top, bottom)
 
     @observe('_history_index')

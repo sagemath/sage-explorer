@@ -11,10 +11,15 @@
 %\begin{center}
 \begin{tikzpicture}
 
-\umlclass[x=-1.5,y=0]{ExplorerTitle}{
+\umlclass[x=-1.5,y=0.5]{ExplorerTitle}{
   value: object \\
   content: string
 }{}
+\umlclass[x=-1.5,y=-2]{ExplorerDescription}{
+  value: object \\
+  content: string
+}{}
+
 
 \umlclass[x=0,y=-5,fill=purple!10,anchor=east]{ExplorerHistory}{
   value: object \\
@@ -37,7 +42,6 @@
   explorable: object \\
   new\_val: object \\
 }{}
-
 
 \umlclass[x=6,y=1.5,fill=orange!20,anchor=east]{ExplorerProperties}{
   value: object \\
@@ -93,11 +97,12 @@
 %mult 1=1 , pos 1=1.9 , a r g2=y , mult 2=∗ ,
 %pos 2=0.2 ] {ExplorerMethodSearch}{ExplorerArgs}
 %\umluniassoc{ExplorerMethodSearch}{ExplorerArgs}
+\umluniassoc{ExplorerDescription}{ExplorerHelp}%clic
 %\umluniassoc{ExplorerMethodSearch}{ExplorerHelp}
-\umluniassoc[geometry=-|-,arm1=-2.6cm,arm2=0.1cm,weight=0.1]{ExplorableValue}{ExplorableCell}
+\umluniassoc[geometry=-|-,arm1=-2.6cm,arm2=0.1cm,weight=0.1]{ExplorableValue}{ExplorableCell}%clic
 \umluniassoc[geometry=-|-,arm1=-2.8cm,arm2=0.1cm,weight=0.3]{ExplorableCell}{ExplorerProperties}
 \umluniassoc[geometry=-|-,arm1=-3cm,arm2=0.1cm,weight=0.6]{ExplorerProperties}{SageExplorer}
-\umluniassoc[geometry=-|-,arm1=-2.6cm,arm2=0.1cm,weight=0.1]{ExplorableValue1}{ExplorableCell1}
+\umluniassoc[geometry=-|-,arm1=-2.6cm,arm2=0.1cm,weight=0.1]{ExplorableValue1}{ExplorableCell1}%clic
 \umluniassoc[geometry=-|-,arm1=-2.8cm,arm2=0.1cm,weight=0.3]{ExplorableCell1}{ExplorerOutput}
 \umlassoc[geometry=-|-,arm1=0.4cm,anchor1=-20,anchor2=199]{ExplorerHistory}{SageExplorer}
 \umluniassoc[geometry=-|-,anchor1=190,anchor2=-10]{SageExplorer}{ExplorerHistory}
