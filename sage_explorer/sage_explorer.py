@@ -674,7 +674,7 @@ class ExplorerMethodSearch(ExplorerComponent):
     """
     explored = Instance(ExploredMember) # to share with ExplorerArgs and ExplorerHelp
 
-    def __init__(self, obj):
+    def __init__(self, obj, help_target=None):
         super(ExplorerMethodSearch, self).__init__(
             obj,
             children=(
@@ -683,6 +683,8 @@ class ExplorerMethodSearch(ExplorerComponent):
                 ),)
         )
         self.reset_value()
+        if help_target:
+            self.set_help_target(help_target)
         def method_changed(change):
             selected_method = change.new
             if selected_method in self.members_dict:
@@ -703,6 +705,20 @@ class ExplorerMethodSearch(ExplorerComponent):
         self.children[0].options=[m.name for m in self.members]
         self.children[0].value = ''
         self.explored = ExploredMember('')
+
+    def set_help_target(self, target):
+        if not target:
+            return
+        def open_help(event):
+            if event['key'] == '?' and self.explored:
+                if not hasattr(self.explored, 'doc'):
+                    self.explored.compute_doc()
+                target.content = self.explored.doc
+        click_event = Event(
+            source=self,
+            watched_events=['keyup']
+        )
+        click_event.on_dom_event(open_help) # Display `obj` help on click
 
 
 class ExplorerArgs(ExplorerComponent):
@@ -1082,7 +1098,7 @@ class SageExplorer(VBox):
                     self.value = self.outputbox.output.explorable
             enter_output_event.on_dom_event(enter_output) # Enter-key triggered shortcut on all the output line
         if 'searchbox' in self.components and 'helpbox' in self.components:
-            dlink((self.searchbox, 'explored'), (self.helpbox, 'explored'))
+            self.searchbox.set_help_target(self.helpbox)
         if 'codebox' in self.components:
             def launch_evaluation(event):
                 if event['key'] == 'Enter' and (event['shiftKey'] or event['ctrlKey']):
