@@ -19,7 +19,7 @@ from cysignals.alarm import alarm, cancel_alarm
 from cysignals.signals import AlarmInterrupt
 from inspect import isclass
 from collections import deque
-from ipywidgets import Accordion, Box, Button, Combobox, Dropdown, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, Textarea, VBox
+from ipywidgets import Accordion, Box, Button, Combobox, Dropdown, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, Textarea, ToggleButton, VBox
 from traitlets import Any, Dict, Instance, Integer, Unicode, dlink, link, observe
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -128,7 +128,7 @@ class Separator(Label):
         self.add_class("separator")
 
 
-class HelpButton(Button):
+class HelpButton(ToggleButton):
     r"""
     """
     def __init__(self, obj=None, target=None):
@@ -139,7 +139,10 @@ class HelpButton(Button):
     def set_target(self, obj, target):
         def open_help(event):
             if obj and target:
-                target.content = obj.__doc__
+                if self.value:
+                    target.content = obj.__doc__
+                else:
+                    target.reset()
         click_event = Event(
             source=self,
             watched_events=['click']
