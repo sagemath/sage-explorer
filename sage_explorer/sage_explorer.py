@@ -19,7 +19,7 @@ from cysignals.alarm import alarm, cancel_alarm
 from cysignals.signals import AlarmInterrupt
 from inspect import isclass
 from collections import deque
-from ipywidgets import Accordion, Box, Button, Combobox, Dropdown, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, Textarea, ToggleButton, VBox
+from ipywidgets import Box, Button, Combobox, Dropdown, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, Textarea, ToggleButton, VBox
 from traitlets import Any, Dict, Instance, Integer, Unicode, dlink, link, observe
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -92,6 +92,17 @@ def math_repr(obj):
             return "${}$" . format(s)
     return obj.__str__()
 
+def switch_visibility(widget, visibility):
+    r"""
+    Display/hide a widget with CSS.
+    """
+    if visibility:
+        widget.remove_class('invisible')
+        widget.add_class('visible')
+    else:
+        widget.remove_class('visible')
+        widget.add_class('invisible')
+
 
 class Title(Label):
     r"""A title of various levels
@@ -141,6 +152,7 @@ class HelpButton(ToggleButton):
             if obj and target:
                 if self.value:
                     target.content = obj.__doc__
+                    switch_visibility(target, True)
                 else:
                     target.reset()
         click_event = Event(
@@ -405,17 +417,6 @@ class ExplorableCell(Box):
             dlink((ev, 'new_val'), (self, 'new_val')) # Propagate click
             children.append(ev)
         self.children = children
-
-    def switch_visibility(self, visibility):
-        r"""
-        Display/hide cell with CSS.
-        """
-        if visibility:
-            self.remove_class('invisible')
-            self.add_class('visible')
-        else:
-            self.remove_class('visible')
-            self.add_class('invisible')
 
 
 class ExplorerComponent(Box):
@@ -720,6 +721,7 @@ class ExplorerMethodSearch(ExplorerComponent):
                 if not hasattr(self.explored, 'doc'):
                     self.explored.compute_doc()
                 target.content = self.explored.doc
+                switch_visibility(target, True)
         click_event = Event(
             source=self,
             watched_events=['keyup']
@@ -811,9 +813,9 @@ class ExplorerOutput(ExplorerComponent):
         def output_changed(change):
             change.owner.reset()
             if change.new:
-                change.owner.switch_visibility(True)
+                switch_visibility(change.owner, True)
             else:
-                change.owner.switch_visibility(False)
+                switch_visibility(change.owner, False)
         self.output.observe(output_changed, names='explorable') # display/hide output
         self.error = HTML("")
         self.error.add_class("ansi-red-fg")
@@ -827,7 +829,7 @@ class ExplorerOutput(ExplorerComponent):
     def reset(self):
         self.output.new_val = self.value
         self.output.explorable = None
-        self.output.switch_visibility(False)
+        switch_visibility(self.output, False)
         self.error.value = ''
         dlink((self.output, 'new_val'), (self, 'value')) # propagate if output is clicked
 
@@ -870,12 +872,15 @@ class ExplorerHelp(ExplorerComponent):
                 if not hasattr(explored, 'doc'):
                     explored.compute_doc()
                 self.content = explored.doc
+                switch_visibility(self, True)
             else:
                 self.content = ''
+                switch_visibility(self, False)
         self.observe(explored_changed, names='explored')
 
     def reset(self):
         self.content = ''
+        switch_visibility(self, False)
 
     @observe('value')
     def value_changed(self, change):
