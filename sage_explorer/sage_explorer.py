@@ -332,13 +332,13 @@ class ExplorableValue(HTMLMath):
     explorable = Any() # Some computed math object
     new_val = Any() # Overall value. Will be changed when explorable is clicked. `value` being reserved by ipywidgets.
 
-    def __init__(self, explorable, initial_value=None):
+    def __init__(self, explorable, display=None, initial_value=None):
         self.explorable = explorable
         if initial_value:
             self.new_val = initial_value
         super(ExplorableValue, self).__init__(layout=Layout(margin='1px'))
         self.add_class('explorable-value')
-        self.reset()
+        self.reset(display)
         click_event = Event(
             source=self,
             watched_events=['click', 'keyup']
@@ -349,11 +349,14 @@ class ExplorableValue(HTMLMath):
         click_event.on_dom_event(set_new_val) # Handle clicking
 
 
-    def reset(self):
+    def reset(self, display):
         r"""
         `explorable` has changed: compute HTML value.
         """
-        self.value = math_repr(self.explorable)
+        if display:
+            self.value = display
+        else:
+            self.value = math_repr(self.explorable)
 
 
 class ExplorableCell(Box):
@@ -396,8 +399,12 @@ class ExplorableCell(Box):
                 children.append(Separator('['))
             elif type(self.explorable) == type(()):
                 children.append(Separator('('))
-            else:
-                children.append(Separator('{'))
+            else: # Here, make both the set and its elements explorable
+                children.append(ExplorableValue(
+                    self.explorable,
+                    display='{',
+                    initial_value=self.new_val)
+                )
             for e in self.explorable:
                 ev = ExplorableValue(e, initial_value=self.new_val)
                 dlink((ev, 'new_val'), (self, 'new_val')) # Propagate click
