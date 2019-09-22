@@ -532,6 +532,16 @@ class ExplorerDescription(ExplorerComponent):
 
     def set_help_target(self, target):
         self.children[1].set_target(self.value, target)
+        def open_help(event):
+            if event['key'] in ['?', 'Enter'] and self.value and target:
+                target.content = self.value.__doc__
+                switch_visibility(target, True)
+                self.children[1].value = True
+        keyboard_event = Event(
+            source=self.children[0],
+            watched_events=['keyup']
+        )
+        keyboard_event.on_dom_event(open_help) # Display `self.value` help on '?'/'Enter'
 
     def reset(self):
         if self.value.__doc__:
