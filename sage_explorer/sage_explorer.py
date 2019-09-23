@@ -21,6 +21,7 @@ from inspect import isclass
 from collections import deque
 from ipywidgets import Box, Button, Combobox, Dropdown, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, Textarea, ToggleButton, VBox
 from traitlets import Any, Dict, Instance, Integer, Unicode, dlink, link, observe
+from IPython.core.interactiveshell import sphinxify
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=DeprecationWarning)
     from ipyevents import Event
@@ -883,7 +884,6 @@ class ExplorerHelp(ExplorerComponent):
             children=(HTMLMath(),),
             layout=Layout(width='99%', padding='0', border='1px solid grey')
         )
-        dlink((self, 'content'), (self.children[0], 'value'))
         def explored_changed(change):
             explored = change.new
             if explored.name:
@@ -899,6 +899,20 @@ class ExplorerHelp(ExplorerComponent):
     def reset(self):
         self.content = ''
         switch_visibility(self, False)
+
+    @observe('content')
+    def content_changed(self, change):
+        r"""
+        Actually display the docstring
+        """
+        if change.new:
+            formatted_content = sphinxify(change.new)
+            if 'text/html' in formatted_content and formatted_content['text/html']:
+                self.children[0].value = formatted_content['text/html']
+            elif 'text/plain' in formatted_content:
+                self.children[0].value = formatted_content['text/plain']
+        else:
+            self.children[0].value = ''
 
     @observe('value')
     def value_changed(self, change):
