@@ -140,6 +140,10 @@ class HelpButton(ToggleButton):
     def __init__(self, obj=None, target=None):
         super(HelpButton, self).__init__(description='?')
         self.add_class("separator")
+        self.click_event = Event(
+            source=self,
+            watched_events=['click']
+        )
         self.set_target(obj, target)
 
     def set_target(self, obj, target):
@@ -150,11 +154,8 @@ class HelpButton(ToggleButton):
                     switch_visibility(target, True)
                 else:
                     target.reset()
-        click_event = Event(
-            source=self,
-            watched_events=['click']
-        )
-        click_event.on_dom_event(open_help) # Display `obj` help on click
+        self.click_event._dom_handlers.callbacks.clear() # Remove previous handler
+        self.click_event.on_dom_event(open_help) # Display `obj` help on click
 
 
 class ExplorableHistory(deque):
@@ -500,16 +501,8 @@ class ExplorerTitle(ExplorerComponent):
                 global_css_code),
             layout=Layout(padding='5px 10px')
         )
-        self.reset()
         self.donottrack = False
         self.add_class("explorer-title")
-
-    @observe('value')
-    def value_changed(self, change):
-        if self.donottrack:
-            return
-        self.value = change.new
-        self.reset()
 
     def reset(self):
         self.content = math_repr(self.value)
@@ -522,6 +515,7 @@ class ExplorerDescription(ExplorerComponent):
     content = Unicode('')
 
     def __init__(self, obj, help_target=None):
+        self.help_target = None
         super(ExplorerDescription, self).__init__(
             obj,
             children=(
@@ -535,6 +529,7 @@ class ExplorerDescription(ExplorerComponent):
         dlink((self, 'content'), (self.children[0], 'value'))
 
     def set_help_target(self, target):
+        self.help_target = target
         self.children[1].set_target(self.value, target)
         def open_help(event):
             if event['key'] in ['?', 'Enter'] and self.value and target:
@@ -552,6 +547,8 @@ class ExplorerDescription(ExplorerComponent):
             self.content = [l for l in self.value.__doc__.split("\n") if l][0].strip()
         else:
             self.content = ''
+        if self.help_target:
+            self.set_help_target(self.help_target) # re-recreate help button handler
 
 
 class ExplorerProperties(ExplorerComponent, GridBox):
@@ -740,7 +737,7 @@ class ExplorerMethodSearch(ExplorerComponent):
             source=self,
             watched_events=['keyup']
         )
-        click_event.on_dom_event(open_help) # Display `obj` help on click
+        click_event.on_dom_event(open_help) # Display `explored` help on click
 
 
 class ExplorerArgs(ExplorerComponent):
@@ -892,7 +889,11 @@ class ExplorerHelp(ExplorerComponent):
         self.observe(explored_changed, names='explored')
 
     def reset(self):
-        self.content = ''
+        self.donottrack = False
+        try:
+            self.content = self.value.__doc__
+        except:
+            self.content = "Cannot retrieve help!"
         switch_visibility(self, False)
 
     @observe('content')
@@ -900,6 +901,8 @@ class ExplorerHelp(ExplorerComponent):
         r"""
         Actually display the docstring
         """
+        if self.donottrack:
+            return
         if change.new:
             formatted_content = sphinxify(change.new)
             if 'text/html' in formatted_content and formatted_content['text/html']:
@@ -908,20 +911,6 @@ class ExplorerHelp(ExplorerComponent):
                 self.children[0].value = formatted_content['text/plain']
         else:
             self.children[0].value = ''
-
-    @observe('value')
-    def value_changed(self, change):
-        r"""
-        Value has changed.
-
-        TESTS::
-            sage: from sage_explorer.sage_explorer import ExplorerHelp
-            sage: h = ExplorerHelp("Some initial value")
-            sage: h.value = 42
-            sage: h.content
-            ''
-        """
-        self.reset()
 
 
 class ExplorerCodeCell(ExplorerComponent):
