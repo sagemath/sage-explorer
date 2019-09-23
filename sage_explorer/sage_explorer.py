@@ -39,14 +39,7 @@ css_lines.append(".explorer-table {border-collapse: collapse}")
 css_lines.append(".explorer-flexrow {padding:0; display:flex; flex-flow:row wrap; width:99%}")
 css_lines.append(".explorer-flexitem {flex-grow:1}")
 css_lines.append(".explorable-value {background-color: #eee; border-radius: 4px; padding: 4px}\n.explorable-value:hover {cursor: pointer}")
-css = HTML("<style>%s</style>" % '\n'.join(css_lines))
-
-try:
-    ip = get_ipython()
-    ip.display_formatter.format(css)
-    oi = ip.inspector
-except:
-    pass # We are in the test environment
+global_css_code = HTML("<style>%s</style>" % '\n'.join(css_lines))
 
 TIMEOUT = 15 # in seconds
 MAX_LEN_HISTORY = 50
@@ -502,7 +495,9 @@ class ExplorerTitle(ExplorerComponent):
         self.donottrack = True
         super(ExplorerTitle, self).__init__(
             obj,
-            children=(MathTitle('', 2),),
+            children=(
+                MathTitle('', 2),
+                global_css_code),
             layout=Layout(padding='5px 10px')
         )
         self.reset()
