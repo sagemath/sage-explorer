@@ -188,7 +188,7 @@ class ExplorableHistory(deque):
             sage: h.get_initial_name(test_sh_hist=["x=42", "w = explore(x)", "explore(43)", "w"])
             'x'
         """
-        initial_name = "Hist[0]"
+        initial_name = None
         try:
             sh_hist = get_ipython().history_manager.input_hist_parsed[-50:]
         except:
@@ -959,17 +959,22 @@ class ExplorerCodeCell(ExplorerComponent):
             3
         """
         g = globals() # the name space used by the usual Jupyter cells
-        l = l or {"_": self.value} #, "__explorer__": self, "Hist": self._history}
-        local_names = ["_", "__explorer__", "Hist"]
+        l = l or {"_": self.value}
+        local_names = l.keys()
         code = compile(self.content, '<string>', 'eval')
-        result = eval(code, g, l)
+        try:
+            result = eval(code, g, l)
+        except Exception as e:
+            self.content = "Evaluation error: %s" % e
+            self.add_class("error")
+            return
         if result is None: # the code may have triggered some assignments
             self.content = "result is None"
             for name, value in l.items():
                 if name not in local_names:
                     g[name] = value
         else:
-            self.content = "OK"
+            self.content = str(result)
             self.new_val = result
 
 
@@ -1139,7 +1144,10 @@ class SageExplorer(VBox):
         if 'codebox' in self.components:
             def launch_evaluation(event):
                 if event['key'] == 'Enter' and (event['shiftKey'] or event['ctrlKey']):
-                    self.codebox.evaluate(l = {"_": self.value, "__explorer__": self, "Hist": self._history})
+                    locs = {"_": self.value, "__explorer__": self, "Hist": list(self._history)}
+                    if self._history.initial_name:
+                        locs[self._history.initial_name] = self.value
+                    self.codebox.evaluate(l = locs)
             self.codebox.run_event.on_dom_event(launch_evaluation)
         if self.test_mode:
             self.donottrack = False
