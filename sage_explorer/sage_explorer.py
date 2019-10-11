@@ -26,6 +26,10 @@ with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=DeprecationWarning)
     from ipyevents import Event
 from .explored_member import ExploredMember, _eval_in_main, get_members, get_properties
+try:
+    from unit_widgets import ButtonUnit, ComboboxUnit, DropdownUnit, HTMLMathUnit, TextUnit, TextareaUnit, ToggleButtonUnit
+except:
+    ButtonUnit, ComboboxUnit, DropdownUnit, HTMLMathUnit, TextUnit, TextareaUnit, ToggleButtonUnit = Button, Combobox, Dropdown, HTMLMath, Text, Textarea, ToggleButton
 
 title_layout = Layout(width='100%', padding='12px')
 css_lines = []
@@ -110,7 +114,7 @@ class Title(Label):
         self.add_class('title-level%d' % level)
 
 
-class MathTitle(HTMLMath):
+class MathTitle(HTMLMathUnit):
     r"""A title of various levels
 
     For HTML display
@@ -134,7 +138,7 @@ class Separator(Label):
         self.add_class("separator")
 
 
-class HelpButton(ToggleButton):
+class HelpButton(ToggleButtonUnit):
     r"""
     """
     def __init__(self, obj=None, target=None):
@@ -317,7 +321,7 @@ class ExplorableHistory(deque):
             self.popleft()
 
 
-class ExplorableValue(HTMLMath):
+class ExplorableValue(HTMLMathUnit):
     r"""
     A repr string with a link to a Sage object.
 
@@ -421,6 +425,17 @@ class ExplorableCell(Box):
             children.append(ev)
         self.children = children
 
+    def set_focusable(self, focusable):
+        r"""
+        For compatibility.
+        """
+        if focusable is True:
+            for ev in self.explorables:
+                ev.allow_focus()
+        elif focusable is False:
+            for ev in self.explorables:
+                ev.disallow_focus()
+
 
 class ExplorerComponent(Box):
     r"""
@@ -447,6 +462,20 @@ class ExplorerComponent(Box):
         super(ExplorerComponent, self).__init__(**kws)
         self.reset()
         self.donottrack = False
+
+    def set_focusable(self, focusable):
+        if hasattr(self, 'allow_focus'): # a Unit
+            if focusable is True:
+                self.allow_focus()
+            elif focusable is False:
+                self.disallow_focus()
+        elif hasattr(self, 'children'):
+            for child in self.children:
+                if hasattr(child, 'allow_focus'):
+                    if focusable is True:
+                        child.allow_focus()
+                    elif focusable is False:
+                        child.disallow_focus()
 
     @abstractmethod
     def reset(self):
@@ -519,7 +548,7 @@ class ExplorerDescription(ExplorerComponent):
         super(ExplorerDescription, self).__init__(
             obj,
             children=(
-                HTMLMath(),
+                HTMLMathUnit(),
                 HelpButton(obj, help_target)
             )
         )
@@ -598,7 +627,7 @@ class ExplorerVisual(ExplorerComponent):
         else:
             if hasattr(self.value, '__ascii_art__'):
                 self.children = (
-                    Textarea(
+                    TextareaUnit(
                         repr(self.value._ascii_art_()),
                         rows=8
                     ),)
@@ -634,7 +663,7 @@ class ExplorerHistory(ExplorerComponent):
         self._history = history or ExplorableHistory(obj)
         super(ExplorerHistory, self).__init__(
             obj,
-            children=(Dropdown(
+            children=(DropdownUnit(
                 layout=Layout(width='5em', padding='0', margin='0')
             ),),
             layout=Layout(padding='0')
@@ -693,7 +722,7 @@ class ExplorerMethodSearch(ExplorerComponent):
         super(ExplorerMethodSearch, self).__init__(
             obj,
             children=(
-                Combobox(
+                ComboboxUnit(
                     placeholder="Enter method name"
                 ),)
         )
@@ -757,7 +786,7 @@ class ExplorerArgs(ExplorerComponent):
         """
         super(ExplorerArgs, self).__init__(
             obj,
-            children=(Text(
+            children=(TextUnit(
                 '',
                 placeholder="Enter arguments",
                 layout=Layout(width="100%")
@@ -791,7 +820,7 @@ class ExplorerArgs(ExplorerComponent):
         self.children[0].placeholder = "Enter arguments"
 
 
-class ExplorerRunButton(Button):
+class ExplorerRunButton(ButtonUnit):
     r"""
     A button for running methods in the explorer.
 
@@ -805,6 +834,15 @@ class ExplorerRunButton(Button):
             tooltip = 'Run the method with specified arguments',
             layout = Layout(width='4em', right='0')
         )
+
+    def set_focusable(self, focusable):
+        r"""
+        For compatibility.
+        """
+        if focusable is True:
+            self.allow_focus()
+        elif focusable is False:
+            self.disallow_focus()
 
 
 class ExplorerOutput(ExplorerComponent):
@@ -873,7 +911,7 @@ class ExplorerHelp(ExplorerComponent):
         """
         super(ExplorerHelp, self).__init__(
             obj,
-            children=(HTMLMath(),),
+            children=(HTMLMathUnit(),),
             layout=Layout(width='99%', padding='0', border='1px solid grey')
         )
         def explored_changed(change):
@@ -928,8 +966,10 @@ class ExplorerCodeCell(ExplorerComponent):
     def __init__(self, obj, standalone=False):
         super(ExplorerCodeCell, self).__init__(
             obj,
-            children=(Textarea(
-                rows = 1,
+            children=(TextareaUnit(
+                placeholder="Run your code here ..",
+                description_tooltip="Use your local namespace, and additionally:\n '_' for your object, __explorer__ and Hist.",
+                rows = 0,
                 layout=Layout(border='1px solid #eee', width='99%')
             ),)
         )
@@ -1168,8 +1208,8 @@ class SageExplorer(VBox):
         self.focuslist = [] # Will be used to allocate focus to successive components
         self.focuslist.append(self.titlebox)
         propsvbox = VBox([self.descriptionbox, self.propsbox])
-        for ev in self.propsbox.explorables:
-            self.focuslist.append(ev)
+        for ec in self.propsbox.explorables:
+            self.focuslist.append(ec)
         self.focuslist.append(self.visualbox)
         propsvbox.add_class('explorer-flexitem')
         topflex = HBox(
@@ -1194,11 +1234,16 @@ class SageExplorer(VBox):
             self.runbutton
         ])
         middleflex.add_class("explorer-flexrow")
-        self.focuslist.append(self.outputbox)
         self.focuslist.append(self.codebox)
+        self.focuslist.append(self.outputbox)
         self.focuslist.append(self.helpbox)
         bottom = VBox([middleflex, self.outputbox, self.codebox, self.helpbox])
         self.children = (top, bottom)
+        self.distribute_focus()
+
+    def distribute_focus(self):
+        for c in self.focuslist:
+            c.set_focusable(True)
 
     @observe('_history_index')
     def history_selection(self, change):

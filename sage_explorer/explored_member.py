@@ -24,7 +24,7 @@ except:
 
 EXCLUDED_MEMBERS = ['__init__', '__repr__', '__str__']
 OPERATORS = {'==' : OP.eq, '<' : OP.lt, '<=' : OP.le, '>' : OP.gt, '>=' : OP.ge}
-CONFIG_PROPERTIES = yaml.load(open(os.path.join(os.path.dirname(__file__),'properties.yml')), yaml.SafeLoader)
+CONFIG_PROPERTIES = yaml.load(open(os.path.join(os.path.dirname(__file__), 'properties.yml')), yaml.SafeLoader)
 
 import __main__
 def _eval_in_main(s, locals={}):
