@@ -622,6 +622,8 @@ class ExplorerVisual(ExplorerComponent):
 
     def reset(self):
         w = _get_visual_widget(self.value)
+        if hasattr(w, 'disallow_inside_focus'):
+            w.disallow_inside_focus()
         if w:
             self.children = (w,)
         else:
