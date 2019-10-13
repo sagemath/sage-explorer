@@ -20,8 +20,11 @@ from cysignals.signals import AlarmInterrupt
 from inspect import isclass
 from collections import deque
 from ipywidgets import Box, Button, Combobox, Dropdown, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, Textarea, ToggleButton, VBox
-from traitlets import Any, Dict, Instance, Integer, Unicode, dlink, link, observe
-from IPython.core.interactiveshell import sphinxify
+from traitlets import Any, Dict, Instance, Int, Unicode, dlink, link, observe
+try:
+    from IPython.core.interactiveshell import sphinxify
+except:
+    sphinxify = str
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=DeprecationWarning)
     from ipyevents import Event
@@ -920,6 +923,7 @@ class ExplorerHelp(ExplorerComponent):
             children=(HTMLMathUnit(),),
             layout=Layout(width='99%', padding='0', border='1px solid grey')
         )
+        self.reset()
         def explored_changed(change):
             explored = change.new
             if explored.name:
@@ -953,6 +957,8 @@ class ExplorerHelp(ExplorerComponent):
                 self.children[0].value = formatted_content['text/html']
             elif 'text/plain' in formatted_content:
                 self.children[0].value = formatted_content['text/plain']
+            else: # case sphinxify=str
+                self.children[0].value = formatted_content
         else:
             self.children[0].value = ''
 
