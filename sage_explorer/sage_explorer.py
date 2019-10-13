@@ -299,8 +299,11 @@ class ExplorableHistory(deque):
             sage: h.make_menu_options()
             [('Hist[0]', 0), ('Hist[1]', 1), ('Hist[2]', 2)]
         """
+        def make_option(label, i):
+            return ("{}: {}".format(label, self[i]), i)
         first_label = self.initial_name or "Hist[0]"
-        return [(first_label, 0)] + [("Hist[{}]" . format(i+1), i+1) for i in range(self.__len__()-1)]
+        return [make_option(first_label, 0)] + \
+            [make_option("Hist[{}]". format(i+1), i+1) for i in range(self.__len__()-1)]
 
     def truncate(self, max=MAX_LEN_HISTORY):
         r"""
@@ -673,7 +676,7 @@ class ExplorerHistory(ExplorerComponent):
         super(ExplorerHistory, self).__init__(
             obj,
             children=(DropdownUnit(
-                layout=Layout(width='5em', padding='0', margin='0')
+                layout=Layout(width='7em', padding='0', margin='0')
             ),),
             layout=Layout(padding='0')
         )
@@ -1214,7 +1217,7 @@ class SageExplorer(VBox):
                 if event['key'] == 'Enter' and (event['shiftKey'] or event['ctrlKey']):
                     locs = {"_": self.value, "__explorer__": self, "Hist": list(self._history)}
                     if self._history.initial_name:
-                        locs[self._history.initial_name] = self.value
+                        locs[self._history.initial_name] = self._history[0]
                     self.codebox.evaluate(l=locs, o=self.outputbox, e=self.outputbox)
             self.codebox.run_event.on_dom_event(launch_evaluation)
         if self.test_mode:
