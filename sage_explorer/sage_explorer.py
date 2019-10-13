@@ -333,7 +333,11 @@ class ExplorableValue(HTMLMathUnit):
     new_val = Any() # Overall value. Will be changed when explorable is clicked. `value` being reserved by ipywidgets.
 
     def __init__(self, explorable, display=None, initial_value=None):
-        self.explorable = explorable
+        if type(explorable) is type(int(1)): # a hack for non-Sage integers
+            from sage.rings.integer import Integer
+            self.explorable = Integer(explorable)
+        else:
+            self.explorable = explorable
         if initial_value:
             self.new_val = initial_value
         super(ExplorableValue, self).__init__(layout=Layout(margin='1px'))
@@ -644,8 +648,8 @@ class ExplorerHistory(ExplorerComponent):
     A text input to give a name to a math object
     """
     _history = Instance(ExplorableHistory)
-    _history_len = Integer()
-    _history_index = Integer()
+    _history_len = Int()
+    _history_index = Int()
 
     def __init__(self, obj, history=None):
         r"""
@@ -1069,8 +1073,8 @@ class SageExplorer(VBox):
 
     value = Any()
     _history = Instance(ExplorableHistory)
-    _history_len = Integer()
-    _history_index = Integer()
+    _history_len = Int()
+    _history_index = Int()
     components = Dict() # A list of widgets ; really a trait ?
 
     def __init__(self, obj=None, components=DEFAULT_COMPONENTS, test_mode=False):
