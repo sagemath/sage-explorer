@@ -987,10 +987,20 @@ class ExplorerCodeCell(ExplorerComponent):
         if standalone: # actually we want to trigger that from the explorer
             self.run_event.on_dom_event(launch_evaluation)
 
-    def evaluate(self, l=None):
+    def reset(self):
+        self.content = ''
+        self.new_val = None
+
+    def evaluate(self, l=None, o=None, e=None):
         r"""
         Evaluate the code cell
         `l` being a dictionary of locals.
+
+        INPUT:
+
+            * `l` -- a locals dictionary ; defaults to {"_": self.value}
+            * `o` -- an output widget
+            * `e` -- an error output widget
 
         TESTS::
             sage: from sage_explorer.sage_explorer import ExplorerCodeCell
@@ -1006,16 +1016,22 @@ class ExplorerCodeCell(ExplorerComponent):
         code = compile(self.content, '<string>', 'eval')
         try:
             result = eval(code, g, l)
-        except Exception as e:
-            self.content = "Evaluation error: %s" % e
-            self.add_class("error")
+        except Exception as err:
+            if e:
+                e.set_error(err)
+            else:
+                self.content = "Evaluation error: %s" % err
+                self.add_class("error")
             return
         if result is None: # the code may have triggered some assignments
             self.content = "result is None"
             for name, value in l.items():
                 if name not in local_names:
                     g[name] = value
-        else:
+        elif o: # output somewhere else
+            o.set_output(result)
+            self.reset()
+        else: # output here
             self.content = str(result)
             self.new_val = result
 
@@ -1189,7 +1205,7 @@ class SageExplorer(VBox):
                     locs = {"_": self.value, "__explorer__": self, "Hist": list(self._history)}
                     if self._history.initial_name:
                         locs[self._history.initial_name] = self.value
-                    self.codebox.evaluate(l = locs)
+                    self.codebox.evaluate(l=locs, o=self.outputbox, e=self.outputbox)
             self.codebox.run_event.on_dom_event(launch_evaluation)
         if self.test_mode:
             self.donottrack = False
@@ -1237,9 +1253,9 @@ class SageExplorer(VBox):
         ])
         middleflex.add_class("explorer-flexrow")
         self.focuslist.append(self.codebox)
-        self.focuslist.append(self.outputbox)
+        self.focuslist.append(self.outputbox.output)
         self.focuslist.append(self.helpbox)
-        bottom = VBox([middleflex, self.outputbox, self.codebox, self.helpbox])
+        bottom = VBox([middleflex, self.codebox, self.outputbox, self.helpbox])
         self.children = (top, bottom)
         self.distribute_focus()
 
