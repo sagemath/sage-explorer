@@ -1469,7 +1469,7 @@ class ExplorerSettings(HasTraits):
             sage: from sage_explorer.sage_explorer import ExplorerSettings
             sage: ES = ExplorerSettings()
             sage: ES.load_properties()
-            sage: ES.settings['properties']['base_ring']
+            sage: ES.properties['base_ring']
             [{'when': 'has_base'}]
         """
         properties = {}
