@@ -13,7 +13,7 @@ AUTHORS:
 - Odile Bénassy, Nicolas Thiéry
 
 """
-import re, warnings
+import re, os, warnings, yaml
 from abc import abstractmethod
 from cysignals.alarm import alarm, cancel_alarm
 from cysignals.signals import AlarmInterrupt
@@ -51,6 +51,7 @@ global_css_code = HTML("<style>%s</style>" % '\n'.join(css_lines))
 
 TIMEOUT = 15 # in seconds
 MAX_LEN_HISTORY = 50
+CONFIG_PROPERTIES = yaml.load(open(os.path.join(os.path.dirname(__file__),'properties.yml')), yaml.SafeLoader)
 
 
 def _get_visual_widget(obj):
@@ -1423,3 +1424,80 @@ class SageExplorer(VBox):
             [3, 3, 2, 1]
         """
         return self.value
+
+
+class ExplorerSettings:
+    r"""
+    Explorer settings. Used as a singleton.
+    """
+    with_tooltips = True # Does the user actually want to see the explanatory tooltips?
+    properties = Dict() # A dictionary of property -> list of context dictionaries
+
+    def tooltips_visibility(self, visibility):
+        r"""
+        Switch tooltips visibility
+        """
+        self.with_tooltips = visibility
+
+    def load_properties(self, config=CONFIG_PROPERTIES):
+        properties = {}
+        for context in config['properties']:
+            propname = context['property']
+            del context['property']
+            if propname not in properties:
+                properties[propname] = []
+            properties[propname].append(context)
+        self.properties = properties
+
+    def add_property(self, propname, clsname=None, predicate=None, label=None):
+        r"""
+        Add/modify a context for `propname` for class `clsname`
+        in `properties` dictionary.
+        """
+        if not propname in self.properties:
+            self.properties[propname] = []
+        else:
+            for context in self.properties[propname]:
+                found = True
+                if clsname and ('isinstance' in self.properties[propname]) \
+                   and self.properties[propname]['isinstance'] != clsname:
+                    found = False
+                    continue
+                if predicate and ('predicate' in self.properties[propname]) \
+                   and self.properties[propname]['predicate'] != predicate:
+                    found = False
+                    continue
+                if found:
+                    break
+            if found and label:
+                self.properties[propname]['label'] = label
+                return
+        context = {}
+        if clsname:
+            context['isinstance'] = clsname
+        if predicate:
+            context['predicate'] = predicate
+        if label:
+            context['label'] = label
+        self.properties[propname].append(context)
+
+    def remove_context(self, propname, clsname=None, predicate=None):
+        r"""
+        Remove context defined by `clsname` and `predicate`
+        for `propname` in `properties` dictionary.
+        """
+        if not propname in self.properties:
+            return
+        for context in self.properties[propname]:
+            found = True
+            if clsname and ('isinstance' in self.properties[propname]) \
+               and self.properties[propname]['isinstance'] != clsname:
+                found = False
+                continue
+            if predicate and ('predicate' in self.properties[propname]) \
+               and self.properties[propname]['predicate'] != predicate:
+                found = False
+                continue
+            if found:
+                self.properties[propname].remove(context)
+                return
