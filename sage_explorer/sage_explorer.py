@@ -23,6 +23,7 @@ from ipywidgets import Box, Button, Combobox, Dropdown, GridBox, HBox, HTML, HTM
 from traitlets import Any, Dict, Instance, Int, Unicode, dlink, link, observe
 try:
     from IPython.core.interactiveshell import sphinxify
+    assert sphinxify is not None
 except:
     sphinxify = str
 with warnings.catch_warnings():
@@ -333,7 +334,12 @@ class ExplorableValue(HTMLMathUnit):
 
     TESTS::
         sage: from sage_explorer.sage_explorer import ExplorableValue
-        sage: ev = ExplorableValue(42)
+        sage: v = ExplorableValue(42)
+        sage: v.new_val
+        sage: e = {'type': 'click'}
+        sage: v.click_event._dom_handlers.callbacks[0](e)
+        sage: v.new_val
+        42
     """
     explorable = Any() # Some computed math object
     new_val = Any() # Overall value. Will be changed when explorable is clicked. `value` being reserved by ipywidgets.
@@ -349,14 +355,22 @@ class ExplorableValue(HTMLMathUnit):
         super(ExplorableValue, self).__init__(layout=Layout(margin='1px'))
         self.add_class('explorable-value')
         self.reset(display)
-        click_event = Event(
+        self.click_event = Event(
             source=self,
             watched_events=['click', 'keyup']
         )
         def set_new_val(event):
+            r"""
+            Check event type and key,
+            then copy `explorable` to `new_val`.
+
+            INPUT:
+
+                - ``event`` -- a dictionary
+            """
             if event['type'] == 'click' or event['key'] == 'Enter':
                 self.new_val = self.explorable
-        click_event.on_dom_event(set_new_val) # Handle clicking
+        self.click_event.on_dom_event(set_new_val) # Handle clicking
 
 
     def reset(self, display):
@@ -392,7 +406,7 @@ class ExplorableCell(Box):
         r"""
         A text box to display explorable value(s).
         """
-        self.explorable = explorable or ''
+        self.explorable = explorable
         if initial_value:
             self.new_val = initial_value
         super(ExplorableCell, self).__init__(**kws)
@@ -410,11 +424,13 @@ class ExplorableCell(Box):
             elif type(self.explorable) == type(()):
                 children.append(Separator('('))
             else: # Here, make both the set and its elements explorable
-                children.append(ExplorableValue(
+                ev = ExplorableValue(
                     self.explorable,
                     display='{',
-                    initial_value=self.new_val)
+                    initial_value=self.new_val
                 )
+                dlink((ev, 'new_val'), (self, 'new_val'))
+                children.append(ev)
             for e in self.explorable:
                 ev = ExplorableValue(e, initial_value=self.new_val)
                 dlink((ev, 'new_val'), (self, 'new_val')) # Propagate click
