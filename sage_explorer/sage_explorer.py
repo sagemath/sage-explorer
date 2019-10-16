@@ -20,7 +20,7 @@ from cysignals.signals import AlarmInterrupt
 from inspect import isclass
 from collections import deque
 from ipywidgets import Box, Button, Combobox, Dropdown, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, Textarea, ToggleButton, VBox
-from traitlets import Any, Dict, Instance, Int, Unicode, dlink, link, observe
+from traitlets import Any, Dict, HasTraits, Instance, Int, Unicode, dlink, link, observe
 try:
     from IPython.core.interactiveshell import sphinxify
     assert sphinxify is not None
@@ -1426,7 +1426,7 @@ class SageExplorer(VBox):
         return self.value
 
 
-class ExplorerSettings:
+class ExplorerSettings(HasTraits):
     r"""
     Explorer settings. Used as a singleton.
     """
@@ -1440,6 +1440,22 @@ class ExplorerSettings:
         self.with_tooltips = visibility
 
     def load_properties(self, config=CONFIG_PROPERTIES):
+        r"""
+        Parse properties flat list
+        to make it a dictionary
+        property name -> list of contexts
+
+        INPUT:
+
+                - ``config`` -- a dictionary 'properties' -> list of dictionaries
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExplorerSettings
+            sage: ES = ExplorerSettings()
+            sage: ES.load_properties()
+            sage: ES.properties['base_ring']
+            [{'when': 'has_base'}]
+        """
         properties = {}
         for context in config['properties']:
             propname = context['property']
