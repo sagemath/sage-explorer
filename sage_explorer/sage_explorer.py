@@ -171,7 +171,7 @@ class HelpButton(ToggleButtonUnit):
 
 class ExplorableHistory(deque):
 
-    def __init__(self, obj, initial_name=None, previous_history=[]):
+    def __init__(self, obj=None, initial_name=None, previous_history=[]):
         super(ExplorableHistory, self).__init__(previous_history)
         if obj:
             self.append(obj)
@@ -185,25 +185,27 @@ class ExplorableHistory(deque):
 
         TESTS::
             sage: from sage_explorer.sage_explorer import ExplorableHistory
-            sage: h = ExplorableHistory(42)
-            sage: h.get_initial_name()
-            'Hist[0]'
+            sage: h = ExplorableHistory()
+            sage: h.get_initial_name(value=42) is None
+            True
             sage: import __main__
             sage: eval(compile('x=42','<string>', 'exec'))
             sage: x
             42
-            sage: h.get_initial_name(test_sh_hist=["w = explore(42)", "w"])
-            'Hist[0]'
-            sage: h.get_initial_name(test_sh_hist=["x=42", "w = explore(x)", "w"])
+            sage: h.get_initial_name(value=42, test_sh_hist=["w = explore(42)", "w"]) is None
+            True
+            sage: h.get_initial_name(value=42, test_sh_hist=["x=42", "w = explore(x)", "w"])
             'x'
-            sage: h.get_initial_name(test_sh_hist=["x=42", "w = explore(x)", "explore(43)", "w"])
+            sage: h.get_initial_name(value=42, test_sh_hist=["x=42", "w = explore(x)", "explore(43)", "w"])
             'x'
         """
         initial_name = None
         try:
             sh_hist = get_ipython().history_manager.input_hist_parsed[-50:]
+            test_locs = {}
         except:
             sh_hist = test_sh_hist # We are in the test environment
+            test_locs = {'x': 42}
         sh_hist.reverse()
         for l in sh_hist:
             if 'explore' in l:
@@ -217,7 +219,7 @@ class ExplorableHistory(deque):
                         if not value:
                             return initial_name_candidate
                     try:
-                        if _eval_in_main(initial_name_candidate) == value:
+                        if _eval_in_main(initial_name_candidate, locals=test_locs) == value:
                             initial_name = initial_name_candidate
                             break
                     except:
