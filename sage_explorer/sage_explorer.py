@@ -1098,6 +1098,7 @@ DEFAULT_COMPONENTS = {
     'codebox': ExplorerCodeCell
     }
 
+
 class SageExplorer(VBox):
     """Sage Explorer in Jupyter Notebook"""
 
@@ -1149,16 +1150,19 @@ class SageExplorer(VBox):
             sage: e = SageExplorer(42)
             sage: e.create_components()
         """
-        for name in self.components:
-            if name == 'runbutton':
-                setattr(self, name, self.components[name].__call__())
-            elif name == 'histbox':
-                setattr(self, name, self.components[name].__call__(
-                    self.value,
-                    history=self._history
-                ))
-            else:
-                setattr(self, name, self.components[name].__call__(self.value))
+        for name in DEFAULT_COMPONENTS:
+            if name in self.components:
+                if name == 'runbutton':
+                    setattr(self, name, self.components[name].__call__())
+                elif name == 'histbox':
+                    setattr(self, name, self.components[name].__call__(
+                        self.value,
+                        history=self._history
+                    ))
+                else:
+                    setattr(self, name, self.components[name].__call__(self.value))
+            else: # We need a placeholder for the missing component
+                setattr(self, name, Separator(''))
 
     def implement_interactivity(self):
         r"""
@@ -1248,6 +1252,46 @@ class SageExplorer(VBox):
         if self.test_mode:
             self.donottrack = False
 
+    def draw_titlebox(self):
+        self.focuslist.append(self.titlebox)
+
+    def draw_topleft(self):
+        if 'descriptionbox' in self.components and 'propsbox' in self.components:
+            self.topleft = VBox([self.descriptionbox, self.propsbox])
+        elif 'descriptionbox' in self.components:
+            self.topleft = self.descriptionbox
+        elif 'propsbox' in self.components:
+            self.topleft = self.propsbox
+        self.topleft.add_class('explorer-flexitem')
+        if 'propsbox' in self.components:
+            for ec in self.propsbox.explorables:
+                self.focuslist.append(ec)
+
+    def draw_topright(self):
+        self.topright = self.visualbox
+        self.focuslist.append(self.visualbox)
+
+    def draw_middleflex(self):
+        self.middleflex = HBox()
+        children = []
+        if 'histbox' in self.components:
+            children.append(self.histbox)
+            children.append(Separator('.'))
+            self.focuslist.append(self.histbox)
+        if 'searchbox' in self.components:
+            children.append(self.searchbox)
+            self.focuslist.append(self.searchbox)
+        if 'argsbox' in self.components:
+            children.append(Separator('('))
+            children.append(self.argsbox)
+            children.append(Separator(')'))
+            self.focuslist.append(self.argsbox)
+        if 'runbutton' in self.components:
+            children.append(self.runbutton)
+            self.focuslist.append(self.runbutton)
+        self.middleflex.children = children
+        self.middleflex.add_class("explorer-flexrow")
+
     def draw(self):
         r"""
         Setup Sage explorer visual display.
@@ -1262,38 +1306,32 @@ class SageExplorer(VBox):
             10
         """
         self.focuslist = [] # Will be used to allocate focus to successive components
-        self.focuslist.append(self.titlebox)
-        propsvbox = VBox([self.descriptionbox, self.propsbox])
-        for ec in self.propsbox.explorables:
-            self.focuslist.append(ec)
-        self.focuslist.append(self.visualbox)
-        propsvbox.add_class('explorer-flexitem')
+        if 'titlebox' in self.components:
+            self.draw_titlebox()
+        if 'descriptionbox' in self.components or 'propsbox' in self.components:
+            self.draw_topleft()
+        else:
+            self.topleft = Separator('')
+        if 'visualbox' in self.components:
+            self.draw_topright()
+        else:
+            self.topright = Separator('')
         topflex = HBox(
-            (propsvbox, Separator(' '), self.visualbox),
+            (self.topleft, Separator(' '), self.topright),
             layout=Layout(margin='10px 0')
         )
         topflex.add_class("explorer-flexrow")
         top = VBox(
             (self.titlebox, topflex)
         )
-        self.focuslist.append(self.histbox)
-        self.focuslist.append(self.searchbox)
-        self.focuslist.append(self.argsbox)
-        self.focuslist.append(self.runbutton)
-        middleflex = HBox([
-            self.histbox,
-            Separator('.'),
-            self.searchbox,
-            Separator('('),
-            self.argsbox,
-            Separator(')'),
-            self.runbutton
-        ])
-        middleflex.add_class("explorer-flexrow")
-        self.focuslist.append(self.codebox)
-        self.focuslist.append(self.outputbox.output)
-        self.focuslist.append(self.helpbox)
-        bottom = VBox([middleflex, self.codebox, self.outputbox, self.helpbox])
+        self.draw_middleflex()
+        if 'codebox' in self.components:
+            self.focuslist.append(self.codebox)
+        if 'outputbox' in self.components:
+            self.focuslist.append(self.outputbox.output)
+        if 'helpbox' in self.components:
+            self.focuslist.append(self.helpbox)
+        bottom = VBox([self.middleflex, self.codebox, self.outputbox, self.helpbox])
         self.children = (top, bottom)
         self.distribute_focus()
 
