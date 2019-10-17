@@ -90,7 +90,10 @@ def math_repr(obj):
     if not obj:
         return ''
     if hasattr(obj, '_latex_'):
-        s = obj._latex_()
+        try:
+            s = obj._latex_()
+        except:
+            s = str(obj) # signature is sometimes different
         if 'tikz' not in s and 'raisebox' not in s:
             return "${}$" . format(s)
     return obj.__str__()
@@ -295,10 +298,10 @@ class ExplorableHistory(deque):
             sage: from sage_explorer.sage_explorer import ExplorableHistory
             sage: h = ExplorableHistory("A first value")
             sage: h.make_menu_options()
-            [('Hist[0]', 0)]
+            [('Hist[0]: A first value', 0)]
             sage: for i in range(2): h.push(i)
             sage: h.make_menu_options()
-            [('Hist[0]', 0), ('Hist[1]', 1), ('Hist[2]', 2)]
+            [('Hist[0]: A first value', 0), ('Hist[1]: 0', 1), ('Hist[2]: 1', 2)]
         """
         def make_option(label, i):
             return ("{}: {}".format(label, self[i]), i)
@@ -1185,13 +1188,17 @@ class SageExplorer(VBox):
         if 'searchbox' in self.components and 'argsbox' in self.components:
             dlink((self.searchbox, 'explored'), (self.argsbox, 'explored'))
         if 'searchbox' in self.components and 'argsbox' in self.components and 'outputbox' in self.components:
-            def compute_selected_method(button=None):
-                method_name = self.searchbox.explored.name
+            def compute_selected_member(button=None):
+                member_name = self.searchbox.explored.name
+                member_type = self.searchbox.explored.member_type
                 args = self.argsbox.content
                 try:
                     if AlarmInterrupt:
                         alarm(TIMEOUT)
-                    out = _eval_in_main("__obj__.{}({})".format(method_name, args), locals={"__obj__": self.value})
+                    if 'attribute' in member_type:
+                        out = _eval_in_main("__obj__.{}" . format(member_name), locals={"__obj__": self.value})
+                    else:
+                        out = _eval_in_main("__obj__.{}({})".format(member_name, args), locals={"__obj__": self.value})
                     if AlarmInterrupt:
                         cancel_alarm()
                 except AlarmInterrupt:
@@ -1203,15 +1210,15 @@ class SageExplorer(VBox):
                     self.outputbox.set_error(e)
                     return
                 self.outputbox.set_output(out)
-                self.searchbox.set_display(method_name) # avoid any trailing '?'
+                self.searchbox.set_display(member_name) # avoid any trailing '?'
                 if 'helpbox' in self.components:
                     self.helpbox.reset() # empty help box
         if 'runbutton' in self.components:
-            self.runbutton.on_click(compute_selected_method)
+            self.runbutton.on_click(compute_selected_member)
             enter_event = Event(source=self.runbutton, watched_events=['keyup'])
             def run_button(event):
                 if event['key'] == 'Enter':
-                    compute_selected_method()
+                    compute_selected_member()
             enter_event.on_dom_event(run_button)
         if 'outputbox' in self.components:
             dlink((self.outputbox, 'value'), (self, 'value')) # Handle the clicks on output values

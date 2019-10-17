@@ -134,6 +134,11 @@ class ExploredMember(object):
             sage: m.compute_member()
             sage: m.member
             <bound method Partitions_all_with_category.element_class.conjugate of [3, 3, 2, 1]>
+            sage: x = 42
+            sage: m = ExploredMember('denominator', parent=x)
+            sage: m.compute_member()
+            sage: str(m.member)[:20]
+            '<built-in method den'
         """
         if hasattr(self, 'member') and not parent:
             return
@@ -172,6 +177,10 @@ class ExploredMember(object):
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
             sage: m = ExploredMember('conjugate', parent=p)
+            sage: m.compute_member_type()
+            sage: assert 'method' in m.member_type
+            sage: x = 42
+            sage: m = ExploredMember('denominator', parent=x)
             sage: m.compute_member_type()
             sage: assert 'method' in m.member_type
         """
@@ -267,6 +276,11 @@ class ExploredMember(object):
             sage: m.compute_argspec()
             sage: m.args, m.defaults
             (['self', 'i', 'j'], (None,))
+            sage: x = 42
+            sage: m = ExploredMember('denominator', parent=x)
+            sage: m.compute_argspec()
+            sage: m.args
+            []
         """
         try:
             argspec = getargspec(self.member)
@@ -274,8 +288,8 @@ class ExploredMember(object):
                 self.args = argspec.args
             if hasattr(argspec, 'defaults'):
                 self.defaults = argspec.defaults
-        except:
-            pass
+        except: # e.g. pure attributes
+            self.args, self.defaults = [], []
 
     def compute_property_label(self, config):
         r"""
