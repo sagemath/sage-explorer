@@ -1480,7 +1480,7 @@ class ExplorerSettings(HasTraits):
             properties[propname].append({
                 key:val for key, val in context.items() if key!='property'
             })
-        self.settings['properties'] = properties
+        self.properties = properties
 
     def add_property(self, propname, clsname=None, predicate=None, label=None):
         r"""
@@ -1499,7 +1499,7 @@ class ExplorerSettings(HasTraits):
             sage: ES = ExplorerSettings()
             sage: ES.load_properties()
             sage: ES.add_property('cardinality', clsname='frozenset')
-            sage: ES.settings['properties']['cardinality']
+            sage: ES.properties['cardinality']
             [{'in': 'EnumeratedSets.Finite'}, {'isinstance': 'frozenset'}]
         """
         properties = self.settings['properties']
@@ -1546,10 +1546,10 @@ class ExplorerSettings(HasTraits):
             sage: ES = ExplorerSettings()
             sage: ES.load_properties()
             sage: ES.add_property('cardinality', clsname='frozenset')
-            sage: ES.settings['properties']['cardinality']
+            sage: ES.properties['cardinality']
             [{'in': 'EnumeratedSets.Finite'}, {'isinstance': 'frozenset'}]
             sage: ES.remove_property('cardinality', clsname='EnumeratedSets.Finite')
-            sage: ES.settings['properties']['cardinality']
+            sage: ES.properties['cardinality']
             [{'isinstance': 'frozenset'}]
         """
         properties = self.settings['properties']
