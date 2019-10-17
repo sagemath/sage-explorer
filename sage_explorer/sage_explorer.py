@@ -1459,16 +1459,32 @@ class ExplorerSettings(HasTraits):
         properties = {}
         for context in config['properties']:
             propname = context['property']
-            del context['property']
             if propname not in properties:
                 properties[propname] = []
-            properties[propname].append(context)
+            properties[propname].append({
+                key:val for key, val in context.items() if key!='property'
+            })
         self.properties = properties
 
     def add_property(self, propname, clsname=None, predicate=None, label=None):
         r"""
         Add/modify a context for `propname` for class `clsname`
         in `properties` dictionary.
+
+        INPUT:
+
+                - ``propname`` -- a string
+                - ``clsname`` -- a string
+                - ``predicate`` -- a string
+                - ``label`` -- a string
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExplorerSettings
+            sage: ES = ExplorerSettings()
+            sage: ES.load_properties()
+            sage: ES.add_property('cardinality', clsname='frozenset')
+            sage: ES.properties['cardinality']
+            [{'in': 'EnumeratedSets.Finite'}, {'isinstance': 'frozenset'}]
         """
         if not propname in self.properties:
             self.properties[propname] = []
@@ -1497,10 +1513,27 @@ class ExplorerSettings(HasTraits):
             context['label'] = label
         self.properties[propname].append(context)
 
-    def remove_context(self, propname, clsname=None, predicate=None):
+    def remove_property(self, propname, clsname=None, predicate=None):
         r"""
-        Remove context defined by `clsname` and `predicate`
+        Remove property in context defined by `clsname` and `predicate`
         for `propname` in `properties` dictionary.
+
+        INPUT:
+
+                - ``propname`` -- a string
+                - ``clsname`` -- a string
+                - ``predicate`` -- a string
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExplorerSettings
+            sage: ES = ExplorerSettings()
+            sage: ES.load_properties()
+            sage: ES.add_property('cardinality', clsname='frozenset')
+            sage: ES.properties['cardinality']
+            [{'in': 'EnumeratedSets.Finite'}, {'isinstance': 'frozenset'}]
+            sage: ES.remove_property('cardinality', clsname='EnumeratedSets.Finite')
+            sage: ES.properties['cardinality']
+            [{'isinstance': 'frozenset'}]
         """
         if not propname in self.properties:
             return
