@@ -1160,7 +1160,6 @@ class SageExplorer(VBox):
             self.implement_interactivity()
             self.draw()
         self.donottrack = False
-        self.settings = Settings
 
     def reset(self):
         self.donottrack = True
@@ -1441,12 +1440,13 @@ class ExplorerSettings(HasTraits):
         TESTS::
             sage: from sage_explorer.sage_explorer import ExplorerSettings
             sage: ES = ExplorerSettings()
-            sage: type(ES.properties)
+            sage: type(ES.settings['properties'])
             <type 'dict'>
         """
         super(HasTraits, self).__init__(*args, **kwargs)
         if not 'config' in kwargs:
             config = CONFIG_PROPERTIES
+        self.settings = {}
         self.load_properties(config=config)
 
     def tooltips_visibility(self, visibility):
@@ -1469,7 +1469,7 @@ class ExplorerSettings(HasTraits):
             sage: from sage_explorer.sage_explorer import ExplorerSettings
             sage: ES = ExplorerSettings()
             sage: ES.load_properties()
-            sage: ES.properties['base_ring']
+            sage: ES.settings['properties']['base_ring']
             [{'when': 'has_base'}]
         """
         properties = {}
@@ -1480,7 +1480,7 @@ class ExplorerSettings(HasTraits):
             properties[propname].append({
                 key:val for key, val in context.items() if key!='property'
             })
-        self.properties = properties
+        self.settings['properties'] = properties
 
     def add_property(self, propname, clsname=None, predicate=None, label=None):
         r"""
@@ -1499,7 +1499,7 @@ class ExplorerSettings(HasTraits):
             sage: ES = ExplorerSettings()
             sage: ES.load_properties()
             sage: ES.add_property('cardinality', clsname='frozenset')
-            sage: ES.properties['cardinality']
+            sage: ES.settings['properties']['cardinality']
             [{'in': 'EnumeratedSets.Finite'}, {'isinstance': 'frozenset'}]
         """
         properties = self.settings['properties']
@@ -1546,10 +1546,10 @@ class ExplorerSettings(HasTraits):
             sage: ES = ExplorerSettings()
             sage: ES.load_properties()
             sage: ES.add_property('cardinality', clsname='frozenset')
-            sage: ES.properties['cardinality']
+            sage: ES.settings['properties']['cardinality']
             [{'in': 'EnumeratedSets.Finite'}, {'isinstance': 'frozenset'}]
             sage: ES.remove_property('cardinality', clsname='EnumeratedSets.Finite')
-            sage: ES.properties['cardinality']
+            sage: ES.settings['properties']['cardinality']
             [{'isinstance': 'frozenset'}]
         """
         properties = self.settings['properties']
