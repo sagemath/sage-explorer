@@ -1,4 +1,5 @@
 .ipynb_checkpoints/
+tests/.ipynb_checkpoints/
 *.pyc
 sage_explorer.egg-info/
 TODO*
