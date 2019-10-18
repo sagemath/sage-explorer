@@ -31,9 +31,9 @@ with warnings.catch_warnings():
     from ipyevents import Event
 from .explored_member import ExploredMember, _eval_in_main, get_members, get_properties
 try:
-    from unit_widgets import ButtonUnit, ComboboxUnit, DropdownUnit, HTMLMathUnit, TextUnit, TextareaUnit, ToggleButtonUnit
+    from singleton_widgets import ButtonSingleton, ComboboxSingleton, DropdownSingleton, HTMLMathSingleton, TextSingleton, TextareaSingleton, ToggleButtonSingleton
 except:
-    ButtonUnit, ComboboxUnit, DropdownUnit, HTMLMathUnit, TextUnit, TextareaUnit, ToggleButtonUnit = Button, Combobox, Dropdown, HTMLMath, Text, Textarea, ToggleButton
+    ButtonSingleton, ComboboxSingleton, DropdownSingleton, HTMLMathSingleton, TextSingleton, TextareaSingleton, ToggleButtonSingleton = Button, Combobox, Dropdown, HTMLMath, Text, Textarea, ToggleButton
 
 title_layout = Layout(width='100%', padding='12px')
 css_lines = []
@@ -121,7 +121,7 @@ class Title(Label):
         self.add_class('title-level%d' % level)
 
 
-class MathTitle(HTMLMathUnit):
+class MathTitle(HTMLMathSingleton):
     r"""A title of various levels
 
     For HTML display
@@ -145,7 +145,7 @@ class Separator(Label):
         self.add_class("separator")
 
 
-class HelpButton(ToggleButtonUnit):
+class HelpButton(ToggleButtonSingleton):
     r"""
     """
     def __init__(self, obj=None, target=None):
@@ -333,7 +333,7 @@ class ExplorableHistory(deque):
             self.popleft()
 
 
-class ExplorableValue(HTMLMathUnit):
+class ExplorableValue(HTMLMathSingleton):
     r"""
     A repr string with a link to a Sage object.
 
@@ -495,7 +495,7 @@ class ExplorerComponent(Box):
         self.donottrack = False
 
     def set_focusable(self, focusable):
-        if hasattr(self, 'allow_focus'): # a Unit
+        if hasattr(self, 'allow_focus'): # a Singleton
             if focusable is True:
                 self.allow_focus()
             elif focusable is False:
@@ -579,7 +579,7 @@ class ExplorerDescription(ExplorerComponent):
         super(ExplorerDescription, self).__init__(
             obj,
             children=(
-                HTMLMathUnit(),
+                HTMLMathSingleton(),
                 HelpButton(obj, help_target)
             )
         )
@@ -660,7 +660,7 @@ class ExplorerVisual(ExplorerComponent):
         else:
             if hasattr(self.value, '__ascii_art__'):
                 self.children = (
-                    TextareaUnit(
+                    TextareaSingleton(
                         repr(self.value._ascii_art_()),
                         rows=8
                     ),)
@@ -696,7 +696,7 @@ class ExplorerHistory(ExplorerComponent):
         self._history = history or ExplorableHistory(obj)
         super(ExplorerHistory, self).__init__(
             obj,
-            children=(DropdownUnit(
+            children=(DropdownSingleton(
                 layout=Layout(width='7em', padding='0', margin='0')
             ),),
             layout=Layout(padding='0')
@@ -755,7 +755,7 @@ class ExplorerMethodSearch(ExplorerComponent):
         super(ExplorerMethodSearch, self).__init__(
             obj,
             children=(
-                ComboboxUnit(
+                ComboboxSingleton(
                     placeholder="Enter method name"
                 ),)
         )
@@ -819,7 +819,7 @@ class ExplorerArgs(ExplorerComponent):
         """
         super(ExplorerArgs, self).__init__(
             obj,
-            children=(TextUnit(
+            children=(TextSingleton(
                 '',
                 placeholder="Enter arguments",
                 layout=Layout(width="100%")
@@ -853,7 +853,7 @@ class ExplorerArgs(ExplorerComponent):
         self.children[0].placeholder = "Enter arguments"
 
 
-class ExplorerRunButton(ButtonUnit):
+class ExplorerRunButton(ButtonSingleton):
     r"""
     A button for running methods in the explorer.
 
@@ -944,7 +944,7 @@ class ExplorerHelp(ExplorerComponent):
         """
         super(ExplorerHelp, self).__init__(
             obj,
-            children=(HTMLMathUnit(),),
+            children=(HTMLMathSingleton(),),
             layout=Layout(width='99%', padding='0', border='1px solid grey')
         )
         self.reset()
@@ -1002,7 +1002,7 @@ class ExplorerCodeCell(ExplorerComponent):
     def __init__(self, obj, standalone=False):
         super(ExplorerCodeCell, self).__init__(
             obj,
-            children=(TextareaUnit(
+            children=(TextareaSingleton(
                 placeholder="Run your code here ..",
                 description_tooltip="Use your local namespace, and additionally:\n '_' for your object, __explorer__ and Hist.",
                 rows = 0,
