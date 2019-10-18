@@ -1160,6 +1160,7 @@ class SageExplorer(VBox):
             self.implement_interactivity()
             self.draw()
         self.donottrack = False
+        self.settings = Settings
 
     def reset(self):
         self.donottrack = True
@@ -1440,13 +1441,12 @@ class ExplorerSettings(HasTraits):
         TESTS::
             sage: from sage_explorer.sage_explorer import ExplorerSettings
             sage: ES = ExplorerSettings()
-            sage: type(ES.settings['properties'])
+            sage: type(ES.properties)
             <type 'dict'>
         """
         super(HasTraits, self).__init__(*args, **kwargs)
         if not 'config' in kwargs:
             config = CONFIG_PROPERTIES
-        self.settings = {}
         self.load_properties(config=config)
 
     def tooltips_visibility(self, visibility):
