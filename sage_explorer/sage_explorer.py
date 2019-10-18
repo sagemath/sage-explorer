@@ -1160,6 +1160,7 @@ class SageExplorer(VBox):
             self.implement_interactivity()
             self.draw()
         self.donottrack = False
+        self.settings = Settings
 
     def reset(self):
         self.donottrack = True
@@ -1433,6 +1434,21 @@ class ExplorerSettings(HasTraits):
     with_tooltips = True # Does the user actually want to see the explanatory tooltips?
     properties = Dict() # A dictionary of property -> list of context dictionaries
 
+    def __init__(self, *args, **kwargs):
+        r"""
+        Init ExplorerSettings with optional argument `config`.
+
+        TESTS::
+            sage: from sage_explorer.sage_explorer import ExplorerSettings
+            sage: ES = ExplorerSettings()
+            sage: type(ES.properties)
+            <type 'dict'>
+        """
+        super(HasTraits, self).__init__(*args, **kwargs)
+        if not 'config' in kwargs:
+            config = CONFIG_PROPERTIES
+        self.load_properties(config=config)
+
     def tooltips_visibility(self, visibility):
         r"""
         Switch tooltips visibility
@@ -1550,3 +1566,5 @@ class ExplorerSettings(HasTraits):
             if found:
                 self.properties[propname].remove(context)
                 return
+
+Settings = ExplorerSettings()
