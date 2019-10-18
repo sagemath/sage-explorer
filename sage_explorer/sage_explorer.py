@@ -649,7 +649,7 @@ class ExplorerProperties(ExplorerComponent, GridBox):
     def reset(self):
         children = []
         self.explorables = []
-        for p in get_properties(self.value):
+        for p in get_properties(self.value, Settings.settings):
             explorable = getattr(self.value, p.name).__call__()
             children.append(Box((Label(p.prop_label),), layout=Layout(border='1px solid #eee')))
             e = ExplorableCell(explorable, initial_value=self.value)
@@ -803,7 +803,7 @@ class ExplorerMethodSearch(ExplorerComponent):
             cls = self.value
         else:
             cls = self.value.__class__
-        self.members = get_members(cls) # Here, we both have a list and a dict
+        self.members = get_members(cls, Settings.settings) # Here, we both have a list and a dict
         self.members_dict = {m.name: m for m in self.members}
         self.children[0].options=[m.name for m in self.members]
         self.children[0].value = ''
@@ -1160,7 +1160,6 @@ class SageExplorer(VBox):
             self.implement_interactivity()
             self.draw()
         self.donottrack = False
-        self.settings = Settings
 
     def reset(self):
         self.donottrack = True
@@ -1441,12 +1440,13 @@ class ExplorerSettings(HasTraits):
         TESTS::
             sage: from sage_explorer.sage_explorer import ExplorerSettings
             sage: ES = ExplorerSettings()
-            sage: type(ES.properties)
+            sage: type(ES.settings['properties'])
             <type 'dict'>
         """
         super(HasTraits, self).__init__(*args, **kwargs)
         if not 'config' in kwargs:
             config = CONFIG_PROPERTIES
+        self.settings = {}
         self.load_properties(config=config)
 
     def tooltips_visibility(self, visibility):
@@ -1469,7 +1469,7 @@ class ExplorerSettings(HasTraits):
             sage: from sage_explorer.sage_explorer import ExplorerSettings
             sage: ES = ExplorerSettings()
             sage: ES.load_properties()
-            sage: ES.properties['base_ring']
+            sage: ES.settings['properties']['base_ring']
             [{'when': 'has_base'}]
         """
         properties = {}
@@ -1480,7 +1480,7 @@ class ExplorerSettings(HasTraits):
             properties[propname].append({
                 key:val for key, val in context.items() if key!='property'
             })
-        self.properties = properties
+        self.settings['properties'] = properties
 
     def add_property(self, propname, clsname=None, predicate=None, label=None):
         r"""
@@ -1499,26 +1499,27 @@ class ExplorerSettings(HasTraits):
             sage: ES = ExplorerSettings()
             sage: ES.load_properties()
             sage: ES.add_property('cardinality', clsname='frozenset')
-            sage: ES.properties['cardinality']
+            sage: ES.settings['properties']['cardinality']
             [{'in': 'EnumeratedSets.Finite'}, {'isinstance': 'frozenset'}]
         """
-        if not propname in self.properties:
-            self.properties[propname] = []
+        properties = self.settings['properties']
+        if not propname in properties:
+            properties[propname] = []
         else:
-            for context in self.properties[propname]:
+            for context in properties[propname]:
                 found = True
-                if clsname and ('isinstance' in self.properties[propname]) \
-                   and self.properties[propname]['isinstance'] != clsname:
+                if clsname and ('isinstance' in properties[propname]) \
+                   and properties[propname]['isinstance'] != clsname:
                     found = False
                     continue
-                if predicate and ('predicate' in self.properties[propname]) \
-                   and self.properties[propname]['predicate'] != predicate:
+                if predicate and ('predicate' in properties[propname]) \
+                   and properties[propname]['predicate'] != predicate:
                     found = False
                     continue
                 if found:
                     break
             if found and label:
-                self.properties[propname]['label'] = label
+                properties[propname]['label'] = label
                 return
         context = {}
         if clsname:
@@ -1527,7 +1528,7 @@ class ExplorerSettings(HasTraits):
             context['predicate'] = predicate
         if label:
             context['label'] = label
-        self.properties[propname].append(context)
+        properties[propname].append(context)
 
     def remove_property(self, propname, clsname=None, predicate=None):
         r"""
@@ -1545,26 +1546,27 @@ class ExplorerSettings(HasTraits):
             sage: ES = ExplorerSettings()
             sage: ES.load_properties()
             sage: ES.add_property('cardinality', clsname='frozenset')
-            sage: ES.properties['cardinality']
+            sage: ES.settings['properties']['cardinality']
             [{'in': 'EnumeratedSets.Finite'}, {'isinstance': 'frozenset'}]
             sage: ES.remove_property('cardinality', clsname='EnumeratedSets.Finite')
-            sage: ES.properties['cardinality']
+            sage: ES.settings['properties']['cardinality']
             [{'isinstance': 'frozenset'}]
         """
-        if not propname in self.properties:
+        properties = self.settings['properties']
+        if not propname in properties:
             return
-        for context in self.properties[propname]:
+        for context in properties[propname]:
             found = True
-            if clsname and ('isinstance' in self.properties[propname]) \
-               and self.properties[propname]['isinstance'] != clsname:
+            if clsname and ('isinstance' in properties[propname]) \
+               and properties[propname]['isinstance'] != clsname:
                 found = False
                 continue
-            if predicate and ('predicate' in self.properties[propname]) \
-               and self.properties[propname]['predicate'] != predicate:
+            if predicate and ('predicate' in properties[propname]) \
+               and properties[propname]['predicate'] != predicate:
                 found = False
                 continue
             if found:
-                self.properties[propname].remove(context)
+                properties[propname].remove(context)
                 return
 
 Settings = ExplorerSettings()
