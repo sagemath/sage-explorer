@@ -47,7 +47,14 @@ Usage
 
 See the `demo notebook <demo_sage_explorer.ipynb>`_.
 
-Thanks
-------
+Acknowledgments
+---------------
 
-* Nathan Carter http://nathancarter.github.io/ had inspiring insights for the new 0.5.0 design
+.. image:: http://opendreamkit.org/public/logos/Flag_of_Europe.svg
+    :width: 50
+    :alt: EU log
+
+This package was created under funding of the Horizon 2020 European Research Infrastructure project
+  `OpenDreamKit <https://opendreamkit.org/>`_ (grant agreement `#676541 <https://opendreamkit.org>`_).
+
+Nathan Carter http://nathancarter.github.io/ offered inspiring insights for the new 0.5.0 design
