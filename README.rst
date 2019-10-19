@@ -50,11 +50,11 @@ See the `demo notebook <demo_sage_explorer.ipynb>`_.
 Acknowledgments
 ---------------
 
-.. image:: http://opendreamkit.org/public/logos/Flag_of_Europe.svg
-    :width: 50
-    :alt: EU log
+.. |EULogo| image:: http://opendreamkit.org/public/logos/Flag_of_Europe.svg
+    :width: 25
+    :alt: EU logo
 
-This package was created under funding of the Horizon 2020 European Research Infrastructure project
+* |EULogo| This package was created under funding of the Horizon 2020 European Research Infrastructure project
   `OpenDreamKit <https://opendreamkit.org/>`_ (grant agreement `#676541 <https://opendreamkit.org>`_).
 
-Nathan Carter http://nathancarter.github.io/ offered inspiring insights for the new 0.5.0 design
+* `Nathan Carter <http://nathancarter.github.io/>`_ offered inspiring insights for the new 0.5.0 design.
