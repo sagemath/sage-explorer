@@ -6,7 +6,7 @@ from codecs import open # To open the README file with proper encoding
 from setuptools.command.test import test as TestCommand # for tests
 
 # The name of the project
-name = 'sage_explorer'
+name = 'sage-explorer'
 
 # Get information from separate files (README, VERSION)
 def readfile(filename):
