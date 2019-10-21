@@ -32,6 +32,7 @@ def _eval_in_main(s, locals={}):
     Evaluate the expression `s` in the global scope
 
     TESTS::
+
         sage: from sage_explorer.explored_member import _eval_in_main
         sage: from sage.combinat.tableau import Tableaux
         sage: _eval_in_main("Tableaux")
@@ -107,6 +108,7 @@ class ExploredMember(object):
         Must have a name.
 
         TESTS::
+
             sage: from sage_explorer.explored_member import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
@@ -127,6 +129,7 @@ class ExploredMember(object):
         Get method or attribute value, given the name.
 
         TESTS::
+
             sage: from sage_explorer.explored_member import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
@@ -155,6 +158,7 @@ class ExploredMember(object):
         Get method or attribute documentation, given the name.
 
         TESTS::
+
             sage: from sage_explorer.explored_member import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
@@ -173,6 +177,7 @@ class ExploredMember(object):
         Get method or attribute value, given the name.
 
         TESTS::
+
             sage: from sage_explorer.explored_member import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
@@ -199,6 +204,7 @@ class ExploredMember(object):
         Compute member privacy, if any.
 
         TESTS::
+
             sage: from sage_explorer.explored_member import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
@@ -228,6 +234,7 @@ class ExploredMember(object):
         of overrides if any.
 
         TESTS::
+
             sage: from sage_explorer.explored_member import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
@@ -268,6 +275,7 @@ class ExploredMember(object):
         If this member is a method: compute its args and defaults.
 
         TESTS::
+
             sage: from sage_explorer.explored_member import ExploredMember
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
@@ -296,6 +304,7 @@ class ExploredMember(object):
         Retrieve the property label, if any, from configuration 'config'.
 
         TESTS::
+
             sage: from sage_explorer.explored_member import ExploredMember
             sage: F = GF(7)
             sage: m = ExploredMember('polynomial', parent=F)
