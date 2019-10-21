@@ -451,7 +451,7 @@ def get_members(cls):
         members.append(m)
     return members
 
-@lru_cache(maxsize=500)
+#@lru_cache(maxsize=500)
 def get_properties(obj):
     r"""
     Get all properties for an object.
