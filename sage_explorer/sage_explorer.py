@@ -58,6 +58,7 @@ def _get_visual_widget(obj):
     Which is the specialized widget class name for viewing this object (if any)
 
     TESTS::
+
         sage: from sage.all import *
         sage: from sage_explorer._widgets import *
         sage: from sage_explorer.sage_explorer import _get_visual_widget
@@ -81,6 +82,7 @@ def math_repr(obj):
     applies well to MathJax, use it.
 
     TESTS::
+
         sage: from sage_explorer.sage_explorer import math_repr
         sage: math_repr(42)
         '$42$'
@@ -184,6 +186,7 @@ class ExplorableHistory(deque):
         In case it is not found, or not a string, set to `Hist[0]`.
 
         TESTS::
+
             sage: from sage_explorer.sage_explorer import ExplorableHistory
             sage: h = ExplorableHistory()
             sage: h.get_initial_name(value=42) is None
@@ -232,6 +235,7 @@ class ExplorableHistory(deque):
         an object and increment index.
 
         TESTS::
+
             sage: from sage_explorer.sage_explorer import ExplorableHistory
             sage: h = ExplorableHistory(42)
             sage: h.push("An object")
@@ -247,6 +251,7 @@ class ExplorableHistory(deque):
         and decrement index.
 
         TESTS::
+
             sage: from sage_explorer.sage_explorer import ExplorableHistory
             sage: h = ExplorableHistory("A first value")
             sage: h.push(42)
@@ -277,6 +282,7 @@ class ExplorableHistory(deque):
         and decrement index.
 
         TESTS::
+
             sage: from sage_explorer.sage_explorer import ExplorableHistory
             sage: h = ExplorableHistory("A first value")
             sage: h.push(42)
@@ -297,6 +303,7 @@ class ExplorableHistory(deque):
         from the start, until list becomes small enough.
 
         TESTS::
+
             sage: from sage_explorer.sage_explorer import ExplorableHistory
             sage: h = ExplorableHistory("A first value")
             sage: h.make_menu_options()
@@ -317,6 +324,7 @@ class ExplorableHistory(deque):
         from the start, until list becomes small enough.
 
         TESTS::
+
             sage: from sage_explorer.sage_explorer import ExplorableHistory
             sage: h = ExplorableHistory("A first value")
             sage: for i in range(55): h.push(i)
@@ -338,6 +346,7 @@ class ExplorableValue(HTMLMathSingleton):
     A repr string with a link to a Sage object.
 
     TESTS::
+
         sage: from sage_explorer.sage_explorer import ExplorableValue
         sage: v = ExplorableValue(42)
         sage: v.new_val
@@ -393,6 +402,7 @@ class ExplorableCell(Box):
     A text box that contains one or several explorable value(s).
 
     TESTS::
+
         sage: from sage_explorer.sage_explorer import ExplorableCell
         sage: c = ExplorableCell(42)
         sage: len(c.children)
@@ -473,6 +483,7 @@ class ExplorerComponent(Box):
     Common methods to all components.
 
     TESTS::
+
         sage: from sage_explorer.sage_explorer import ExplorerComponent
         sage: c = ExplorerComponent("Initial value")
         sage: c.value = 42
@@ -484,6 +495,7 @@ class ExplorerComponent(Box):
         Common methods to all components.
 
         TESTS::
+
             sage: from sage_explorer.sage_explorer import ExplorerComponent
             sage: c = ExplorerComponent("Initial value")
             sage: c.value = 42
@@ -514,6 +526,7 @@ class ExplorerComponent(Box):
         Reset component when `value` is changed.
 
         TESTS::
+
             sage: from sage_explorer.sage_explorer import ExplorerComponent
             sage: c = ExplorerComponent("Initial value")
             sage: c.value = 42
@@ -616,6 +629,7 @@ class ExplorerProperties(ExplorerComponent, GridBox):
     Display object properties as a table.
 
     TESTS::
+
         sage: from sage_explorer.sage_explorer import ExplorerProperties
         sage: p = ExplorerProperties(42)
     """
@@ -683,6 +697,7 @@ class ExplorerHistory(ExplorerComponent):
         Which is the specialized widget class name for viewing this object (if any)
 
         TESTS::
+
             sage: from sage_explorer.sage_explorer import ExplorerHistory, ExplorableHistory
             sage: h = ExplorerHistory('Initial value')
             sage: h._history
@@ -746,6 +761,7 @@ class ExplorerMethodSearch(ExplorerComponent):
     A widget to search a method
 
     TESTS::
+
         sage: from sage_explorer.sage_explorer import ExplorerMethodSearch
         sage: s = ExplorerMethodSearch(42)
     """
@@ -814,6 +830,7 @@ class ExplorerArgs(ExplorerComponent):
         A text box to input method arguments.
 
         TESTS::
+
             sage: from sage_explorer.sage_explorer import ExplorerArgs
             sage: a = ExplorerArgs(42)
         """
@@ -858,6 +875,7 @@ class ExplorerRunButton(ButtonSingleton):
     A button for running methods in the explorer.
 
     TESTS::
+
         sage: from sage_explorer.sage_explorer import ExplorerRunButton
         sage: b = ExplorerRunButton()
     """
@@ -883,6 +901,7 @@ class ExplorerOutput(ExplorerComponent):
     A text box to output method results.
 
     TESTS::
+
         sage: from sage_explorer.sage_explorer import ExplorerOutput
         sage: o = ExplorerOutput(42)
     """
@@ -932,6 +951,7 @@ class ExplorerHelp(ExplorerComponent):
     An expandable box for object or method help text.
 
     TESTS::
+
         sage: from sage_explorer.sage_explorer import ExplorerHelp
         sage: h = ExplorerHelp(42)
     """
@@ -1037,6 +1057,7 @@ class ExplorerCodeCell(ExplorerComponent):
             * `e` -- an error output widget
 
         TESTS::
+
             sage: from sage_explorer.sage_explorer import ExplorerCodeCell
             sage: c = ExplorerCodeCell(42)
             sage: c.content = "1 + 2"
@@ -1145,6 +1166,7 @@ class SageExplorer(VBox):
         Create all components for the explorer.
 
         TESTS::
+
             sage: from sage_explorer import SageExplorer
             sage: e = SageExplorer(42)
             sage: e.create_components()
@@ -1165,6 +1187,7 @@ class SageExplorer(VBox):
         Implement links and observers on explorer components.
 
         TESTS::
+
             sage: from sage_explorer import SageExplorer
             sage: e = SageExplorer(42)
             sage: e.create_components()
@@ -1253,6 +1276,7 @@ class SageExplorer(VBox):
         Setup Sage explorer visual display.
 
         TESTS::
+
             sage: from sage_explorer import SageExplorer
             sage: e = SageExplorer(42)
             sage: e.create_components()
@@ -1364,6 +1388,7 @@ class SageExplorer(VBox):
         Set new math object `obj` to the explorer.
 
         TESTS::
+
             sage: from sage_explorer.sage_explorer import SageExplorer
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])
@@ -1383,6 +1408,7 @@ class SageExplorer(VBox):
         Return math object currently explored.
 
         TESTS::
+
             sage: from sage_explorer.sage_explorer import SageExplorer
             sage: from sage.combinat.partition import Partition
             sage: p = Partition([3,3,2,1])

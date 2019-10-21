@@ -20,6 +20,8 @@ package_folder = "../../sage_explorer"
 authors = u"Odile Bénassy, Nicolas M. Thiéry"
 
 import sys
+if sys.version_info[0] >= 3:
+    unicode = str
 import os
 
 from sage.env import SAGE_DOC_SRC, SAGE_DOC, SAGE_SRC
