@@ -19,6 +19,7 @@ from functools import lru_cache
 try: # Are we in a Sage environment?
     import sage.all
     from sage.misc.sageinspect import sage_getargspec as getargspec
+    from sage.misc.sage_eval import sage_eval as eval
 except:
     pass
 
