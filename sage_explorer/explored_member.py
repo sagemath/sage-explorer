@@ -259,17 +259,11 @@ class ExploredMember(object):
             parentclass = parent
         else:
             parentclass = parent.__class__
-        origin, overrides = parentclass, []
-        for c in parentclass.__mro__[1:]:
-            if not self.name in [x[0] for x in getmembers(c)]:
-                continue
-            for x in getmembers(c):
-                if x[0] == self.name:
-                    if x[1] == getattr(parentclass, self.name):
-                        origin = c
-                    else:
-                        overrides.append(c)
-        self.origin, self.overrides = origin, overrides
+        overrides = []
+        for c in parentclass.__mro__:
+            if self.name in c.__dict__:
+                overrides.append(c)
+        self.origin, self.overrides = overrides[0], overrides[1:]
 
     def compute_argspec(self, parent=None):
         r"""
