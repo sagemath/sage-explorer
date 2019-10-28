@@ -299,35 +299,34 @@ class ExploredMember(object):
         except: # e.g. pure attribute
             self.args, self.defaults = [], []
 
-    def compute_property_label(self, settings={}):
+    def compute_property_label(self, properties_settings={}):
         r"""
-        Retrieve the property label, if any, from configuration 'settings'.
+        Retrieve the property label, if any, from configuration 'properties_settings'.
 
         TESTS::
 
             sage: from sage_explorer.explored_member import ExploredMember
             sage: F = GF(7)
             sage: m = ExploredMember('polynomial', container=F)
-            sage: m.compute_property_label({'properties': {'polynomial': [{'in': 'Fields.Finite'}]}})
+            sage: m.compute_property_label({'polynomial': [{'in': 'Fields.Finite'}]})
             sage: m.prop_label
             'Polynomial'
             sage: G = PermutationGroup([[(1,2,3),(4,5)],[(3,4)]])
             sage: m = ExploredMember('cardinality', container=G)
-            sage: m.compute_property_label({'properties': {'cardinality': [{'in': 'EnumeratedSets.Finite'}]}})
+            sage: m.compute_property_label({'cardinality': [{'in': 'EnumeratedSets.Finite'}]})
             sage: m.prop_label
             'Cardinality'
             sage: m = ExploredMember('category', container=G)
-            sage: m.compute_property_label({'properties': {'category': [{'in': 'Sets'}]}})
+            sage: m.compute_property_label({'category': [{'in': 'Sets', 'label': 'A Better Category Label'}]})
             sage: m.prop_label
-            'Category'
+            'A Better Category Label'
         """
         self.prop_label = None
-        if 'properties' not in settings or \
-           self.name not in settings['properties'].keys():
+        if self.name not in properties_settings:
             return
         if not hasattr(self, 'container'):
             raise ValueError("Cannot compute property label without a container.")
-        contexts = settings['properties'][self.name]
+        contexts = properties_settings[self.name]
         def test_when(funcname, expected, operator=None, complement=None):
             if funcname == 'isclass': # FIXME Prendre les premières valeurs de obj.getmembers pour le test -> calculer cette liste avant ?
                 res = _eval_in_main(funcname)(self.container)
@@ -415,7 +414,7 @@ class ExploredMember(object):
 
 
 #@lru_cache(maxsize=100)
-def get_members(cls, settings):
+def get_members(cls, properties_settings):
     r"""
     Get all members for a class.
 
@@ -427,9 +426,9 @@ def get_members(cls, settings):
         sage: from sage_explorer.explored_member import get_members
         sage: from sage_explorer.sage_explorer import Settings
         sage: from sage.combinat.partition import Partition
-        sage: mm = get_members(42, Settings.settings)
-        sage: mm = get_members(int(42), Settings.settings)
-        sage: mm = get_members(Partition, Settings.settings)
+        sage: mm = get_members(42, Settings.properties)
+        sage: mm = get_members(int(42), Settings.properties)
+        sage: mm = get_members(Partition, Settings.properties)
         sage: mm[2].name, mm[2].privacy
         ('__class__', 'python_special')
         sage: [(mm[i].name, mm[i].overrides, mm[i].privacy) for i in range(len(mm)) if mm[i].name == '_unicode_art_']
@@ -440,9 +439,9 @@ def get_members(cls, settings):
           <class 'sage.structure.sage_object.SageObject'>],
          'sage_special')]
         sage: from sage.combinat.tableau import Tableau
-        sage: mm = get_members(Tableau([[1], [2], [3]]), Settings.settings)
-        sage: [(mm[i].name, mm[i].container, mm[i].origin, mm[i].prop_label) for i in range(len(mm)) if mm[i].name == 'conjugate']
-        [('conjugate', [[1], [2], [3]], <class 'sage.combinat.tableau.Tableau'>, 'Conjugate')]
+        sage: mm = get_members(Tableau([[1], [2], [3]]), Settings.properties)
+        sage: [(mm[i].name, mm[i].container, mm[i].origin, mm[i].prop_label) for i in range(len(mm)) if mm[i].name == 'cocharge']
+        [('cocharge', [[1], [2], [3]], <class 'sage.combinat.tableau.Tableau'>, 'Cocharge')]
     """
     members = []
     for name, member in getmembers(cls):
@@ -452,12 +451,12 @@ def get_members(cls, settings):
         m.compute_member_type()
         m.compute_origin()
         m.compute_privacy()
-        m.compute_property_label(settings)
+        m.compute_property_label(properties_settings)
         members.append(m)
     return members
 
 #@lru_cache(maxsize=500)
-def get_properties(obj, settings={}):
+def get_properties(obj, properties_settings={}):
     r"""
     Get all properties for an object.
 
@@ -472,13 +471,15 @@ def get_properties(obj, settings={}):
         sage: sst = SemistandardTableaux(3).an_element()
         sage: G = PermutationGroup([[(1,2,3),(4,5)],[(3,4)]])
         sage: from sage_explorer.sage_explorer import Settings
-        sage: pp = get_properties(st, Settings.settings)
+        sage: pp = get_properties(st, Settings.properties)
         sage: pp[3].name, pp[3].prop_label
         ('parent', 'Element of')
-        sage: pp = get_properties(sst, Settings.settings)
+        sage: pp = get_properties(sst, Settings.properties)
         sage: pp[3].name, pp[3].prop_label
         ('is_standard', 'Is Standard')
-        sage: pp = get_properties(G, Settings.settings)
+        sage: pp = get_properties(G, Settings.properties)
+        sage: [p.name for p in pp]
+        ['an_element', 'cardinality', 'category']
         sage: len(pp)
         3
     """
@@ -491,7 +492,7 @@ def get_properties(obj, settings={}):
         if isabstract(member) or 'deprecated' in str(type(member)).lower():
             continue
         m = ExploredMember(name, member=member, container=obj)
-        m.compute_property_label(settings=settings)
+        m.compute_property_label(properties_settings)
         if m.prop_label:
             properties.append(m)
     return properties
