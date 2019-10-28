@@ -163,6 +163,15 @@ class HelpButton(ToggleButtonSingleton):
         )
         self.set_target(obj, target)
 
+    def set_focusable(self, focusable):
+        r"""
+        For compatibility.
+        """
+        if focusable is True:
+            self.allow_focus()
+        else:
+            self.disallow_focus()
+
     def set_target(self, obj, target):
         def open_help(event):
             if obj and target:
@@ -1294,6 +1303,7 @@ class SageExplorer(VBox):
         """
         self.focuslist = [] # Will be used to allocate focus to successive components
         self.focuslist.append(self.titlebox)
+        self.focuslist.append(self.descriptionbox.children[1])
         propsvbox = VBox([self.descriptionbox, self.propsbox])
         for ec in self.propsbox.explorables:
             self.focuslist.append(ec)
