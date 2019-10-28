@@ -1,0 +1,27 @@
+include ChangeLog
+include LICENSE
+include README.rst
+include VERSION
+
+# Documentation
+include demo_sage_explorer.ipynb
+graft docs
+exclude docs/\#*
+prune docs/build
+prune docs/dist
+prune docs/presentation
+prune docs/video
+
+# Examples
+recursive-include examples *.ipynb *.py
+
+# Tests
+prune tests
+
+# Patterns to exclude from any directory
+global-exclude *~
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude .git
+global-exclude *checkpoint*
+global-exclude *Untitled*
