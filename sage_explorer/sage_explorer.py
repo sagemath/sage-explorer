@@ -20,7 +20,7 @@ from cysignals.signals import AlarmInterrupt
 from inspect import isclass
 from collections import deque
 from ipywidgets import Box, Button, Combobox, Dropdown, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, Textarea, ToggleButton, VBox
-from traitlets import Any, Dict, HasTraits, Instance, Int, Unicode, dlink, link, observe
+from traitlets import Any, Bool, Dict, HasTraits, Instance, Int, Unicode, dlink, link, observe
 try:
     from IPython.core.interactiveshell import sphinxify
     assert sphinxify is not None
@@ -658,7 +658,7 @@ class ExplorerProperties(ExplorerComponent, GridBox):
     def reset(self):
         children = []
         self.explorables = []
-        for p in get_properties(self.value, Settings.settings):
+        for p in get_properties(self.value, Settings.properties):
             explorable = getattr(self.value, p.name).__call__()
             children.append(Box((Label(p.prop_label),), layout=Layout(border='1px solid #eee')))
             e = ExplorableCell(explorable, initial_value=self.value)
@@ -812,7 +812,7 @@ class ExplorerMethodSearch(ExplorerComponent):
             cls = self.value
         else:
             cls = self.value.__class__
-        self.members = get_members(cls, Settings.settings) # Here, we both have a list and a dict
+        self.members = get_members(cls, Settings.properties) # Here, we both have a list and a dict
         self.members_dict = {m.name: m for m in self.members}
         self.children[0].options=[m.name for m in self.members]
         self.children[0].value = ''
@@ -1440,7 +1440,7 @@ class ExplorerSettings(HasTraits):
     r"""
     Explorer settings. Used as a singleton.
     """
-    with_tooltips = True # Does the user actually want to see the explanatory tooltips?
+    show_tooltips = Bool(True) # Does the user actually want to see the explanatory tooltips?
     properties = Dict() # A dictionary of property -> list of context dictionaries
 
     def __init__(self, *args, **kwargs):
@@ -1450,20 +1450,21 @@ class ExplorerSettings(HasTraits):
         TESTS::
             sage: from sage_explorer.sage_explorer import ExplorerSettings
             sage: ES = ExplorerSettings()
-            sage: type(ES.settings['properties'])
+            sage: ES.show_tooltips
+            True
+            sage: type(ES.properties)
             <type 'dict'>
         """
         super(HasTraits, self).__init__(*args, **kwargs)
         if not 'config' in kwargs:
             config = CONFIG_PROPERTIES
-        self.settings = {}
         self.load_properties(config=config)
 
     def tooltips_visibility(self, visibility):
         r"""
         Switch tooltips visibility
         """
-        self.with_tooltips = visibility
+        self.show_tooltips = visibility
 
     def load_properties(self, config=CONFIG_PROPERTIES):
         r"""
@@ -1479,7 +1480,7 @@ class ExplorerSettings(HasTraits):
             sage: from sage_explorer.sage_explorer import ExplorerSettings
             sage: ES = ExplorerSettings()
             sage: ES.load_properties()
-            sage: ES.settings['properties']['base_ring']
+            sage: ES.properties['base_ring']
             [{'when': 'has_base'}]
         """
         properties = {}
@@ -1490,7 +1491,7 @@ class ExplorerSettings(HasTraits):
             properties[propname].append({
                 key:val for key, val in context.items() if key!='property'
             })
-        self.settings['properties'] = properties
+        self.properties = properties
 
     def add_property(self, propname, clsname=None, predicate=None, label=None):
         r"""
@@ -1501,7 +1502,7 @@ class ExplorerSettings(HasTraits):
 
                 - ``propname`` -- a string
                 - ``clsname`` -- a string
-                - ``predicate`` -- a string
+                - ``predicate`` -- a function
                 - ``label`` -- a string
 
         TESTS::
@@ -1509,28 +1510,12 @@ class ExplorerSettings(HasTraits):
             sage: ES = ExplorerSettings()
             sage: ES.load_properties()
             sage: ES.add_property('cardinality', clsname='frozenset')
-            sage: ES.settings['properties']['cardinality']
+            sage: ES.properties['cardinality']
             [{'in': 'EnumeratedSets.Finite'}, {'isinstance': 'frozenset'}]
         """
-        properties = self.settings['properties']
+        properties = self.properties
         if not propname in properties:
             properties[propname] = []
-        else:
-            for context in properties[propname]:
-                found = True
-                if clsname and ('isinstance' in properties[propname]) \
-                   and properties[propname]['isinstance'] != clsname:
-                    found = False
-                    continue
-                if predicate and ('predicate' in properties[propname]) \
-                   and properties[propname]['predicate'] != predicate:
-                    found = False
-                    continue
-                if found:
-                    break
-            if found and label:
-                properties[propname]['label'] = label
-                return
         context = {}
         if clsname:
             context['isinstance'] = clsname
@@ -1556,13 +1541,13 @@ class ExplorerSettings(HasTraits):
             sage: ES = ExplorerSettings()
             sage: ES.load_properties()
             sage: ES.add_property('cardinality', clsname='frozenset')
-            sage: ES.settings['properties']['cardinality']
+            sage: ES.properties['cardinality']
             [{'in': 'EnumeratedSets.Finite'}, {'isinstance': 'frozenset'}]
             sage: ES.remove_property('cardinality', clsname='EnumeratedSets.Finite')
-            sage: ES.settings['properties']['cardinality']
+            sage: ES.properties['cardinality']
             [{'isinstance': 'frozenset'}]
         """
-        properties = self.settings['properties']
+        properties = self.properties
         if not propname in properties:
             return
         for context in properties[propname]:
