@@ -151,7 +151,10 @@ class HelpButton(ToggleButtonSingleton):
     r"""
     """
     def __init__(self, obj=None, target=None):
-        super(HelpButton, self).__init__(description='?')
+        super(HelpButton, self).__init__(
+            description='?',
+            _tooltip="Click for full documentation"
+        )
         self.add_class("separator")
         self.click_event = Event(
             source=self,
@@ -368,6 +371,7 @@ class ExplorableValue(HTMLMathSingleton):
             self.new_val = initial_value
         super(ExplorableValue, self).__init__(layout=Layout(margin='1px'))
         self.add_class('explorable-value')
+        self._tooltip = "Click to explore this value"
         self.reset(display)
         self.click_event = Event(
             source=self,
@@ -741,8 +745,10 @@ class ExplorerHistory(ExplorerComponent):
         self.children[0].value = self._history_index
         if self._history_len > 1:
             self.children[0].disabled = False
+            self.children[0]._tooltip = 'Click to show history'
         else:
             self.children[0].disabled = True
+            self.children[0]._tooltip = ''
 
     @observe('_history_len')
     def history_changed(self, change):
@@ -772,7 +778,7 @@ class ExplorerMethodSearch(ExplorerComponent):
             obj,
             children=(
                 ComboboxSingleton(
-                    placeholder="Enter method name"
+                    placeholder="Enter method name ; use '?' for help"
                 ),)
         )
         self.reset()
@@ -834,11 +840,11 @@ class ExplorerArgs(ExplorerComponent):
             sage: from sage_explorer.sage_explorer import ExplorerArgs
             sage: a = ExplorerArgs(42)
         """
+        self.default_placeholder = "Enter arguments ; for example: 3,7,pi=3.14"
         super(ExplorerArgs, self).__init__(
             obj,
             children=(TextSingleton(
                 '',
-                placeholder="Enter arguments",
                 layout=Layout(width="100%")
             ),)
         )
@@ -856,7 +862,7 @@ class ExplorerArgs(ExplorerComponent):
                 if defaults:
                     self.children[0].placeholder = str(defaults)
                 else:
-                    self.children[0].placeholder = "Enter arguments"
+                    self.children[0].placeholder = self.default_placeholder
             else:
                 self.children[0].value = ''
                 self.children[0].placeholder = ''
@@ -867,7 +873,7 @@ class ExplorerArgs(ExplorerComponent):
     def reset(self):
         self.children[0].value = ''
         self.children[0].disabled = False
-        self.children[0].placeholder = "Enter arguments"
+        self.children[0].placeholder = self.default_placeholder
 
 
 class ExplorerRunButton(ButtonSingleton):
@@ -882,7 +888,7 @@ class ExplorerRunButton(ButtonSingleton):
     def __init__(self):
         super(ExplorerRunButton, self).__init__(
             description = 'Run!',
-            tooltip = 'Run the method with specified arguments',
+            tooltip = 'Evaluate the method with the specified arguments',
             layout = Layout(width='4em', right='0')
         )
 
@@ -1023,8 +1029,8 @@ class ExplorerCodeCell(ExplorerComponent):
         super(ExplorerCodeCell, self).__init__(
             obj,
             children=(TextareaSingleton(
-                placeholder="Run your code here ..",
-                description_tooltip="Use your local namespace, and additionally:\n '_' for your object, __explorer__ and Hist.",
+                placeholder="Enter code ; shift-enter to evaluate",
+                description_tooltip="Special values: Use '_' for your object, 'Hist' for our history\nand '__explorer__' for the current explorer.\nExamples:\n    3*_ + 1 + Hist[1]",
                 rows = 0,
                 layout=Layout(border='1px solid #eee', width='99%')
             ),)
