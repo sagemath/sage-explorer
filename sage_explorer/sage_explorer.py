@@ -1302,7 +1302,6 @@ class SageExplorer(VBox):
             10
         """
         self.focuslist = [] # Will be used to allocate focus to successive components
-        self.focuslist.append(self.titlebox)
         self.focuslist.append(self.descriptionbox.children[1])
         propsvbox = VBox([self.descriptionbox, self.propsbox])
         for ec in self.propsbox.explorables:
@@ -1454,6 +1453,8 @@ class ExplorerSettings(HasTraits):
             True
             sage: type(ES.properties)
             <type 'dict'>
+            sage: ES.properties['conjugate']
+            [{'in': 'Partitions()'}, {'in': 'Tableaux()'}]
         """
         super(HasTraits, self).__init__(*args, **kwargs)
         if not 'config' in kwargs:

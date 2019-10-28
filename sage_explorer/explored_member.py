@@ -348,24 +348,30 @@ class ExploredMember(object):
                 operator = "not found"
             return funcname, operator, complement
         for context in contexts:
+            fullfilled = True
             if 'isinstance' in context.keys():
                 """Test isinstance"""
                 if not isinstance(self.container, _eval_in_main(context['isinstance'])):
+                    fullfilled = False
                     continue
             if 'not isinstance' in context.keys():
                 """Test not isinstance"""
                 if isinstance(self.container, _eval_in_main(context['not isinstance'])):
+                    fullfilled = False
                     continue
             if 'in' in context.keys():
                 """Test in"""
                 try:
                     if not self.container in _eval_in_main(context['in']):
-                        return
+                        fullfilled = False
+                        continue
                 except:
+                    fullfilled = False
                     continue # The error is : descriptor 'category' of 'sage.structure.parent.Parent' object needs an argument
             if 'not in' in context.keys():
                 """Test not in"""
                 if self.container in _eval_in_main(context['not in']):
+                    fullfilled = False
                     continue
             if 'when' in context.keys():
                 """Test when predicate(s)"""
@@ -374,39 +380,53 @@ class ExploredMember(object):
                 elif isinstance(context['when'], (list,)):
                     when = context['when']
                 else:
+                    fullfilled = False
                     continue
                 for predicate in when:
                     if not ' ' in predicate:
                         if not hasattr(self.container, predicate):
+                            fullfilled = False
                             continue
                         if not test_when(predicate, True):
+                            fullfilled = False
                             continue
                     else:
                         funcname, operator, complement = split_when(predicate, context)
                         if not hasattr(self.container, funcname):
+                            fullfilled = False
                             continue
                         if operator == "not found":
+                            fullfilled = False
                             continue
                         if not test_when(funcname, True, operator, complement):
+                            fullfilled = False
                             continue
             if 'not when' in context.keys():
                 """Test not when predicate(s)"""
                 if isinstance(context['not when'], six.string_types):
                     nwhen = [context['not when']]
                 if not test_when(context['not when'],False):
+                    fullfilled = False
                     continue
                 elif isinstance(context['not when'], (list,)):
                     nwhen = context['not when']
                 else:
+                    fullfilled = False
                     continue
                 for predicate in nwhen:
                     if not ' ' in predicate:
                         if not test_when(predicate, False):
+                            fullfilled = False
                             continue
                     else:
                         funcname, operator, complement = split_when(predicate)
                         if not test_when(funcname, False, operator, complement):
+                            fullfilled = False
                             continue
+                if fullfilled:
+                    break # contexts should not overlap
+            if not fullfilled:
+                return
             if 'label' in context.keys():
                 self.prop_label = context['label']
             else:
@@ -472,6 +492,8 @@ def get_properties(obj, properties_settings={}):
         sage: G = PermutationGroup([[(1,2,3),(4,5)],[(3,4)]])
         sage: from sage_explorer.sage_explorer import Settings
         sage: pp = get_properties(st, Settings.properties)
+        sage: [p.name for p in pp]
+        ['charge', 'cocharge', 'conjugate', 'parent']
         sage: pp[3].name, pp[3].prop_label
         ('parent', 'Element of')
         sage: pp = get_properties(sst, Settings.properties)
