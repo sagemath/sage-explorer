@@ -125,7 +125,7 @@ def math_repr(obj, display_mode=None):
             return "${}$" . format(s)
     if display_mode=='unicode_art' and hasattr(obj, '_unicode_art_'):
         try:
-            return obj._unicode_art_()
+            return "<pre>{}</pre>" . format(obj._unicode_art_())
         except:
             pass
     return obj.__str__()
@@ -621,7 +621,12 @@ class ExplorerTitle(ExplorerComponent):
         self.add_class("explorer-title")
 
     def reset(self):
-        self.content = math_repr(self.value)
+        content = math_repr(self.value)
+        if content.startswith('<pre'):
+            content = content[5:-6]
+            if '\n' in content:
+                content = content[:content.find('\n')]
+        self.content = content
         self.children[0].value = "Exploring: {}" . format(self.content)
 
 
