@@ -1352,8 +1352,6 @@ class SageExplorer(VBox):
         self._history = ExplorableHistory(obj) #, initial_name=self.initial_name)
         self._history_len = 1 # Needed to activate history propagation
         self._history_index = 0
-        dlink((Settings,'_display_settings'), (self, '_display_settings'))
-        dlink((Settings, 'properties'), (self, '_properties_settings'))
         self.components = components
         if not test_mode:
             self.create_components()
