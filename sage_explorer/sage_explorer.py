@@ -1304,6 +1304,8 @@ class SageExplorer(VBox):
     _history_len = Int()
     _history_index = Int()
     components = Dict() # A list of widgets ; really a trait ?
+    _display_settings = Dict()
+    _properties_settings = Dict()
 
     def __init__(self, obj=None, components=DEFAULT_COMPONENTS, test_mode=False):
         """
@@ -1326,6 +1328,8 @@ class SageExplorer(VBox):
         self._history = ExplorableHistory(obj) #, initial_name=self.initial_name)
         self._history_len = 1 # Needed to activate history propagation
         self._history_index = 0
+        dlink((Settings,'_display_settings'), (self, '_display_settings'))
+        dlink((Settings, 'properties'), (self, '_properties_settings'))
         self.components = components
         if not test_mode:
             self.create_components()
@@ -1632,6 +1636,7 @@ class ExplorerSettings(HasTraits):
     Explorer settings. Used as a singleton.
     """
     show_tooltips = Bool(True) # Does the user actually want to see the explanatory tooltips?
+    _display_settings = Dict() # A dictionary for display settings
     properties = Dict() # A dictionary of property -> list of context dictionaries
 
     def __init__(self, *args, **kwargs):
@@ -1652,6 +1657,10 @@ class ExplorerSettings(HasTraits):
         if not 'config' in kwargs:
             config = CONFIG_PROPERTIES
         self.load_properties(config=config)
+
+    @observe('show_tooltips')
+    def settings_changed(self, change):
+        self._display_settings = {'show_tooltips': change.new}
 
     def tooltips_visibility(self, visibility):
         r"""
