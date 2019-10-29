@@ -216,8 +216,7 @@ class HelpButton(ToggleButtonSingleton):
     """
     def __init__(self, obj=None, target=None):
         super(HelpButton, self).__init__(
-            description='?',
-            _tooltip="Click for full documentation"
+            description='?'
         )
         self.add_class("separator")
         self.click_event = Event(
@@ -566,6 +565,8 @@ class ExplorerComponent(Box):
         sage: c.value = 42
     """
     value = Any()
+    _tooltip = Unicode('')
+    _tooltip_visibility = Bool(True)
 
     def __init__(self, obj, **kws):
         r"""
@@ -582,6 +583,17 @@ class ExplorerComponent(Box):
         super(ExplorerComponent, self).__init__(**kws)
         self.reset()
         self.donottrack = False
+
+    @observe('_tooltip_visibility')
+    def tooltip_visibility_changed(self, change):
+        if not self._tooltip:
+            return
+        for c in self.children:
+            if hasattr(c, 'set_tooltip'):
+                if change.new:
+                    c.set_tooltip(self._tooltip)
+                else:
+                    c.set_tooltip()
 
     def set_focusable(self, focusable):
         if hasattr(self, 'allow_focus'): # a Singleton
@@ -684,6 +696,7 @@ class ExplorerDescription(ExplorerComponent):
 
     def __init__(self, obj, help_target=None):
         self.help_target = None
+        self._tooltip = "Click for full documentation"
         super(ExplorerDescription, self).__init__(
             obj,
             children=(
@@ -717,6 +730,8 @@ class ExplorerDescription(ExplorerComponent):
             self.content = ''
         if self.help_target:
             self.set_help_target(self.help_target) # re-recreate help button handler
+        if self._tooltip:
+            self.children[1].set_tooltip(self._tooltip)
 
 
 class ExplorerProperties(ExplorerComponent, GridBox):
@@ -1328,12 +1343,11 @@ class SageExplorer(VBox):
         self._history = ExplorableHistory(obj) #, initial_name=self.initial_name)
         self._history_len = 1 # Needed to activate history propagation
         self._history_index = 0
-        dlink((Settings,'_display_settings'), (self, '_display_settings'))
-        dlink((Settings, 'properties'), (self, '_properties_settings'))
         self.components = components
         if not test_mode:
             self.create_components()
             self.implement_interactivity()
+            self.implement_settings_interactivity()
             self.draw()
         self.donottrack = False
 
@@ -1482,6 +1496,14 @@ class SageExplorer(VBox):
             self.codebox.run_event.on_dom_event(launch_evaluation)
         if self.test_mode:
             self.donottrack = False
+
+    def implement_settings_interactivity(self):
+        dlink((Settings,'_display_settings'), (self, '_display_settings'))
+        dlink((Settings, 'properties'), (self, '_properties_settings'))
+        @observe('_display_settings')
+        def display_settings_changed(self, change):
+            for c in self.components:
+                gettattr(self, c)._tooltip_visibility = change.new['show_tooltips']
 
     def draw(self):
         r"""
