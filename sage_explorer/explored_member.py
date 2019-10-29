@@ -258,17 +258,14 @@ class ExploredMember(object):
             containerclass = container
         else:
             containerclass = container.__class__
-        origin, overrides = containerclass, []
-        for c in containerclass.__mro__[1:]:
-            if not self.name in [x[0] for x in getmembers(c)]:
-                continue
-            for x in getmembers(c):
-                if x[0] == self.name:
-                    if x[1] == getattr(containerclass, self.name):
-                        origin = c
-                    else:
-                        overrides.append(c)
-        self.origin, self.overrides = origin, overrides
+        self.overrides = []
+        for c in containerclass.__mro__:
+            if self.name in dir(c):
+                self.overrides.append(c)
+                if getattr(containerclass, self.name) == getattr(c, self.name):
+                    self.origin = c
+        if self.overrides:
+            self.overrides = self.overrides[1:]
 
     def compute_argspec(self, container=None):
         r"""
