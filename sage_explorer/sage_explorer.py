@@ -94,6 +94,18 @@ def math_repr(obj, display_mode=None):
         '$42$'
         sage: math_repr(ZZ, display_mode='latex')
         '$\\Bold{Z}$'
+        sage: from sage.combinat.tableau import Tableau
+        sage: t = Tableau([[1, 2, 5, 6], [3], [4]])
+        sage: math_repr(t)
+        '[[1, 2, 5, 6], [3], [4]]'
+        sage: math_repr(t, display_mode='unicode_art')
+        ┌───┬───┬───┬───┐
+        │ 1 │ 2 │ 5 │ 6 │
+        ├───┼───┴───┴───┘
+        │ 3 │
+        ├───┤
+        │ 4 │
+        └───┘
     """
     if not obj:
         return ''
@@ -113,7 +125,7 @@ def math_repr(obj, display_mode=None):
             return "${}$" . format(s)
     if display_mode=='unicode_art' and hasattr(obj, '_unicode_art_'):
         try:
-            s = obj._unicode_art_()
+            return obj._unicode_art_()
         except:
             pass
     return obj.__str__()
