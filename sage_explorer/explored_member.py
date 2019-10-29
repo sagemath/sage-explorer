@@ -196,6 +196,8 @@ class ExploredMember(object):
         m = re.match("<(type|class) '([.\\w]+)'>", str(type(self.member)))
         if m and ('method' in m.group(2)):
             self.member_type = m.group(2)
+        elif callable(self.member):
+            self.member_type = "callable (%s)" % str(type(self.member))
         else:
             self.member_type = "attribute (%s)" % str(type(self.member))
 
