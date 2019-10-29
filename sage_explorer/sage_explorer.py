@@ -82,7 +82,7 @@ def _get_visual_widget(obj):
     else:
         return
 
-def math_repr(obj, display_mode=DISPLAY_MODE):
+def math_repr(obj, display_mode=None):
     r"""
     When Sage LaTeX implementation
     applies well to MathJax, use it.
@@ -97,6 +97,11 @@ def math_repr(obj, display_mode=DISPLAY_MODE):
     """
     if not obj:
         return ''
+    if not display_mode:
+        try:
+            display_mode = get_display_manager().preferences.text
+        except:
+            display_mode = DISPLAY_MODE
     if not display_mode or display_mode=='plain':
         return obj.__str__()
     if display_mode=='latex' and hasattr(obj, '_latex_'):
