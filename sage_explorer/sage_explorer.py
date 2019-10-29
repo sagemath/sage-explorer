@@ -26,6 +26,11 @@ try:
     assert sphinxify is not None
 except:
     sphinxify = str
+try:
+    from sage.repl.rich_output import get_display_manager
+    DISPLAY_MODE = get_display_manager().preferences.text
+except:
+    DISPLAY_MODE = 'plain'
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=DeprecationWarning)
     from ipyevents import Event
@@ -77,7 +82,7 @@ def _get_visual_widget(obj):
     else:
         return
 
-def math_repr(obj):
+def math_repr(obj, display_mode=DISPLAY_MODE):
     r"""
     When Sage LaTeX implementation
     applies well to MathJax, use it.
@@ -85,20 +90,27 @@ def math_repr(obj):
     TESTS::
 
         sage: from sage_explorer.sage_explorer import math_repr
-        sage: math_repr(42)
+        sage: math_repr(42, display_mode='latex')
         '$42$'
-        sage: math_repr(ZZ)
+        sage: math_repr(ZZ, display_mode='latex')
         '$\\Bold{Z}$'
     """
     if not obj:
         return ''
-    if hasattr(obj, '_latex_'):
+    if not display_mode or display_mode=='plain':
+        return obj.__str__()
+    if display_mode=='latex' and hasattr(obj, '_latex_'):
         try:
             s = obj._latex_()
         except:
             s = str(obj) # signature is sometimes different
         if 'tikz' not in s and 'raisebox' not in s:
             return "${}$" . format(s)
+    if display_mode=='unicode_art' and hasattr(obj, '_unicode_art_'):
+        try:
+            s = obj._unicode_art_()
+        except:
+            pass
     return obj.__str__()
 
 def switch_visibility(widget, visibility):
