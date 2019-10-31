@@ -82,7 +82,7 @@ def _get_visual_widget(obj):
     else:
         return
 
-def math_repr(obj, display_mode=None):
+def math_repr(obj, display_mode=None, standalone=False):
     r"""
     When Sage LaTeX implementation
     applies well to MathJax, use it.
@@ -125,9 +125,18 @@ def math_repr(obj, display_mode=None):
             return "${}$" . format(s)
     if display_mode=='unicode_art' and hasattr(obj, '_unicode_art_'):
         try:
-            return "<pre>{}</pre>" . format(obj._unicode_art_())
+            s = obj._unicode_art_()
         except:
             pass
+        else:
+            if standalone: # for ExplorableValue
+                return "<pre>{}</pre>" . format(obj._unicode_art_())
+            else: # for limited size widget labels
+                s = str(s)
+                if '\n' in str(s):
+                    return s[:s.find('\n')]
+                else:
+                    return s
     return obj.__str__()
 
 def switch_visibility(widget, visibility):
@@ -355,7 +364,7 @@ class ExplorableHistory(deque):
             [('Hist[0]: A first value', 0), ('Hist[1]: 0', 1), ('Hist[2]: 1', 2)]
         """
         def make_option(label, i):
-            return ("{}: {}".format(label, self[i]), i)
+            return ("{}: {}".format(label, math_repr(self[i])), i)
         first_label = self.initial_name or "Hist[0]"
         return [make_option(first_label, 0)] + \
             [make_option("Hist[{}]". format(i+1), i+1) for i in range(self.__len__()-1)]
@@ -437,7 +446,7 @@ class ExplorableValue(HTMLMathSingleton):
         if display:
             self.value = display
         else:
-            self.value = math_repr(self.explorable)
+            self.value = math_repr(self.explorable, standalone=True)
 
 
 class ExplorableCell(Box):
@@ -621,12 +630,7 @@ class ExplorerTitle(ExplorerComponent):
         self.add_class("explorer-title")
 
     def reset(self):
-        content = math_repr(self.value)
-        if content.startswith('<pre'):
-            content = content[5:-6]
-            if '\n' in content:
-                content = content[:content.find('\n')]
-        self.content = content
+        self.content = '{}' . format(math_repr(self.value))
         self.children[0].value = "Exploring: {}" . format(self.content)
 
 
@@ -986,7 +990,7 @@ class ExplorerOutput(ExplorerComponent):
 
     def set_output(self, obj):
         self.output.explorable = obj
-        self.output.value = '${}$' .format(math_repr(obj))
+        self.output.value = math_repr(obj)
         self.error.value = ''
         #self.output.switch_visibility(True)
 
