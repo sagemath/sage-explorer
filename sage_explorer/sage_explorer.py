@@ -87,6 +87,14 @@ def math_repr(obj, display_mode=None, standalone=False):
     When Sage LaTeX implementation
     applies well to MathJax, use it.
 
+    INPUT:
+
+                - ``obj`` -- an object to be represented
+                - ``display_mode`` -- string values of %display magic
+                - ``standalone`` -- a boolean
+
+    OUTPUT: a (unicode) string
+
     TESTS::
 
         sage: from sage_explorer.sage_explorer import math_repr
@@ -95,19 +103,17 @@ def math_repr(obj, display_mode=None, standalone=False):
         sage: math_repr(ZZ, display_mode='latex')
         '$\\Bold{Z}$'
         sage: from sage.combinat.tableau import Tableau
-        sage: t = Tableau([[1, 2, 5, 6], [3], [4]])
+        sage: t = Tableau([[1, 2], [3], [4]])
         sage: math_repr(t)
-        '[[1, 2, 5, 6], [3], [4]]'
-        sage: math_repr(t, display_mode='unicode_art')
-        ┌───┬───┬───┬───┐
-        │ 1 │ 2 │ 5 │ 6 │
-        ├───┼───┴───┴───┘
-        │ 3 │
-        ├───┤
-        │ 4 │
-        └───┘
+        '[[1, 2], [3], [4]]'
+        sage: math_repr(t, display_mode='unicode_art', standalone=True)
+        '<pre>┌───┬───┐\n│ 1 │ 2 │\n├───┼───┘\n│ 3 │\n├───┤\n│ 4 │\n└───┘</pre>'
+        sage: math_repr(t, display_mode='unicode_art', standalone=False)
+        '[[1, 2], [3], [4]]'
+        sage: math_repr(0)
+        '0'
     """
-    if not obj:
+    if obj is None:
         return ''
     if not display_mode:
         try:
@@ -131,13 +137,13 @@ def math_repr(obj, display_mode=None, standalone=False):
         else:
             if standalone: # for ExplorableValue
                 return "<pre>{}</pre>" . format(obj._unicode_art_())
-            else: # for limited size widget labels
-                s = str(s)
-                if '\n' in str(s):
-                    return s[:s.find('\n')]
-                else:
-                    return s
-    return obj.__str__()
+            else: # for widget labels: back to plain representation
+                pass
+    s = obj.__str__()
+    if '\n' in str(s): # for limited size widget labels
+        return s[:s.find('\n')]
+    else:
+        return s
 
 def switch_visibility(widget, visibility):
     r"""
