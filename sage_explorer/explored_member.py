@@ -260,11 +260,12 @@ class ExploredMember(object):
             containerclass = container
         else:
             containerclass = container.__class__
+        self.origin = None
         self.overrides = []
         for c in containerclass.__mro__:
-            if self.name in dir(c):
+            if self.name in c.__dict__:
                 self.overrides.append(c)
-                if getattr(containerclass, self.name) == getattr(c, self.name):
+                if self.origin is None: # and getattr(containerclass, self.name) == getattr(c, self.name):
                     self.origin = c
         if self.overrides:
             self.overrides = self.overrides[1:]
