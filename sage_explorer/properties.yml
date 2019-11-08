@@ -38,11 +38,11 @@ properties:
 
 - property: addition_table
   in: AdditiveSemigroups.Finite
-  when: cardinality < 21
+  when: cardinality < 25
 
 - property: multiplication_table
   in: Semigroups.Finite
-  when: cardinality < 21
+  when: cardinality < 25
 
 - property: characteristic
   in: Fields

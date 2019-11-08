@@ -54,7 +54,7 @@ css_lines.append(".explorer-flexitem {flex-grow:1}")
 css_lines.append(".explorable-value {background-color: #eee; border-radius: 4px; padding: 4px}\n.explorable-value:hover {cursor: pointer}")
 global_css_code = HTML("<style>%s</style>" % '\n'.join(css_lines))
 
-TIMEOUT = 15 # in seconds
+TIMEOUT = 0.5 # in seconds
 MAX_LEN_HISTORY = 50
 CONFIG_PROPERTIES = yaml.load(open(os.path.join(os.path.dirname(__file__),'properties.yml')), yaml.SafeLoader)
 

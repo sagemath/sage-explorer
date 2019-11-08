@@ -89,7 +89,7 @@ def getmembers(object, predicate=None):
                 # could be a (currently) missing slot member, or a buggy
                 # __dir__; discard and move on
                 continue
-        if not predicate or predicate(value):
+        if predicate is None or predicate(value):
             results.append((key, value))
         processed.add(key)
     results.sort(key=lambda pair: pair[0])
