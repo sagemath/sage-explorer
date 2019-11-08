@@ -1557,6 +1557,18 @@ class ExplorerSettings(HasTraits):
             sage: ES.add_property('cardinality', clsname='frozenset')
             sage: ES.properties['cardinality']
             [{'in': 'EnumeratedSets.Finite'}, {'isinstance': 'frozenset'}]
+            sage: ES.add_property('cardinality', predicate=Groups().Finite().__contains__)
+            sage: len(ES.properties['cardinality'])
+            3
+            sage: ES.add_property('__abs__')
+            sage: ES.properties['__abs__']
+            [{}]
+            sage: ES.remove_property('__abs__')
+            sage: ES.properties['__abs__']
+            []
+            sage: ES.add_property('__abs__', predicate=lambda x:False)
+            sage: 'predicate' in ES.properties['__abs__'][0]
+            True
         """
         properties = self.properties
         if not propname in properties:

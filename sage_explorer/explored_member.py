@@ -46,11 +46,19 @@ def _eval_in_main(s, locals={}):
     globs.update(locals)
     return eval(s, globs)
 
-def getmembers(object, predicate=None):
+def getmembers(object):
     """Return all members of an object as (name, value) pairs sorted by name.
-    Optionally, only return members that satisfy a given predicate.
     This function patches inspect.getmembers
     because of Python3's new `__weakref__` attribute.
+
+    TESTS::
+
+        sage: from sage_explorer.sage_explorer import Settings
+        sage: from sage_explorer.explored_member import getmembers
+        sage: len(getmembers(1))
+        272
+        sage: len(getmembers(ZZ))
+        315
     """
     if isclass(object):
         mro = (object,) + getmro(object)
@@ -89,8 +97,7 @@ def getmembers(object, predicate=None):
                 # could be a (currently) missing slot member, or a buggy
                 # __dir__; discard and move on
                 continue
-        if predicate is None or predicate(value):
-            results.append((key, value))
+        results.append((key, value))
         processed.add(key)
     results.sort(key=lambda pair: pair[0])
     return results
@@ -320,6 +327,16 @@ class ExploredMember(object):
             sage: m.compute_property_label({'category': [{'in': 'Sets', 'label': 'A Better Category Label'}]})
             sage: m.prop_label
             'A Better Category Label'
+            sage: m = ExploredMember('__abs__', container=1)
+            sage: m.compute_property_label({'__abs__': [{'label': 'Absolute value'}]})
+            sage: m.prop_label
+            'Absolute value'
+            sage: m.compute_property_label({'__abs__': [{'label': 'Absolute value', 'predicate': lambda x:False}]})
+            sage: m.prop_label
+            sage: from sage.rings.integer_ring import ZZ
+            sage: m = ExploredMember('cardinality', container=ZZ)
+            sage: m.compute_property_label({'cardinality': [{'predicate': Groups().Finite().__contains__}]})
+            sage: m.prop_label
         """
         self.prop_label = None
         if self.name not in properties_settings:
@@ -327,6 +344,8 @@ class ExploredMember(object):
         if not hasattr(self, 'container'):
             raise ValueError("Cannot compute property label without a container.")
         contexts = properties_settings[self.name]
+        def test_predicate(obj, predicate):
+            return predicate(obj)
         def test_when(funcname, expected, operator=None, complement=None):
             if funcname == 'isclass': # FIXME Prendre les premières valeurs de obj.getmembers pour le test -> calculer cette liste avant ?
                 res = _eval_in_main(funcname)(self.container)
@@ -349,6 +368,10 @@ class ExploredMember(object):
             return funcname, operator, complement
         for context in contexts:
             fullfilled = True
+            if 'predicate' in context.keys():
+                if not context['predicate'](self.container):
+                    fulfilled = False
+                    continue
             if 'isinstance' in context.keys():
                 """Test isinstance"""
                 if not isinstance(self.container, _eval_in_main(context['isinstance'])):
@@ -508,6 +531,15 @@ def get_properties(obj, properties_settings={}):
         ['an_element', 'cardinality', 'category']
         sage: len(pp)
         3
+        sage: [p.name for p in get_properties(1, Settings.properties)]
+        ['parent']
+        sage: Settings.add_property('__abs__')
+        sage: [p.name for p in get_properties(1, Settings.properties)]
+        ['__abs__', 'parent']
+        sage: Settings.remove_property('__abs__')
+        sage: Settings.add_property('__abs__', predicate=lambda x:False)
+        sage: [p.name for p in get_properties(1, Settings.properties)]
+        ['parent']
     """
     try:
         members = getmembers(obj)
