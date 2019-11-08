@@ -451,17 +451,21 @@ def get_members(cls, properties_settings):
         sage: mm = get_members(Partition, Settings.properties)
         sage: mm[2].name, mm[2].privacy
         ('__class__', 'python_special')
-        sage: [(mm[i].name, mm[i].overrides, mm[i].privacy) for i in range(len(mm)) if mm[i].name == '_unicode_art_']
+        sage: [(mm[i].name, mm[i].origin, mm[i].overrides, mm[i].privacy) for i in range(len(mm)) if mm[i].name == '_unicode_art_']
         [('_unicode_art_',
-         [<class 'sage.combinat.combinat.CombinatorialElement'>,
-          <class 'sage.combinat.combinat.CombinatorialObject'>,
-          <class 'sage.structure.element.Element'>,
-          <class 'sage.structure.sage_object.SageObject'>],
-         'sage_special')]
+          <class 'sage.combinat.partition.Partition'>,
+          [<class 'sage.structure.sage_object.SageObject'>],
+          'sage_special')]
         sage: from sage.combinat.tableau import Tableau
         sage: mm = get_members(Tableau([[1], [2], [3]]), Settings.properties)
         sage: [(mm[i].name, mm[i].container, mm[i].origin, mm[i].prop_label) for i in range(len(mm)) if mm[i].name == 'cocharge']
         [('cocharge', [[1], [2], [3]], <class 'sage.combinat.tableau.Tableau'>, 'Cocharge')]
+        sage: mm = get_members(Groups(), Settings.properties)
+        sage: (mm[0].name, mm[0].container, mm[0].origin, mm[0].overrides)
+        ('Algebras',
+         Category of groups,
+         <class 'sage.categories.groups.Groups'>,
+         [<class 'sage.categories.sets_cat.Sets.subcategory_class'>])
     """
     members = []
     for name, member in getmembers(cls):
