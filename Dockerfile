@@ -5,5 +5,5 @@ RUN sudo apt-get update && sudo apt-get -yq dist-upgrade \
 COPY --chown=sage:sage . ${HOME}/sage-explorer
 WORKDIR ${HOME}/sage-explorer
 RUN sage -pip install jupyterlab
-RUN sage -pip install git+https://github.com/sagemath/sage-combinat-widgets.git
+RUN sage -pip install sage-combinat-widgets
 RUN sage -pip install .
