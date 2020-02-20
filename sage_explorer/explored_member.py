@@ -58,7 +58,7 @@ def getmembers(object):
         sage: len(getmembers(1))
         272
         sage: len(getmembers(ZZ))
-        315
+        316
     """
     if isclass(object):
         mro = (object,) + getmro(object)
