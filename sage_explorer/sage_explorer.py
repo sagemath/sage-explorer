@@ -71,16 +71,24 @@ def _get_visual_widget(obj):
         sage: p = Partition([3,3,2,1])
         sage: _get_visual_widget(p).__class__
         <class 'sage_combinat_widgets.grid_view_widget.GridViewWidget'>
-    """
+        sage: x, y = var('x y')
+        sage: f(x) = x**2
+        sage: w = _get_visual_widget(f)
+        sage: w.name
+        'x |--> x^2'
+        sage: g(x,y) = x**2 + y**2
+        sage: w = _get_visual_widget(g)
+        sage: w.name
+        '(x, y) |--> x^2 + y^2'
+   """
     if isclass(obj):
         return
     if hasattr(obj, "_widget_"):
         return obj._widget_()
-    if hasattr(obj, 'plot'):
+    if (hasattr(obj, 'number_of_arguments') and obj.number_of_arguments() < 3) \
+       or hasattr(obj, 'plot'):
         from ._widgets import PlotWidget
         return PlotWidget(obj)
-    else:
-        return
 
 def math_repr(obj, display_mode=None, standalone=False):
     r"""
