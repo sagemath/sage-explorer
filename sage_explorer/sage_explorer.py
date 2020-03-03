@@ -837,12 +837,16 @@ class ExplorerMethodSearch(ExplorerComponent):
     """
     explored = Instance(ExploredMember) # to share with ExplorerArgs and ExplorerHelp
 
-    def __init__(self, obj, help_target=None):
+    def __init__(self, obj, help_target=None, menu_type="combo"):
+        if menu_type == "dropdown":
+            menu_widget_class = DropdownSingleton
+        else:
+            menu_widget_class = ComboboxSingleton
         super(ExplorerMethodSearch, self).__init__(
             obj,
             children=(
-                ComboboxSingleton(
-                    placeholder="Enter method name ; use '?' for help"
+                menu_widget_class(
+                    placeholder="Enter name ; use '?' for help"
                 ),)
         )
         if help_target:
@@ -868,7 +872,10 @@ class ExplorerMethodSearch(ExplorerComponent):
         self.members = get_members(cls, Settings.properties) # Here, we both have a list and a dict
         self.members_dict = {m.name: m for m in self.members}
         self.children[0].options=[m.name for m in self.members]
-        self.children[0].value = ''
+        try:
+            self.children[0].value = '' # case Combobox
+        except:
+            self.children[0].value = None # case Dropdown
         self.explored = ExploredMember('')
 
     def set_help_target(self, target):
@@ -1245,6 +1252,11 @@ class SageExplorer(VBox):
                 setattr(self, name, self.components[name].__call__(
                     self.value,
                     history=self._history
+                ))
+            elif name == 'searchbox' and ismodule(self.value):
+                setattr(self, name, self.components[name].__call__(
+                    self.value,
+                    menu_type='dropdown'
                 ))
             else:
                 setattr(self, name, self.components[name].__call__(self.value))
