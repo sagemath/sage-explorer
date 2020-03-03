@@ -697,7 +697,6 @@ class ExplorerProperties(ExplorerComponent, GridBox):
             layout=Layout(border='1px solid #eee', width='100%', grid_template_columns='auto auto')
         )
         self.add_class("explorer-table")
-        self.reset()
 
     def reset(self):
         children = []
@@ -721,7 +720,6 @@ class ExplorerVisual(ExplorerComponent):
             obj,
             layout = Layout(right='0')
         )
-        self.reset()
 
     def reset(self):
         w = _get_visual_widget(self.value)
@@ -835,7 +833,6 @@ class ExplorerMethodSearch(ExplorerComponent):
                     placeholder="Enter method name ; use '?' for help"
                 ),)
         )
-        self.reset()
         if help_target:
             self.set_help_target(help_target)
         def method_changed(change):
@@ -985,7 +982,6 @@ class ExplorerOutput(ExplorerComponent):
             children=(self.output, self.error),
             layout = Layout(padding='2px 50px 2px 2px')
         )
-        self.reset()
 
     def reset(self):
         self.output.new_val = self.value
@@ -1027,7 +1023,6 @@ class ExplorerHelp(ExplorerComponent):
             children=(HTMLMathSingleton(),),
             layout=Layout(width='99%', padding='0', border='1px solid grey')
         )
-        self.reset()
         def explored_changed(change):
             explored = change.new
             if explored.name:
