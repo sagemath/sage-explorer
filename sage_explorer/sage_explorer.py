@@ -120,8 +120,6 @@ def math_repr(obj, display_mode=None, standalone=False):
             display_mode = get_display_manager().preferences.text
         except:
             display_mode = DISPLAY_MODE
-    if not display_mode or display_mode=='plain':
-        return obj.__str__()
     if display_mode=='latex' and hasattr(obj, '_latex_'):
         try:
             s = obj._latex_()
@@ -139,7 +137,11 @@ def math_repr(obj, display_mode=None, standalone=False):
                 return "<pre>{}</pre>" . format(obj._unicode_art_())
             else: # for widget labels: back to plain representation
                 pass
-    s = obj.__str__()
+    # not display_mode or display_mode=='plain'
+    try:
+        s = obj.__str__()
+    except:
+        s = obj.__doc__.strip()
     if '\n' in str(s): # for limited size widget labels
         return s[:s.find('\n')]
     else:
