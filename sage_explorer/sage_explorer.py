@@ -232,7 +232,7 @@ class ExplorableHistory(deque):
 
     def __init__(self, obj=None, initial_name=None, previous_history=[]):
         super(ExplorableHistory, self).__init__(previous_history)
-        if obj:
+        if obj is not None:
             self.append(obj)
         self.initial_name = self.get_initial_name(value=obj)
 
@@ -421,7 +421,7 @@ class ExplorableValue(HTMLMathSingleton):
             self.explorable = Integer(explorable)
         else:
             self.explorable = explorable
-        if initial_value:
+        if initial_value is not None:
             self.new_val = initial_value
         super(ExplorableValue, self).__init__(layout=Layout(margin='1px'))
         self.add_class('explorable-value')
@@ -480,7 +480,7 @@ class ExplorableCell(Box):
         A text box to display explorable value(s).
         """
         self.explorable = explorable
-        if initial_value:
+        if initial_value is not None:
             self.new_val = initial_value
         super(ExplorableCell, self).__init__(**kws)
         self.reset()
@@ -517,7 +517,7 @@ class ExplorableCell(Box):
                 children.append(Separator(')'))
             else:
                 children.append(Separator('}'))
-        elif self.explorable: # treated as a single value
+        elif self.explorable is not None: # treated as a single value
             ev = ExplorableValue(self.explorable, initial_value=self.new_val)
             self.explorables.append(ev)
             dlink((ev, 'new_val'), (self, 'new_val')) # Propagate click
