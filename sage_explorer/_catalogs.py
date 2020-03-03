@@ -18,6 +18,7 @@ from sage.game_theory.catalog import normal_form_games as games_catalog
 from sage.combinat.words import word_generators as words_catalog
 
 class fields_catalog:
+    r"""A catalog of fields."""
     from sage.rings.finite_rings.finite_field_constructor import FiniteField
     from sage.rings.complex_field import ComplexField
     from sage.rings.rational_field import RationalField

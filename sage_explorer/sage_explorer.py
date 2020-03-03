@@ -17,7 +17,7 @@ import re, os, warnings, yaml
 from abc import abstractmethod
 from cysignals.alarm import alarm, cancel_alarm
 from cysignals.signals import AlarmInterrupt
-from inspect import isclass
+from inspect import isclass, ismodule
 from collections import deque
 from ipywidgets import Box, Button, Combobox, Dropdown, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, Textarea, ToggleButton, VBox
 from traitlets import Any, Bool, Dict, HasTraits, Instance, Int, Unicode, dlink, link, observe
@@ -81,7 +81,7 @@ def _get_visual_widget(obj):
         sage: w.name
         '(x, y) |--> x^2 + y^2'
    """
-    if isclass(obj):
+    if isclass(obj) or ismodule(obj):
         return
     if hasattr(obj, "_widget_"):
         return obj._widget_()
@@ -146,9 +146,11 @@ def math_repr(obj, display_mode=None, standalone=False):
             else: # for widget labels: back to plain representation
                 pass
     # not display_mode or display_mode=='plain'
-    try:
+    if hasattr(obj, '__name__') and obj.__name__ and not obj.__name__.startswith('<'):
+        return obj.__name__
+    if hasattr(obj, '__str__') and obj.__str__() and not obj.__str__().startswith('<'):
         s = obj.__str__()
-    except:
+    else:
         s = obj.__doc__.strip()
     if '\n' in str(s): # for limited size widget labels
         return s[:s.find('\n')]
@@ -859,7 +861,7 @@ class ExplorerMethodSearch(ExplorerComponent):
         r"""
         Setup the combobox.
         """
-        if isclass(self.value):
+        if isclass(self.value) or ismodule(self.value):
             cls = self.value
         else:
             cls = self.value.__class__
