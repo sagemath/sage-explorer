@@ -1,5 +1,9 @@
+0.5.2
+	* Exploring catalogs
+	* Simple plot for functions of 1 variable
 0.5.1
 	* Configurable settings for properties lists and display options
+	* Bug fixes
 0.5.0
 	* Complete redesign: lighter ergonomics
 	* Complete redesign: modularity in code
