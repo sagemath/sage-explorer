@@ -35,6 +35,8 @@ with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=DeprecationWarning)
     from ipyevents import Event
 from .explored_member import ExploredMember, _eval_in_main, get_members, get_properties
+import sage_explorer._sage_catalog as sage_catalog
+from ._sage_catalog import sage_catalogs
 try:
     from singleton_widgets import ButtonSingleton, ComboboxSingleton, DropdownSingleton, HTMLMathSingleton, TextSingleton, TextareaSingleton, ToggleButtonSingleton
 except:
@@ -59,6 +61,9 @@ MAX_LEN_HISTORY = 50
 CONFIG_PROPERTIES = yaml.load(open(os.path.join(os.path.dirname(__file__),'properties.yml')), yaml.SafeLoader)
 
 
+def iscatalog(obj):
+    return obj == sage_catalog or obj in sage_catalogs
+
 def _get_visual_widget(obj):
     r"""
     Which is the specialized widget class name for viewing this object (if any)
@@ -81,7 +86,7 @@ def _get_visual_widget(obj):
         sage: w.name
         '(x, y) |--> x^2 + y^2'
    """
-    if isclass(obj) or ismodule(obj):
+    if isclass(obj) or ismodule(obj) or iscatalog(obj):
         return
     if hasattr(obj, "_widget_"):
         return obj._widget_()
@@ -865,7 +870,7 @@ class ExplorerMethodSearch(ExplorerComponent):
         r"""
         Setup the combobox.
         """
-        if isclass(self.value) or ismodule(self.value):
+        if isclass(self.value) or ismodule(self.value) or iscatalog(self.value):
             cls = self.value
         else:
             cls = self.value.__class__
@@ -1253,7 +1258,7 @@ class SageExplorer(VBox):
                     self.value,
                     history=self._history
                 ))
-            elif name == 'searchbox' and ismodule(self.value):
+            elif name == 'searchbox' and iscatalog(self.value):
                 setattr(self, name, self.components[name].__call__(
                     self.value,
                     menu_type='dropdown'

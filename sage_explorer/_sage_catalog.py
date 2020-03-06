@@ -25,21 +25,38 @@ class fields_catalog:
     from sage.rings.real_mpfr import RealField
     from sage.rings.qqbar import AlgebraicRealField, AlgebraicField
 
-catalogs = [
-    ("Groups given by presentation", presentation_groups_catalog),
-    ("Permutation groups", permutation_groups_catalog),
-    ("Matrix groups", matrix_groups_catalog),
-    ("Affine groups", affine_groups_catalog),
-    ("Misc groups", misc_groups_catalog),
-    ("Monoids", monoids_catalog),
-    ("Fields", fields_catalog),
-    ("Algebras", algebras_catalog),
-    ("Modules", modules_catalog),
-    ("Graphs", graphs_catalog),
-    ("Posets", posets_catalog),
-    ("Crystals", crystals_catalog),
-    ("Codes", codes_catalog),
-    ("Matroids", matroids_catalog),
-    ("Games", games_catalog),
-    ("Words", words_catalog),
+presentation_groups_catalog.name = "Groups given by presentation"
+permutation_groups_catalog.name = "Permutation groups"
+matrix_groups_catalog.name = "Matrix groups"
+affine_groups_catalog.name = "Affine groups"
+misc_groups_catalog.name = "Misc groups"
+monoids_catalog.name = "Monoids"
+fields_catalog.name = "Fields"
+algebras_catalog.name = "Algebras"
+modules_catalog.name = "Modules"
+graphs_catalog.name = "Graphs"
+posets_catalog.name = "Posets"
+crystals_catalog.name = "Crystals"
+codes_catalog.name = "Codes"
+matroids_catalog.name = "Matroids"
+games_catalog.name = "Games"
+words_catalog.name = "Words"
+
+sage_catalogs = [
+    presentation_groups_catalog,
+    permutation_groups_catalog,
+    matrix_groups_catalog,
+    affine_groups_catalog,
+    misc_groups_catalog,
+    monoids_catalog,
+    fields_catalog,
+    algebras_catalog,
+    modules_catalog,
+    graphs_catalog,
+    posets_catalog,
+    crystals_catalog,
+    codes_catalog,
+    matroids_catalog,
+    games_catalog,
+    words_catalog,
 ]
