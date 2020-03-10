@@ -457,7 +457,7 @@ class ExploredMember(object):
 
 
 #@lru_cache(maxsize=100)
-def get_members(cls, properties_settings):
+def get_members(cls, properties_settings, include_private=False):
     r"""
     Get all members for a class.
 
@@ -471,7 +471,10 @@ def get_members(cls, properties_settings):
         sage: from sage.combinat.partition import Partition
         sage: mm = get_members(42, Settings.properties)
         sage: mm = get_members(int(42), Settings.properties)
-        sage: mm = get_members(Partition, Settings.properties)
+        sage: mm = get_members(NN, Settings.properties)
+        sage: mm[0].name, mm[0].origin
+        ('CartesianProduct', None)
+        sage: mm = get_members(Partition, Settings.properties, include_private=True)
         sage: mm[2].name, mm[2].privacy
         ('__class__', 'python_special')
         sage: [(mm[i].name, mm[i].origin, mm[i].overrides, mm[i].privacy) for i in range(len(mm)) if mm[i].name == '_unicode_art_']
@@ -498,6 +501,8 @@ def get_members(cls, properties_settings):
         m.compute_member_type()
         m.compute_origin()
         m.compute_privacy()
+        if not include_private and m.privacy:
+            continue
         m.compute_property_label(properties_settings)
         members.append(m)
     return members
