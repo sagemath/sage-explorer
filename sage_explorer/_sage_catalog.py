@@ -9,8 +9,7 @@ from sage.groups.misc_gps import misc_groups_catalog
 from sage.algebras import catalog as algebras_catalog
 from sage.combinat.posets.poset_examples import Posets as posets_catalog
 from sage.monoids import all as monoids_catalog
-from sage.graphs.graph_generators import GraphGenerators
-graphs_catalog = GraphGenerators()
+from sage.graphs.graph_generators import graphs as graphs_catalog
 from sage.modules import all as modules_catalog
 from sage.matroids import catalog as matroids_catalog
 from sage.combinat.crystals import catalog as crystals_catalog
