@@ -64,6 +64,18 @@ CONFIG_PROPERTIES = yaml.load(open(os.path.join(os.path.dirname(__file__),'prope
 def iscatalog(obj):
     return obj == sage_catalog or obj in sage_catalogs
 
+def _get_name(obj, standalone=False):
+    if hasattr(obj, '_name'):
+        return obj._name
+    if hasattr(obj, 'name'):
+        try:
+            return obj.name()
+        except:
+            pass
+    if hasattr(obj, '__name__'):
+        return obj.__name__
+    return _math_repr(obj, standalone)
+
 def _get_visual_widget(obj):
     r"""
     Which is the specialized widget class name for viewing this object (if any)
@@ -76,26 +88,21 @@ def _get_visual_widget(obj):
         sage: p = Partition([3,3,2,1])
         sage: _get_visual_widget(p).__class__
         <class 'sage_combinat_widgets.grid_view_widget.GridViewWidget'>
-        sage: x, y = var('x y')
-        sage: f(x) = x**2
+        sage: f(x) = x^2
         sage: w = _get_visual_widget(f)
         sage: w.name
         'x |--> x^2'
-        sage: g(x,y) = x**2 + y**2
-        sage: w = _get_visual_widget(g)
-        sage: w.name
-        '(x, y) |--> x^2 + y^2'
    """
     if isclass(obj) or ismodule(obj) or iscatalog(obj):
         return
     if hasattr(obj, "_widget_"):
         return obj._widget_()
-    if (hasattr(obj, 'number_of_arguments') and obj.number_of_arguments() < 3) \
-       or hasattr(obj, 'plot'):
+    if (hasattr(obj, 'number_of_arguments') and obj.number_of_arguments() < 2) \
+       or (hasattr(obj, 'plot') and not hasattr(obj, 'number_of_arguments')):
         from ._widgets import PlotWidget
         return PlotWidget(obj)
 
-def math_repr(obj, display_mode=None, standalone=False):
+def _math_repr(obj, display_mode=None, standalone=False):
     r"""
     When Sage LaTeX implementation
     applies well to MathJax, use it.
@@ -110,20 +117,20 @@ def math_repr(obj, display_mode=None, standalone=False):
 
     TESTS::
 
-        sage: from sage_explorer.sage_explorer import math_repr
-        sage: math_repr(42, display_mode='latex')
+        sage: from sage_explorer.sage_explorer import _math_repr
+        sage: _math_repr(42, display_mode='latex')
         '$42$'
-        sage: math_repr(ZZ, display_mode='latex')
+        sage: _math_repr(ZZ, display_mode='latex')
         '$\\Bold{Z}$'
         sage: from sage.combinat.tableau import Tableau
         sage: t = Tableau([[1, 2], [3], [4]])
-        sage: math_repr(t)
+        sage: _math_repr(t)
         '[[1, 2], [3], [4]]'
-        sage: math_repr(t, display_mode='unicode_art', standalone=True)
+        sage: _math_repr(t, display_mode='unicode_art', standalone=True)
         '<pre>┌───┬───┐\n│ 1 │ 2 │\n├───┼───┘\n│ 3 │\n├───┤\n│ 4 │\n└───┘</pre>'
-        sage: math_repr(t, display_mode='unicode_art', standalone=False)
+        sage: _math_repr(t, display_mode='unicode_art', standalone=False)
         '[[1, 2], [3], [4]]'
-        sage: math_repr(0)
+        sage: _math_repr(0)
         '0'
     """
     if obj is None:
@@ -192,7 +199,7 @@ class MathTitle(HTMLMathSingleton):
     """
     def __init__(self, value='', level=1):
         super(MathTitle, self).__init__(value)
-        self.value = math_repr(value)
+        self.value = _math_repr(value)
         self.add_class("title-level%d" % level)
 
 
@@ -387,7 +394,7 @@ class ExplorableHistory(deque):
             [('Hist[0]: A first value', 0), ('Hist[1]: 0', 1), ('Hist[2]: 1', 2)]
         """
         def make_option(label, i):
-            return ("{}: {}".format(label, math_repr(self[i])), i)
+            return ("{}: {}".format(label, _get_name(self[i])), i)
         first_label = self.initial_name or "Hist[0]"
         return [make_option(first_label, 0)] + \
             [make_option("Hist[{}]". format(i+1), i+1) for i in range(self.__len__()-1)]
@@ -469,7 +476,7 @@ class ExplorableValue(HTMLMathSingleton):
         if display:
             self.value = display
         else:
-            self.value = math_repr(self.explorable, standalone=True)
+            self.value = _get_name(self.explorable, standalone=True)
 
 
 class ExplorableCell(Box):
@@ -653,7 +660,10 @@ class ExplorerTitle(ExplorerComponent):
         self.add_class("explorer-title")
 
     def reset(self):
-        self.content = '{}' . format(math_repr(self.value))
+        if _get_name(self.value):
+            self.content = _get_name(self.value)
+        else:
+            self.content = '{}' . format(_get_name(self.value))
         self.children[0].value = "Exploring: {}" . format(self.content)
 
 
@@ -1016,7 +1026,7 @@ class ExplorerOutput(ExplorerComponent):
 
     def set_output(self, obj):
         self.output.explorable = obj
-        self.output.value = math_repr(obj)
+        self.output.value = _get_name(obj)
         self.error.value = ''
         #self.output.switch_visibility(True)
 
@@ -1222,6 +1232,8 @@ class SageExplorer(VBox):
         self.test_mode = test_mode
         self.donottrack = True # Prevent any interactivity while creating the widget
         super(SageExplorer, self).__init__()
+        if not obj:
+            obj = sage_catalog
         self.value = obj
         self._history = ExplorableHistory(obj) #, initial_name=self.initial_name)
         self._history_len = 1 # Needed to activate history propagation
@@ -1257,11 +1269,6 @@ class SageExplorer(VBox):
                 setattr(self, name, self.components[name].__call__(
                     self.value,
                     history=self._history
-                ))
-            elif name == 'searchbox' and iscatalog(self.value):
-                setattr(self, name, self.components[name].__call__(
-                    self.value,
-                    menu_type='dropdown'
                 ))
             else:
                 setattr(self, name, self.components[name].__call__(self.value))
