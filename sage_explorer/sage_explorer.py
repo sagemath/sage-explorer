@@ -22,7 +22,7 @@ from collections import deque
 from ipywidgets import Box, Button, Combobox, Dropdown, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, Textarea, ToggleButton, VBox
 from traitlets import Any, Bool, Dict, HasTraits, Instance, Int, Unicode, dlink, link, observe
 try:
-    from IPython.core.interactiveshell import sphinxify
+    from sage.misc.sphinxify import sphinxify
     assert sphinxify is not None
 except:
     sphinxify = str
@@ -1072,7 +1072,7 @@ class ExplorerHelp(ExplorerComponent):
     def reset(self):
         self.donottrack = False
         try:
-            self.content = self.value.__doc__
+            self.content = sphinxify(self.value.__doc__)
         except:
             self.content = "Cannot retrieve help!"
         switch_visibility(self, False)
