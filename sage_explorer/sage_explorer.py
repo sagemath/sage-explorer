@@ -1378,6 +1378,20 @@ class SageExplorer(VBox):
                 self.reset()
                 self.donottrack = False
             self.observe(handle_history_selection, names='_history_index')
+
+        def run_button(event):
+            if event['key'] == 'Enter' and (
+                    event.source == self.runbutton or \
+                    (event['shiftKey'] and event.source == self.searchbox and self.searchbox.explored and not self.searchbox.explored.args) or \
+                    (event['shiftKey'] and event.source == self.argsbox and self.argsbox.explored)
+                    ):
+                compute_selected_member()
+        if 'searchbox' in self.components:
+            searchbox_shift_enter_event = Event(source=self.searchbox, watched_events=['keyup'])
+            searchbox_shift_enter_event.on_dom_event(run_button)
+        if 'argsbox' in self.components:
+            argsbox_shift_enter_event = Event(source=self.argsbox, watched_events=['keyup'])
+            argsbox_shift_enter_event.on_dom_event(run_button)
         if 'searchbox' in self.components and 'argsbox' in self.components:
             dlink((self.searchbox, 'explored'), (self.argsbox, 'explored'))
         if 'searchbox' in self.components and 'argsbox' in self.components and 'outputbox' in self.components:
@@ -1408,11 +1422,8 @@ class SageExplorer(VBox):
                     self.helpbox.reset() # empty help box
         if 'runbutton' in self.components:
             self.runbutton.on_click(compute_selected_member)
-            enter_event = Event(source=self.runbutton, watched_events=['keyup'])
-            def run_button(event):
-                if event['key'] == 'Enter':
-                    compute_selected_member()
-            enter_event.on_dom_event(run_button)
+            runbutton_enter_event = Event(source=self.runbutton, watched_events=['keyup'])
+            runbutton_enter_event.on_dom_event(run_button)
         if 'outputbox' in self.components:
             dlink((self.outputbox, 'value'), (self, 'value')) # Handle the clicks on output values
             #def new_clicked_value(change):
