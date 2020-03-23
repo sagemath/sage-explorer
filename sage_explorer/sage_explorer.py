@@ -14,7 +14,7 @@ from cysignals.alarm import alarm, cancel_alarm
 from cysignals.signals import AlarmInterrupt
 from inspect import isclass, ismodule
 from collections import deque
-from ipywidgets import Box, Button, Combobox, Dropdown, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, Textarea, ToggleButton, VBox
+from ipywidgets import Box, Button, CallbackDispatcher, Combobox, Dropdown, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, Textarea, ToggleButton, VBox
 from traitlets import Any, Bool, Dict, HasTraits, Instance, Int, Unicode, dlink, link, observe
 try:
     from sage.misc.sphinxify import sphinxify
@@ -636,6 +636,21 @@ class ExplorerComponent(Box):
         if actually_changed:
             self.reset()
 
+    @abstractmethod
+    def on_submit(self, callback, remove=False):
+        """(Un)Register a callback to handle 'submit' event.
+        Triggered when the user clicks enter.
+        Abstract method.
+
+        Parameters
+        ----------
+        callback: callable
+            Will be called with exactly one argument: the Widget instance
+        remove: bool (optional)
+            Whether to unregister the callback
+        """
+        pass
+
 
 class ExplorerTitle(ExplorerComponent):
     r"""The sage explorer title bar
@@ -867,6 +882,7 @@ class ExplorerMethodSearch(ExplorerComponent):
                 self.explored = self.members_dict[selected_method]
         # we do not link directly for not all names deserve a computation
         self.children[0].observe(method_changed, names='value')
+        self.children[0]._submission_callbacks = CallbackDispatcher()
 
     def set_display(self, s):
         self.children[0].value = s
@@ -902,6 +918,9 @@ class ExplorerMethodSearch(ExplorerComponent):
             watched_events=['keyup']
         )
         click_event.on_dom_event(open_help) # Display `explored` help on click
+
+    def on_submit(self, callback, remove=False):
+        self.children[0].on_submit(callback, remove)
 
 
 class ExplorerArgs(ExplorerComponent):
@@ -948,12 +967,16 @@ class ExplorerArgs(ExplorerComponent):
                 self.children[0].placeholder = ''
                 self.children[0].disabled = True
         self.observe(explored_changed, names='explored')
+        self.children[0]._submission_callbacks = CallbackDispatcher()
         dlink((self.children[0], 'value'), (self, 'content'))
 
     def reset(self):
         self.children[0].value = ''
         self.children[0].disabled = False
         self.children[0].placeholder = self.default_placeholder
+
+    def on_submit(self, callback, remove=False):
+        self.children[0].on_submit(callback, remove)
 
 
 class ExplorerRunButton(ButtonSingleton):
@@ -1368,47 +1391,52 @@ class SageExplorer(VBox):
                 self.donottrack = False
             self.observe(handle_history_selection, names='_history_index')
 
+        def compute_selected_member(button=None):
+            if not 'searchbox' in self.components or not 'outputbox' in self.components:
+                return
+            member_name = self.searchbox.explored.name
+            member_type = self.searchbox.explored.member_type
+            if 'argsbox' in self.components:
+                args = self.argsbox.content
+            else:
+                args = ''
+            try:
+                if AlarmInterrupt:
+                    alarm(TIMEOUT)
+                if 'attribute' in member_type:
+                    out = _eval_in_main("__obj__.{}" . format(member_name), locals={"__obj__": self.value})
+                else:
+                    out = _eval_in_main("__obj__.{}({})".format(member_name, args), locals={"__obj__": self.value})
+                if AlarmInterrupt:
+                    cancel_alarm()
+            except AlarmInterrupt:
+                self.outputbox.set_error("Timeout!")
+                return
+            except Exception as e:
+                if AlarmInterrupt:
+                    cancel_alarm()
+                self.outputbox.set_error(e)
+                return
+            self.outputbox.set_output(out)
+            self.searchbox.set_display(member_name) # avoid any trailing '?'
+            if 'helpbox' in self.components:
+                self.helpbox.reset() # empty help box
+
         def run_button(event):
-            if event['key'] == 'Enter' and (
-                    event.source == self.runbutton or \
-                    (event['shiftKey'] and event.source == self.searchbox and self.searchbox.explored and not self.searchbox.explored.args) or \
-                    (event['shiftKey'] and event.source == self.argsbox and self.argsbox.explored)
-                    ):
+            if event['key'] == 'Enter' and event.source == self.runbutton:
                 compute_selected_member()
-        if 'searchbox' in self.components:
-            searchbox_shift_enter_event = Event(source=self.searchbox, watched_events=['keyup'])
-            searchbox_shift_enter_event.on_dom_event(run_button)
-        if 'argsbox' in self.components:
-            argsbox_shift_enter_event = Event(source=self.argsbox, watched_events=['keyup'])
-            argsbox_shift_enter_event.on_dom_event(run_button)
+        def submit_computation_noargs(w):
+            explored = self.searchbox.explored
+            if explored and explored.name and (not hasattr(explored, 'args') or not explored.args):
+                compute_selected_member()
+        def submit_computation(w):
+            compute_selected_member()
         if 'searchbox' in self.components and 'argsbox' in self.components:
             dlink((self.searchbox, 'explored'), (self.argsbox, 'explored'))
-        if 'searchbox' in self.components and 'argsbox' in self.components and 'outputbox' in self.components:
-            def compute_selected_member(button=None):
-                member_name = self.searchbox.explored.name
-                member_type = self.searchbox.explored.member_type
-                args = self.argsbox.content
-                try:
-                    if AlarmInterrupt:
-                        alarm(TIMEOUT)
-                    if 'attribute' in member_type:
-                        out = _eval_in_main("__obj__.{}" . format(member_name), locals={"__obj__": self.value})
-                    else:
-                        out = _eval_in_main("__obj__.{}({})".format(member_name, args), locals={"__obj__": self.value})
-                    if AlarmInterrupt:
-                        cancel_alarm()
-                except AlarmInterrupt:
-                    self.outputbox.set_error("Timeout!")
-                    return
-                except Exception as e:
-                    if AlarmInterrupt:
-                        cancel_alarm()
-                    self.outputbox.set_error(e)
-                    return
-                self.outputbox.set_output(out)
-                self.searchbox.set_display(member_name) # avoid any trailing '?'
-                if 'helpbox' in self.components:
-                    self.helpbox.reset() # empty help box
+        if 'searchbox' in self.components:
+            self.searchbox.on_submit(submit_computation_noargs)
+        if 'argsbox' in self.components:
+            self.argsbox.on_submit(submit_computation)
         if 'runbutton' in self.components:
             self.runbutton.on_click(compute_selected_member)
             runbutton_enter_event = Event(source=self.runbutton, watched_events=['keyup'])
