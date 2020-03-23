@@ -1395,6 +1395,8 @@ class SageExplorer(VBox):
             if not 'searchbox' in self.components or not 'outputbox' in self.components:
                 return
             member_name = self.searchbox.explored.name
+            if not member_name:
+                return
             member_type = self.searchbox.explored.member_type
             if 'argsbox' in self.components:
                 args = self.argsbox.content
@@ -1421,9 +1423,8 @@ class SageExplorer(VBox):
             self.searchbox.set_display(member_name) # avoid any trailing '?'
             if 'helpbox' in self.components:
                 self.helpbox.reset() # empty help box
-
         def run_button(event):
-            if event['key'] == 'Enter' and event.source == self.runbutton:
+            if event['key'] == 'Enter':
                 compute_selected_member()
         def submit_computation_noargs(w):
             explored = self.searchbox.explored
