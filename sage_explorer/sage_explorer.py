@@ -1298,13 +1298,13 @@ class SageExplorer(VBox):
 
         sage: explore.settings.properties
         ...
-         'cardinality': [{'in': 'EnumeratedSets.Finite'}],
+         'cardinality': [{'member_of': EnumeratedSets.Finite}],
         ...
 
     This adds the property ``number of vertices`` to Sage's graphs::
 
         sage: explore.settings.add_property('num_verts',
-        ....:                               clsname='Graph',
+        ....:                               instance_of=Graph,
         ....:                               label='number of vertices')
         sage: explore(graphs.PetersenGraph())
         SageExplorer(...)
@@ -1712,12 +1712,12 @@ class ExplorerSettings(HasTraits):
             propname = context['property']
             if propname not in properties:
                 properties[propname] = []
-            new_context = {
-                key:eval(val) for key, val in context.items() \
-                if key!='property' and key!='label'
-            }
-            if 'label' in context:
-                new_context['label'] = context['label']
+            new_context = {}
+            for key, val in context.items():
+                if key in ['instance_of', 'member_of', 'not_in']:
+                    new_context[key] = _eval_in_main(val)
+                else:
+                    new_context[key] = val
             properties[propname].append(new_context)
         self.properties = properties
 
@@ -1740,10 +1740,10 @@ class ExplorerSettings(HasTraits):
             sage: from sage_explorer.sage_explorer import ExplorerSettings
             sage: ES = ExplorerSettings()
             sage: ES.load_properties()
-            sage: ES.add_property('cardinality', isinstance=frozenset)
+            sage: ES.add_property('cardinality', instance_of=frozenset)
             sage: ES.properties['cardinality']
-            [{'member_of': EnumeratedSets.Finite}, {'isinstance': frozenset}]
-            sage: ES.add_property('cardinality', predicate=Groups().Finite().__contains__)
+            [{'member_of': EnumeratedSets.Finite}, {'instance_of': <class 'frozenset'>}]
+            sage: ES.add_property('cardinality', member_of=Groups().Finite())
             sage: len(ES.properties['cardinality'])
             3
             sage: ES.add_property('__abs__')
@@ -1752,8 +1752,8 @@ class ExplorerSettings(HasTraits):
             sage: ES.remove_property('__abs__')
             sage: ES.properties['__abs__']
             []
-            sage: ES.add_property('__abs__', predicate=lambda x:False)
-            sage: 'predicate' in ES.properties['__abs__'][0]
+            sage: ES.add_property('__abs__', when=lambda x:False)
+            sage: 'when' in ES.properties['__abs__'][0]
             True
         """
         properties = self.properties
@@ -1794,10 +1794,10 @@ class ExplorerSettings(HasTraits):
             sage: ES.load_properties()
             sage: ES.add_property('cardinality', instance_of=frozenset)
             sage: ES.properties['cardinality']
-            [{'member_of': EnumeratedSets.Finite}, {'instance_of': frozenset}]
+            [{'member_of': EnumeratedSets.Finite}, {'instance_of': <class 'frozenset'>}]
             sage: ES.remove_property('cardinality', instance_of=EnumeratedSets.Finite)
             sage: ES.properties['cardinality']
-            [{'instance_of': frozenset}]
+            [{'instance_of': <class 'frozenset'>}]
         """
         properties = self.properties
         if not propname in properties:
