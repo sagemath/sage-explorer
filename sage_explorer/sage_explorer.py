@@ -1282,10 +1282,9 @@ class SageExplorer(VBox):
     the explorer's settings::
 
         sage: explore.settings.properties
-        {...
+        ...
          'cardinality': [{'in': 'EnumeratedSets.Finite'}],
-         ...
-        }
+        ...
 
     This adds the property ``number of vertices`` to Sage's graphs::
 
@@ -1333,6 +1332,18 @@ class SageExplorer(VBox):
             self.implement_interactivity()
             self.draw()
         self.donottrack = False
+
+    def __repr__(self):
+        r"""
+        A readable representation string.
+
+        TESTS::
+
+            sage: from sage_explorer import explore
+            sage: explore(42)
+            SageExplorer(42)
+        """
+        return "SageExplorer({})" . format(self.value)
 
     def reset(self):
         self.donottrack = True
