@@ -47,6 +47,18 @@ Usage
 
 See the `demo notebook <demo_sage_explorer.ipynb>`_.
 
+How to contribute
+-----------------
+
+The most practical process for contributions is to
+
+# open a ticket to describe what you intend to do
+# write your patch
+# make a pull request
+
+Please PR to the branch `develop` as the branch `master` holds only stable code.
+
+
 Acknowledgments
 ---------------
 
