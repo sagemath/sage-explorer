@@ -1298,13 +1298,13 @@ class SageExplorer(VBox):
 
         sage: explore.settings.properties
         ...
-         'cardinality': [{'in': 'EnumeratedSets.Finite'}],
+         'cardinality': [{'member_of': EnumeratedSets.Finite}],
         ...
 
     This adds the property ``number of vertices`` to Sage's graphs::
 
         sage: explore.settings.add_property('num_verts',
-        ....:                               clsname='Graph',
+        ....:                               instance_of=Graph,
         ....:                               label='number of vertices')
         sage: explore(graphs.PetersenGraph())
         SageExplorer(...)
@@ -1712,12 +1712,16 @@ class ExplorerSettings(HasTraits):
             propname = context['property']
             if propname not in properties:
                 properties[propname] = []
-            properties[propname].append({
-                key:val for key, val in context.items() if key!='property'
-            })
+            new_context = {}
+            for key, val in context.items():
+                if key in ['instance_of', 'member_of', 'not_in']:
+                    new_context[key] = _eval_in_main(val)
+                else:
+                    new_context[key] = val
+            properties[propname].append(new_context)
         self.properties = properties
 
-    def add_property(self, propname, clsname=None, predicate=None, label=None):
+    def add_property(self, propname, instance_of=None, member_of=None, not_in=None, not_when=None, when=None, label=None):
         r"""
         Add/modify a context for `propname` for class `clsname`
         in `properties` dictionary.
@@ -1725,18 +1729,21 @@ class ExplorerSettings(HasTraits):
         INPUT:
 
                 - ``propname`` -- a string
-                - ``clsname`` -- a string
-                - ``predicate`` -- a function
+                - ``instance_of`` -- a class
+                - ``member_of`` -- an object
+                - ``not_in`` -- an object
+                - ``not_when`` -- a method
+                - ``when`` -- a method
                 - ``label`` -- a string
 
         TESTS::
             sage: from sage_explorer.sage_explorer import ExplorerSettings
             sage: ES = ExplorerSettings()
             sage: ES.load_properties()
-            sage: ES.add_property('cardinality', clsname='frozenset')
+            sage: ES.add_property('cardinality', instance_of=frozenset)
             sage: ES.properties['cardinality']
-            [{'in': 'EnumeratedSets.Finite'}, {'isinstance': 'frozenset'}]
-            sage: ES.add_property('cardinality', predicate=Groups().Finite().__contains__)
+            [{'member_of': EnumeratedSets.Finite}, {'instance_of': <class 'frozenset'>}]
+            sage: ES.add_property('cardinality', member_of=Groups().Finite())
             sage: len(ES.properties['cardinality'])
             3
             sage: ES.add_property('__abs__')
@@ -1745,23 +1752,29 @@ class ExplorerSettings(HasTraits):
             sage: ES.remove_property('__abs__')
             sage: ES.properties['__abs__']
             []
-            sage: ES.add_property('__abs__', predicate=lambda x:False)
-            sage: 'predicate' in ES.properties['__abs__'][0]
+            sage: ES.add_property('__abs__', when=lambda x:False)
+            sage: 'when' in ES.properties['__abs__'][0]
             True
         """
         properties = self.properties
         if not propname in properties:
             properties[propname] = []
         context = {}
-        if clsname:
-            context['isinstance'] = clsname
-        if predicate:
-            context['predicate'] = predicate
+        if instance_of:
+            context['instance_of'] = instance_of
+        if member_of:
+            context['member_of'] = member_of
+        if not_in:
+            context['not_in'] = not_in
+        if not_when:
+            context['not_when'] = not_when
+        if when:
+            context['when'] = not_when
         if label:
             context['label'] = label
         properties[propname].append(context)
 
-    def remove_property(self, propname, clsname=None, predicate=None):
+    def remove_property(self, propname, instance_of=None, member_of=None, not_in=None, not_when=None, when=None, label=None):
         r"""
         Remove property in context defined by `clsname` and `predicate`
         for `propname` in `properties` dictionary.
@@ -1769,31 +1782,46 @@ class ExplorerSettings(HasTraits):
         INPUT:
 
                 - ``propname`` -- a string
-                - ``clsname`` -- a string
-                - ``predicate`` -- a string
+                - ``instance_of`` -- a class
+                - ``member_of`` -- an object
+                - ``not_in`` -- an object
+                - ``not_when`` -- a method
+                - ``when`` -- a method
 
         TESTS::
             sage: from sage_explorer.sage_explorer import ExplorerSettings
             sage: ES = ExplorerSettings()
             sage: ES.load_properties()
-            sage: ES.add_property('cardinality', clsname='frozenset')
+            sage: ES.add_property('cardinality', instance_of=frozenset)
             sage: ES.properties['cardinality']
-            [{'in': 'EnumeratedSets.Finite'}, {'isinstance': 'frozenset'}]
-            sage: ES.remove_property('cardinality', clsname='EnumeratedSets.Finite')
+            [{'member_of': EnumeratedSets.Finite}, {'instance_of': <class 'frozenset'>}]
+            sage: ES.remove_property('cardinality', instance_of=EnumeratedSets.Finite)
             sage: ES.properties['cardinality']
-            [{'isinstance': 'frozenset'}]
+            [{'instance_of': <class 'frozenset'>}]
         """
         properties = self.properties
         if not propname in properties:
             return
         for context in properties[propname]:
             found = True
-            if clsname and ('isinstance' in properties[propname]) \
-               and properties[propname]['isinstance'] != clsname:
+            if instance_of and ('instance_of' in properties[propname]) \
+               and properties[propname]['instance_of'] != instance_of:
                 found = False
                 continue
-            if predicate and ('predicate' in properties[propname]) \
-               and properties[propname]['predicate'] != predicate:
+            if member_of and ('member_of' in properties[propname]) \
+               and properties[propname]['member_of'] != member_of:
+                found = False
+                continue
+            if not_in and ('not_in' in properties[propname]) \
+               and properties[propname]['not_in'] != not_in:
+                found = False
+                continue
+            if not_when and ('not_when' in properties[propname]) \
+               and properties[propname]['not_when'] != not_when:
+                found = False
+                continue
+            if when and ('when' in properties[propname]) \
+               and properties[propname]['when'] != when:
                 found = False
                 continue
             if found:
