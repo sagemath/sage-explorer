@@ -1,13 +1,8 @@
 # -*- coding: utf-8 -*-
 r"""
-Sage Explorer in Jupyter Notebook
+Sage-Explorer: interactive exploration of SageMath objects in Jupyter
 
-EXAMPLES ::
-from sage.combinat.tableau import StandardTableaux
-from SageExplorer import *
-t = StandardTableaux(15).random_element()
-widget = SageExplorer(t)
-display(t)
+See :class:`SageExplorer`.
 
 AUTHORS:
 - Odile Bénassy, Nicolas Thiéry
@@ -1209,7 +1204,78 @@ DEFAULT_COMPONENTS = {
     }
 
 class SageExplorer(VBox):
-    """Sage Explorer in Jupyter Notebook"""
+    r"""
+    Sage-Explorer: interactive exploration of SageMath objects in Jupyter
+
+    INPUT:
+
+    - `o` -- an object
+
+    OUTPUT: a Jupyter widget
+
+    Running `explore(o)` opens an interactive page displaying `o`
+    together with contextual information:
+    - rich display(s) of the object (e.g. LaTeX formula, picture, or
+      interactive widget depending on availability;
+    - a selection of properties, that is relevant invariants or
+      related objects;
+    - a list of operations (methods) available for the object
+    - documentation.
+
+    Following the metaphor of a web browser, the user can then
+    visually explore SageMath by navigating between objects along
+    properties or method calls.
+
+    EXAMPLES:
+
+    Explore various objects::
+
+        sage: from sage_explorer import explore
+
+        sage: explore(SymmetricGroup(3))
+        SageExplorer(...)
+
+        sage: explore(Partition([3,2,1,1]))
+        SageExplorer(...)
+
+        sage: explore(graphs.PetersenGraph())
+        SageExplorer(...)
+
+    Explore Sage's catalog of graphs::
+
+        sage: explore(graphs)
+        SageExplorer(...)
+
+    Explore Sage as a whole, starting from Sage's catalog of
+    catalogs::
+
+        sage: explore()
+        SageExplorer(...)
+
+    The selection of properties is made based on the semantic of
+    ``o``, typically encoded in its category and class. For example, a
+    finite (enumerated) set will have its cardinality displayed; a
+    field its characteristics. This can be viewed and configured using
+    the explorer's settings::
+
+        sage: explore.settings.properties
+        {...
+         'cardinality': [{'in': 'EnumeratedSets.Finite'}],
+         ...
+        }
+
+    This adds the property ``number of vertices`` to Sage's graphs::
+
+        sage: explore.settings.add_property('num_verts',
+        ....:                               clsname='Graph',
+        ....:                               label='number of vertices')
+        sage: explore(graphs.PetersenGraph())
+        SageExplorer(...)
+
+    Users are most welcome to suggest additions to the default
+    configuration, e.g. by contacting the authors or posting an issue
+    on `Sage-Explorer's GitHub repository <https://github.com/sagemath/sage-explorer>`_.
+    """
 
     value = Any()
     _history = Instance(ExplorableHistory)
@@ -1653,3 +1719,4 @@ class ExplorerSettings(HasTraits):
                 return
 
 Settings = ExplorerSettings()
+SageExplorer.settings = Settings
