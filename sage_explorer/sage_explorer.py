@@ -1320,7 +1320,7 @@ class SageExplorer(VBox):
         self.test_mode = test_mode
         self.donottrack = True # Prevent any interactivity while creating the widget
         super(SageExplorer, self).__init__()
-        if not obj:
+        if obj is None:
             obj = sage_catalog
         self.value = obj
         self._history = ExplorableHistory(obj) #, initial_name=self.initial_name)
