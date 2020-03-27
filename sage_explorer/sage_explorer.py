@@ -1716,17 +1716,25 @@ class ExplorerSettings(HasTraits):
             for key, val in context.items():
                 if key == 'property':
                     continue
-                if key in ['isinstance', 'in', 'not_in']:
+                if key == 'label':
+                    new_context[key] = val
+                if key in ['isinstance', 'not isinstance', 'in', 'not in']:
                     try:
                         new_context[key] = _eval_in_main(val)
                     except:
                         #print(key, val)
                         continue
-                else:
-                    new_context[key] = val
+                if key in ['when', 'not when']:
+                    try:
+                        new_context[key] = _eval_in_main(val)
+                    except:
+                        def my_method(obj):
+                            return getattr(obj, val)
+                        new_context[key] = val
             self.properties[propname].append(new_context)
 
-    def add_property(self, propname, isinstance=None, member_of=None, not_in=None, not_when=None, when=None, label=None):
+    def add_property(self, propname, isinstance=None, member_of=None, not_in=None, not_isinstance=None,
+                     not_when=None, when=None, label=None):
         r"""
         Add/modify a context for `propname` for class `clsname`
         in `properties` dictionary.
@@ -1737,8 +1745,9 @@ class ExplorerSettings(HasTraits):
                 - ``isinstance`` -- a class
                 - ``member_of`` -- an object
                 - ``not_in`` -- an object
-                - ``not_when`` -- a method
-                - ``when`` -- a method
+                - ``not_isinstance`` -- a class
+                - ``not_when`` -- a method/function
+                - ``when`` -- a method/function
                 - ``label`` -- a string
 
         TESTS::
@@ -1770,9 +1779,11 @@ class ExplorerSettings(HasTraits):
         if member_of:
             context['in'] = member_of
         if not_in:
-            context['not_in'] = not_in
+            context['not in'] = not_in
+        if not_isinstance:
+            context['not isinstance'] = not_isinstance
         if not_when:
-            context['not_when'] = not_when
+            context['not when'] = not_when
         if when:
             context['when'] = not_when
         if label:

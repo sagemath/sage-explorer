@@ -315,27 +315,27 @@ class ExploredMember(object):
             sage: from sage_explorer.explored_member import ExploredMember
             sage: F = GF(7)
             sage: m = ExploredMember('polynomial', container=F)
-            sage: m.compute_property_label({'polynomial': [{'in': 'Fields.Finite'}]})
+            sage: m.compute_property_label({'polynomial': [{'in': Fields.Finite}]})
             sage: m.prop_label
             'Polynomial'
             sage: G = PermutationGroup([[(1,2,3),(4,5)],[(3,4)]])
             sage: m = ExploredMember('cardinality', container=G)
-            sage: m.compute_property_label({'cardinality': [{'in': 'EnumeratedSets.Finite'}]})
+            sage: m.compute_property_label({'cardinality': [{'in': EnumeratedSets.Finite}]})
             sage: m.prop_label
             'Cardinality'
             sage: m = ExploredMember('category', container=G)
-            sage: m.compute_property_label({'category': [{'in': 'Sets', 'label': 'A Better Category Label'}]})
+            sage: m.compute_property_label({'category': [{'in': Sets, 'label': 'A Better Category Label'}]})
             sage: m.prop_label
             'A Better Category Label'
             sage: m = ExploredMember('__abs__', container=1)
             sage: m.compute_property_label({'__abs__': [{'label': 'Absolute value'}]})
             sage: m.prop_label
             'Absolute value'
-            sage: m.compute_property_label({'__abs__': [{'label': 'Absolute value', 'predicate': lambda x:False}]})
+            sage: m.compute_property_label({'__abs__': [{'label': 'Absolute value', 'when': lambda x:False}]})
             sage: m.prop_label
             sage: from sage.rings.integer_ring import ZZ
             sage: m = ExploredMember('cardinality', container=ZZ)
-            sage: m.compute_property_label({'cardinality': [{'predicate': Groups().Finite().__contains__}]})
+            sage: m.compute_property_label({'cardinality': [{'in': Groups().Finite()}]})
             sage: m.prop_label
         """
         self.prop_label = None
@@ -344,8 +344,6 @@ class ExploredMember(object):
         if not hasattr(self, 'container'):
             raise ValueError("Cannot compute property label without a container.")
         contexts = properties_settings[self.name]
-        def test_predicate(obj, predicate):
-            return predicate(obj)
         def test_when(funcname, expected, operator=None, complement=None):
             if funcname == 'isclass': # FIXME Prendre les premières valeurs de obj.getmembers pour le test -> calculer cette liste avant ?
                 res = _eval_in_main(funcname)(self.container)
@@ -368,24 +366,20 @@ class ExploredMember(object):
             return funcname, operator, complement
         for context in contexts:
             fullfilled = True
-            if 'predicate' in context.keys():
-                if not context['predicate'](self.container):
-                    fulfilled = False
-                    continue
             if 'isinstance' in context.keys():
                 """Test isinstance"""
-                if not isinstance(self.container, _eval_in_main(context['isinstance'])):
+                if not isinstance(self.container, context['isinstance']):
                     fullfilled = False
                     continue
             if 'not isinstance' in context.keys():
                 """Test not isinstance"""
-                if isinstance(self.container, _eval_in_main(context['not isinstance'])):
+                if isinstance(self.container, context['not isinstance']):
                     fullfilled = False
                     continue
             if 'in' in context.keys():
                 """Test in"""
                 try:
-                    if not self.container in _eval_in_main(context['in']):
+                    if not self.container in context['in']:
                         fullfilled = False
                         continue
                 except:
@@ -393,7 +387,7 @@ class ExploredMember(object):
                     continue # The error is : descriptor 'category' of 'sage.structure.parent.Parent' object needs an argument
             if 'not in' in context.keys():
                 """Test not in"""
-                if self.container in _eval_in_main(context['not in']):
+                if self.container in context['not in']:
                     fullfilled = False
                     continue
             if 'when' in context.keys():
@@ -542,7 +536,7 @@ def get_properties(obj, properties_settings={}):
         sage: [p.name for p in get_properties(1, Settings.properties)]
         ['__abs__', 'parent']
         sage: Settings.remove_property('__abs__')
-        sage: Settings.add_property('__abs__', predicate=lambda x:False)
+        sage: Settings.add_property('__abs__', when=lambda x:False)
         sage: [p.name for p in get_properties(1, Settings.properties)]
         ['parent']
     """
