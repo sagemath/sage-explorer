@@ -37,7 +37,7 @@ properties:
   in: EnumeratedSets.Finite
 
 - property: addition_table
-  in: AdditiveSemigroups.Finite
+  in: sage.categories.additive_semigroups.AdditiveSemigroups
   when: cardinality < 25
 
 - property: multiplication_table
