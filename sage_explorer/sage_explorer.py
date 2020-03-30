@@ -1704,8 +1704,18 @@ class ExplorerSettings(HasTraits):
             sage: from sage_explorer.sage_explorer import ExplorerSettings
             sage: ES = ExplorerSettings()
             sage: ES.load_properties()
-            sage: ES.properties['base_ring']
-            [{'when': 'has_base'}]
+            sage: len(ES.properties['addition_table'])
+            2
+            sage: ES.properties['addition_table'][0]['when'](GF(7))
+            True
+            sage: ES.properties['addition_table'][0]['when'](GF(29))
+            False
+            sage: len(ES.properties['base_ring'])
+            1
+            sage: ES.properties['base_ring'][0]['when'](CoxeterGroup(["A",2]))
+            True
+            sage: ES.properties['base_ring'][0]['when'](StandardTableaux(3).random_element())
+            False
         """
         self.properties = {}
         for context in config['properties']:
@@ -1718,19 +1728,29 @@ class ExplorerSettings(HasTraits):
                     continue
                 if key == 'label':
                     new_context[key] = val
-                if key in ['isinstance', 'not isinstance', 'in', 'not in']:
+                elif key in ['isinstance', 'not isinstance', 'in', 'not in']:
+                    new_context[key] = _eval_in_main(val)
+                elif key in ['when', 'not when']:
+                    first_part = val.split()[0]
+                    func = None
                     try:
-                        new_context[key] = _eval_in_main(val)
+                        func = _eval_in_main(first_part)
                     except:
-                        #print(key, val)
+                        pass
+                    if func is not None and val == first_part:
+                        new_context[key] = func
                         continue
-                if key in ['when', 'not when']:
-                    try:
-                        new_context[key] = _eval_in_main(val)
-                    except:
-                        def my_method(obj):
-                            return getattr(obj, val)
-                        new_context[key] = val
+                    def build_test(key, val, first_part):
+                        if func is not None:
+                            return lambda obj:_eval_in_main(val)(obj)
+                        remain = " " . join(val.split()[1:])
+                        def test_when(obj):
+                            if not hasattr(obj, first_part):
+                                return False
+                            return hasattr(obj, first_part) and \
+                                _eval_in_main("{} {}" . format(str(getattr(obj, first_part).__call__()), remain))
+                        return test_when
+                    new_context[key] = build_test(key, val, first_part)
             self.properties[propname].append(new_context)
 
     def add_property(self, propname, isinstance=None, member_of=None, not_in=None, not_isinstance=None,
