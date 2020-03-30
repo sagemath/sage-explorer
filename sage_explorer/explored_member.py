@@ -344,26 +344,6 @@ class ExploredMember(object):
         if not hasattr(self, 'container'):
             raise ValueError("Cannot compute property label without a container.")
         contexts = properties_settings[self.name]
-        def test_when(funcname, expected, operator=None, complement=None):
-            if funcname == 'isclass': # FIXME Prendre les premières valeurs de obj.getmembers pour le test -> calculer cette liste avant ?
-                res = _eval_in_main(funcname)(self.container)
-            else:
-                res = getattr(self.container, funcname).__call__()
-            if operator and complement:
-                res = operator(res, _eval_in_main(complement))
-            return (res == expected)
-        def split_when(s, context):
-            when_parts = context['when'].split()
-            funcname = when_parts[0]
-            if len(when_parts) > 2:
-                operatorsign, complement = when_parts[1], when_parts[2]
-            elif len(when_parts) > 1:
-                operatorsign, complement = when_parts[1][0], when_parts[1][1:]
-            if operatorsign in OPERATORS.keys():
-                operator = OPERATORS[operatorsign]
-            else:
-                operator = "not found"
-            return funcname, operator, complement
         for context in contexts:
             fullfilled = True
             if 'isinstance' in context.keys():
@@ -390,58 +370,31 @@ class ExploredMember(object):
                 if self.container in context['not in']:
                     fullfilled = False
                     continue
+            def prepare_when_context(v):
+                if v is None:
+                    return [] # Shouldn't happen, though
+                if isinstance(v, (list,)):
+                    return v
+                else:
+                    return [v]
             if 'when' in context.keys():
                 """Test when predicate(s)"""
-                if isinstance(context['when'], six.string_types):
-                    when = [context['when']]
-                elif isinstance(context['when'], (list,)):
-                    when = context['when']
-                else:
-                    fullfilled = False
-                    continue
+                when = prepare_when_context(context['when'])
                 for predicate in when:
-                    if not ' ' in predicate:
-                        if not hasattr(self.container, predicate):
-                            fullfilled = False
-                            continue
-                        if not test_when(predicate, True):
-                            fullfilled = False
-                            continue
-                    else:
-                        funcname, operator, complement = split_when(predicate, context)
-                        if not hasattr(self.container, funcname):
-                            fullfilled = False
-                            continue
-                        if operator == "not found":
-                            fullfilled = False
-                            continue
-                        if not test_when(funcname, True, operator, complement):
-                            fullfilled = False
-                            continue
+                    if not predicate(self.container):
+                        fullfilled = False
+                        continue
+                    if fullfilled:
+                        break # contexts should not overlap
             if 'not when' in context.keys():
                 """Test not when predicate(s)"""
-                if isinstance(context['not when'], six.string_types):
-                    nwhen = [context['not when']]
-                if not test_when(context['not when'],False):
-                    fullfilled = False
-                    continue
-                elif isinstance(context['not when'], (list,)):
-                    nwhen = context['not when']
-                else:
-                    fullfilled = False
-                    continue
+                nwhen = prepare_when_context(context['nwhen'])
                 for predicate in nwhen:
-                    if not ' ' in predicate:
-                        if not test_when(predicate, False):
-                            fullfilled = False
-                            continue
-                    else:
-                        funcname, operator, complement = split_when(predicate)
-                        if not test_when(funcname, False, operator, complement):
-                            fullfilled = False
-                            continue
-                if fullfilled:
-                    break # contexts should not overlap
+                    if predicate(self.container):
+                        fullfilled = False
+                        continue
+                    if fullfilled:
+                        break # contexts should not overlap
             if not fullfilled:
                 return
             if 'label' in context.keys():
