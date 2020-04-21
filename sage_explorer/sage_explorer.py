@@ -39,7 +39,7 @@ except:
 
 title_layout = Layout(width='100%', padding='12px')
 css_lines = []
-css_lines.append(".visible {visibility: visible; display: table}")
+css_lines.append(".visible {visibility: visible; display: flex}")
 css_lines.append(".invisible {visibility: hidden; display: none}")
 css_lines.append(".title-level2 {font-size: 150%}")
 css_lines.append(".separator {width: 1em}")
