@@ -6,7 +6,7 @@
 # import sage
 # monkey_patch(sage_explorer.misc, sage.misc, log_level=logging.INFO)
 
-from .sage_explorer import SageExplorer, ExplorerSettings as explore, Settings
+from .sage_explorer import SageExplorer, SageExplorer as explore, ExplorerSettings, ExplorerSettings as Settings
 try:
     from ._widgets import *
 except:
