@@ -216,8 +216,7 @@ class HelpButton(ToggleButtonSingleton):
     """
     def __init__(self, obj=None, target=None):
         super(HelpButton, self).__init__(
-            description='?',
-            _tooltip="Click for full documentation"
+            description='?'
         )
         self.add_class("separator")
         self.click_event = Event(
@@ -566,6 +565,8 @@ class ExplorerComponent(Box):
         sage: c.value = 42
     """
     value = Any()
+    _tooltip = Unicode('')
+    _tooltip_visibility = Bool(True)
 
     def __init__(self, obj, **kws):
         r"""
@@ -582,6 +583,17 @@ class ExplorerComponent(Box):
         super(ExplorerComponent, self).__init__(**kws)
         self.reset()
         self.donottrack = False
+
+    @observe('_tooltip_visibility')
+    def tooltip_visibility_changed(self, change):
+        if not self._tooltip:
+            return
+        for c in self.children:
+            if hasattr(c, 'set_tooltip'):
+                if change.new:
+                    c.set_tooltip(self._tooltip)
+                else:
+                    c.set_tooltip()
 
     def set_focusable(self, focusable):
         if hasattr(self, 'allow_focus'): # a Singleton
@@ -684,6 +696,7 @@ class ExplorerDescription(ExplorerComponent):
 
     def __init__(self, obj, help_target=None):
         self.help_target = None
+        self._tooltip = "Click for full documentation"
         super(ExplorerDescription, self).__init__(
             obj,
             children=(
@@ -717,6 +730,8 @@ class ExplorerDescription(ExplorerComponent):
             self.content = ''
         if self.help_target:
             self.set_help_target(self.help_target) # re-recreate help button handler
+        if self._tooltip:
+            self.children[1].set_tooltip(self._tooltip)
 
 
 class ExplorerProperties(ExplorerComponent, GridBox):
@@ -1283,13 +1298,13 @@ class SageExplorer(VBox):
 
         sage: explore.settings.properties
         ...
-         'cardinality': [{'in': 'EnumeratedSets.Finite'}],
+         'cardinality': [{'in': <class 'sage.categories.finite_enumerated_sets.FiniteEnumeratedSets'>}],
         ...
 
     This adds the property ``number of vertices`` to Sage's graphs::
 
         sage: explore.settings.add_property('num_verts',
-        ....:                               clsname='Graph',
+        ....:                               isinstance=Graph,
         ....:                               label='number of vertices')
         sage: explore(graphs.PetersenGraph())
         SageExplorer(...)
@@ -1304,6 +1319,8 @@ class SageExplorer(VBox):
     _history_len = Int()
     _history_index = Int()
     components = Dict() # A list of widgets ; really a trait ?
+    _display_settings = Dict()
+    _properties_settings = Dict()
 
     def __init__(self, obj=None, components=DEFAULT_COMPONENTS, test_mode=False):
         """
@@ -1330,6 +1347,7 @@ class SageExplorer(VBox):
         if not test_mode:
             self.create_components()
             self.implement_interactivity()
+            self.implement_settings_interactivity()
             self.draw()
         self.donottrack = False
 
@@ -1478,6 +1496,14 @@ class SageExplorer(VBox):
             self.codebox.run_event.on_dom_event(launch_evaluation)
         if self.test_mode:
             self.donottrack = False
+
+    def implement_settings_interactivity(self):
+        dlink((Settings,'_display_settings'), (self, '_display_settings'))
+        dlink((Settings, 'properties'), (self, '_properties_settings'))
+        @observe('_display_settings')
+        def display_settings_changed(self, change):
+            for c in self.components:
+                gettattr(self, c)._tooltip_visibility = change.new['show_tooltips']
 
     def draw(self):
         r"""
@@ -1632,6 +1658,7 @@ class ExplorerSettings(HasTraits):
     Explorer settings. Used as a singleton.
     """
     show_tooltips = Bool(True) # Does the user actually want to see the explanatory tooltips?
+    _display_settings = Dict() # A dictionary for display settings
     properties = Dict() # A dictionary of property -> list of context dictionaries
 
     def __init__(self, *args, **kwargs):
@@ -1646,12 +1673,16 @@ class ExplorerSettings(HasTraits):
             sage: type(ES.properties)
             <type 'dict'>
             sage: ES.properties['conjugate']
-            [{'in': 'Partitions()'}, {'in': 'Tableaux()'}]
+            [{'in': Partitions}, {'in': Tableaux}]
         """
         super(HasTraits, self).__init__(*args, **kwargs)
         if not 'config' in kwargs:
             config = CONFIG_PROPERTIES
         self.load_properties(config=config)
+
+    @observe('show_tooltips')
+    def settings_changed(self, change):
+        self._display_settings = {'show_tooltips': change.new}
 
     def tooltips_visibility(self, visibility):
         r"""
@@ -1673,20 +1704,57 @@ class ExplorerSettings(HasTraits):
             sage: from sage_explorer.sage_explorer import ExplorerSettings
             sage: ES = ExplorerSettings()
             sage: ES.load_properties()
-            sage: ES.properties['base_ring']
-            [{'when': 'has_base'}]
+            sage: len(ES.properties['addition_table'])
+            2
+            sage: ES.properties['addition_table'][0]['when'](GF(7))
+            True
+            sage: ES.properties['addition_table'][0]['when'](GF(29))
+            False
+            sage: len(ES.properties['base_ring'])
+            1
+            sage: ES.properties['base_ring'][0]['when'](CoxeterGroup(["A",2]))
+            True
+            sage: ES.properties['base_ring'][0]['when'](StandardTableaux(3).random_element())
+            False
         """
-        properties = {}
+        self.properties = {}
         for context in config['properties']:
             propname = context['property']
-            if propname not in properties:
-                properties[propname] = []
-            properties[propname].append({
-                key:val for key, val in context.items() if key!='property'
-            })
-        self.properties = properties
+            if propname not in self.properties:
+                self.properties[propname] = []
+            new_context = {}
+            for key, val in context.items():
+                if key == 'property':
+                    continue
+                if key == 'label':
+                    new_context[key] = val
+                elif key in ['isinstance', 'not isinstance', 'in', 'not in']:
+                    new_context[key] = _eval_in_main(val)
+                elif key in ['when', 'not when']:
+                    first_part = val.split()[0]
+                    func = None
+                    try:
+                        func = _eval_in_main(first_part)
+                    except:
+                        pass
+                    if func is not None and val == first_part:
+                        new_context[key] = func
+                        continue
+                    def build_test(key, val, first_part):
+                        if func is not None:
+                            return lambda obj:_eval_in_main(val)(obj)
+                        remain = " " . join(val.split()[1:])
+                        def test_when(obj):
+                            if not hasattr(obj, first_part):
+                                return False
+                            return hasattr(obj, first_part) and \
+                                _eval_in_main("{} {}" . format(str(getattr(obj, first_part).__call__()), remain))
+                        return test_when
+                    new_context[key] = build_test(key, val, first_part)
+            self.properties[propname].append(new_context)
 
-    def add_property(self, propname, clsname=None, predicate=None, label=None):
+    def add_property(self, propname, isinstance=None, member_of=None, not_in=None, not_isinstance=None,
+                     not_when=None, when=None, label=None):
         r"""
         Add/modify a context for `propname` for class `clsname`
         in `properties` dictionary.
@@ -1694,18 +1762,22 @@ class ExplorerSettings(HasTraits):
         INPUT:
 
                 - ``propname`` -- a string
-                - ``clsname`` -- a string
-                - ``predicate`` -- a function
+                - ``isinstance`` -- a class
+                - ``member_of`` -- an object
+                - ``not_in`` -- an object
+                - ``not_isinstance`` -- a class
+                - ``not_when`` -- a method/function
+                - ``when`` -- a method/function
                 - ``label`` -- a string
 
         TESTS::
             sage: from sage_explorer.sage_explorer import ExplorerSettings
             sage: ES = ExplorerSettings()
             sage: ES.load_properties()
-            sage: ES.add_property('cardinality', clsname='frozenset')
+            sage: ES.add_property('cardinality', isinstance=frozenset)
             sage: ES.properties['cardinality']
-            [{'in': 'EnumeratedSets.Finite'}, {'isinstance': 'frozenset'}]
-            sage: ES.add_property('cardinality', predicate=Groups().Finite().__contains__)
+            [{'in': <class 'sage.categories.finite_enumerated_sets.FiniteEnumeratedSets'>}, {'isinstance': <class 'frozenset'>}]
+            sage: ES.add_property('cardinality', member_of=Groups().Finite())
             sage: len(ES.properties['cardinality'])
             3
             sage: ES.add_property('__abs__')
@@ -1714,23 +1786,31 @@ class ExplorerSettings(HasTraits):
             sage: ES.remove_property('__abs__')
             sage: ES.properties['__abs__']
             []
-            sage: ES.add_property('__abs__', predicate=lambda x:False)
-            sage: 'predicate' in ES.properties['__abs__'][0]
+            sage: ES.add_property('__abs__', when=lambda x:False)
+            sage: 'when' in ES.properties['__abs__'][0]
             True
         """
         properties = self.properties
         if not propname in properties:
             properties[propname] = []
         context = {}
-        if clsname:
-            context['isinstance'] = clsname
-        if predicate:
-            context['predicate'] = predicate
+        if isinstance:
+            context['isinstance'] = isinstance
+        if member_of:
+            context['in'] = member_of
+        if not_in:
+            context['not in'] = not_in
+        if not_isinstance:
+            context['not isinstance'] = not_isinstance
+        if not_when:
+            context['not when'] = not_when
+        if when:
+            context['when'] = not_when
         if label:
             context['label'] = label
         properties[propname].append(context)
 
-    def remove_property(self, propname, clsname=None, predicate=None):
+    def remove_property(self, propname, isinstance=None, member_of=None, not_in=None, not_when=None, when=None, label=None):
         r"""
         Remove property in context defined by `clsname` and `predicate`
         for `propname` in `properties` dictionary.
@@ -1738,31 +1818,46 @@ class ExplorerSettings(HasTraits):
         INPUT:
 
                 - ``propname`` -- a string
-                - ``clsname`` -- a string
-                - ``predicate`` -- a string
+                - ``isinstance`` -- a class
+                - ``member_of`` -- an object
+                - ``not_in`` -- an object
+                - ``not_when`` -- a method
+                - ``when`` -- a method
 
         TESTS::
             sage: from sage_explorer.sage_explorer import ExplorerSettings
             sage: ES = ExplorerSettings()
             sage: ES.load_properties()
-            sage: ES.add_property('cardinality', clsname='frozenset')
+            sage: ES.add_property('cardinality', isinstance=frozenset)
             sage: ES.properties['cardinality']
-            [{'in': 'EnumeratedSets.Finite'}, {'isinstance': 'frozenset'}]
-            sage: ES.remove_property('cardinality', clsname='EnumeratedSets.Finite')
+            [{'in': <class 'sage.categories.finite_enumerated_sets.FiniteEnumeratedSets'>}, {'isinstance': <class 'frozenset'>}]
+            sage: ES.remove_property('cardinality', isinstance=EnumeratedSets.Finite)
             sage: ES.properties['cardinality']
-            [{'isinstance': 'frozenset'}]
+            [{'isinstance': <class 'frozenset'>}]
         """
         properties = self.properties
         if not propname in properties:
             return
         for context in properties[propname]:
             found = True
-            if clsname and ('isinstance' in properties[propname]) \
-               and properties[propname]['isinstance'] != clsname:
+            if isinstance and ('isinstance' in properties[propname]) \
+               and properties[propname]['isinstance'] != isinstance:
                 found = False
                 continue
-            if predicate and ('predicate' in properties[propname]) \
-               and properties[propname]['predicate'] != predicate:
+            if member_of and ('in' in properties[propname]) \
+               and properties[propname]['in'] != member_of:
+                found = False
+                continue
+            if not_in and ('not_in' in properties[propname]) \
+               and properties[propname]['not_in'] != not_in:
+                found = False
+                continue
+            if not_when and ('not_when' in properties[propname]) \
+               and properties[propname]['not_when'] != not_when:
+                found = False
+                continue
+            if when and ('when' in properties[propname]) \
+               and properties[propname]['when'] != when:
                 found = False
                 continue
             if found:

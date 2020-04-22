@@ -315,27 +315,27 @@ class ExploredMember(object):
             sage: from sage_explorer.explored_member import ExploredMember
             sage: F = GF(7)
             sage: m = ExploredMember('polynomial', container=F)
-            sage: m.compute_property_label({'polynomial': [{'in': 'Fields.Finite'}]})
+            sage: m.compute_property_label({'polynomial': [{'in': Fields.Finite}]})
             sage: m.prop_label
             'Polynomial'
             sage: G = PermutationGroup([[(1,2,3),(4,5)],[(3,4)]])
             sage: m = ExploredMember('cardinality', container=G)
-            sage: m.compute_property_label({'cardinality': [{'in': 'EnumeratedSets.Finite'}]})
+            sage: m.compute_property_label({'cardinality': [{'in': EnumeratedSets.Finite}]})
             sage: m.prop_label
             'Cardinality'
             sage: m = ExploredMember('category', container=G)
-            sage: m.compute_property_label({'category': [{'in': 'Sets', 'label': 'A Better Category Label'}]})
+            sage: m.compute_property_label({'category': [{'in': Sets, 'label': 'A Better Category Label'}]})
             sage: m.prop_label
             'A Better Category Label'
             sage: m = ExploredMember('__abs__', container=1)
             sage: m.compute_property_label({'__abs__': [{'label': 'Absolute value'}]})
             sage: m.prop_label
             'Absolute value'
-            sage: m.compute_property_label({'__abs__': [{'label': 'Absolute value', 'predicate': lambda x:False}]})
+            sage: m.compute_property_label({'__abs__': [{'label': 'Absolute value', 'when': lambda x:False}]})
             sage: m.prop_label
             sage: from sage.rings.integer_ring import ZZ
             sage: m = ExploredMember('cardinality', container=ZZ)
-            sage: m.compute_property_label({'cardinality': [{'predicate': Groups().Finite().__contains__}]})
+            sage: m.compute_property_label({'cardinality': [{'in': Groups().Finite()}]})
             sage: m.prop_label
         """
         self.prop_label = None
@@ -344,48 +344,22 @@ class ExploredMember(object):
         if not hasattr(self, 'container'):
             raise ValueError("Cannot compute property label without a container.")
         contexts = properties_settings[self.name]
-        def test_predicate(obj, predicate):
-            return predicate(obj)
-        def test_when(funcname, expected, operator=None, complement=None):
-            if funcname == 'isclass': # FIXME Prendre les premières valeurs de obj.getmembers pour le test -> calculer cette liste avant ?
-                res = _eval_in_main(funcname)(self.container)
-            else:
-                res = getattr(self.container, funcname).__call__()
-            if operator and complement:
-                res = operator(res, _eval_in_main(complement))
-            return (res == expected)
-        def split_when(s, context):
-            when_parts = context['when'].split()
-            funcname = when_parts[0]
-            if len(when_parts) > 2:
-                operatorsign, complement = when_parts[1], when_parts[2]
-            elif len(when_parts) > 1:
-                operatorsign, complement = when_parts[1][0], when_parts[1][1:]
-            if operatorsign in OPERATORS.keys():
-                operator = OPERATORS[operatorsign]
-            else:
-                operator = "not found"
-            return funcname, operator, complement
         for context in contexts:
             fullfilled = True
-            if 'predicate' in context.keys():
-                if not context['predicate'](self.container):
-                    fulfilled = False
-                    continue
             if 'isinstance' in context.keys():
                 """Test isinstance"""
-                if not isinstance(self.container, _eval_in_main(context['isinstance'])):
+                if not isinstance(self.container, context['isinstance']):
                     fullfilled = False
                     continue
             if 'not isinstance' in context.keys():
                 """Test not isinstance"""
-                if isinstance(self.container, _eval_in_main(context['not isinstance'])):
+                if isinstance(self.container, context['not isinstance']):
                     fullfilled = False
                     continue
             if 'in' in context.keys():
                 """Test in"""
                 try:
-                    if not self.container in _eval_in_main(context['in']):
+                    if not self.container in context['in']:
                         fullfilled = False
                         continue
                 except:
@@ -393,61 +367,34 @@ class ExploredMember(object):
                     continue # The error is : descriptor 'category' of 'sage.structure.parent.Parent' object needs an argument
             if 'not in' in context.keys():
                 """Test not in"""
-                if self.container in _eval_in_main(context['not in']):
+                if self.container in context['not in']:
                     fullfilled = False
                     continue
+            def prepare_when_context(v):
+                if v is None:
+                    return [] # Shouldn't happen, though
+                if isinstance(v, (list,)):
+                    return v
+                else:
+                    return [v]
             if 'when' in context.keys():
                 """Test when predicate(s)"""
-                if isinstance(context['when'], six.string_types):
-                    when = [context['when']]
-                elif isinstance(context['when'], (list,)):
-                    when = context['when']
-                else:
-                    fullfilled = False
-                    continue
+                when = prepare_when_context(context['when'])
                 for predicate in when:
-                    if not ' ' in predicate:
-                        if not hasattr(self.container, predicate):
-                            fullfilled = False
-                            continue
-                        if not test_when(predicate, True):
-                            fullfilled = False
-                            continue
-                    else:
-                        funcname, operator, complement = split_when(predicate, context)
-                        if not hasattr(self.container, funcname):
-                            fullfilled = False
-                            continue
-                        if operator == "not found":
-                            fullfilled = False
-                            continue
-                        if not test_when(funcname, True, operator, complement):
-                            fullfilled = False
-                            continue
+                    if not predicate(self.container):
+                        fullfilled = False
+                        continue
+                    if fullfilled:
+                        break # contexts should not overlap
             if 'not when' in context.keys():
                 """Test not when predicate(s)"""
-                if isinstance(context['not when'], six.string_types):
-                    nwhen = [context['not when']]
-                if not test_when(context['not when'],False):
-                    fullfilled = False
-                    continue
-                elif isinstance(context['not when'], (list,)):
-                    nwhen = context['not when']
-                else:
-                    fullfilled = False
-                    continue
+                nwhen = prepare_when_context(context['nwhen'])
                 for predicate in nwhen:
-                    if not ' ' in predicate:
-                        if not test_when(predicate, False):
-                            fullfilled = False
-                            continue
-                    else:
-                        funcname, operator, complement = split_when(predicate)
-                        if not test_when(funcname, False, operator, complement):
-                            fullfilled = False
-                            continue
-                if fullfilled:
-                    break # contexts should not overlap
+                    if predicate(self.container):
+                        fullfilled = False
+                        continue
+                    if fullfilled:
+                        break # contexts should not overlap
             if not fullfilled:
                 return
             if 'label' in context.keys():
@@ -542,7 +489,7 @@ def get_properties(obj, properties_settings={}):
         sage: [p.name for p in get_properties(1, Settings.properties)]
         ['__abs__', 'parent']
         sage: Settings.remove_property('__abs__')
-        sage: Settings.add_property('__abs__', predicate=lambda x:False)
+        sage: Settings.add_property('__abs__', when=lambda x:False)
         sage: [p.name for p in get_properties(1, Settings.properties)]
         ['parent']
     """
