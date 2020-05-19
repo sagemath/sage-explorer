@@ -1,5 +1,5 @@
 # Dockerfile for binder
-FROM sagemath/sagemath:9.0-py3
+FROM sagemath/sagemath:9.1.rc5
 USER root
 ENV HOME /root
 RUN apt-get update && apt-get -qq install -y curl tar \
