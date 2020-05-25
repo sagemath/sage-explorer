@@ -388,7 +388,7 @@ class ExploredMember(object):
                         break # contexts should not overlap
             if 'not when' in context.keys():
                 """Test not when predicate(s)"""
-                nwhen = prepare_when_context(context['nwhen'])
+                nwhen = prepare_when_context(context['not when'])
                 for predicate in nwhen:
                     if predicate(self.container):
                         fullfilled = False

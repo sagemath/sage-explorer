@@ -11,7 +11,7 @@ RUN sage -pip install jupyterlab==1.2.11
 RUN sage -pip install --upgrade jupyter_core jupyter_server jupyter_client async_generator nbformat nbclient nbconvert pygments jupyterlab_pygments voila
 RUN sage -pip install --upgrade ipywidgets sage_combinat_widgets pyyaml ipyevents
 COPY jupyter_config.json .
-RUN sage -jupyter labextension install --no-build @jupyter-widgets/jupyterlab-manager \
+RUN sage -jupyter labextension install --no-build @jupyter-widgets/jupyterlab-manager @jupyter-voila/jupyterlab-preview \
  && sage -jupyter lab build \
  && sage -jupyter lab clean
 COPY --chown=sage:sage . ${HOME}/sage-explorer
