@@ -752,8 +752,10 @@ class ExplorerProperties(ExplorerComponent, GridBox):
 
     def reset(self):
         children = []
+        self.properties = []
         self.explorables = []
         for p in get_properties(self.value, Settings.properties):
+            self.properties.append(p)
             explorable = getattr(self.value, p.name).__call__()
             children.append(Box((Label(p.prop_label),), layout=Layout(border='1px solid #eee')))
             e = ExplorableCell(explorable, initial_value=self.value)
@@ -1359,9 +1361,17 @@ class SageExplorer(VBox):
 
             sage: from sage_explorer import explore
             sage: explore(42)
-            SageExplorer(42)
+            SageExplorer for 42 with property 'parent'
+            sage: explore(StandardTableaux(5).random_element())
+            SageExplorer for [[1, 3, 4], [2], [5]] with properties 'charge', 'cocharge', 'conjugate', 'parent'
         """
-        return "SageExplorer({})" . format(self.value)
+        ret = "SageExplorer for %s" % self.value
+        properties_names = [p.name for p in self.propsbox.properties]
+        if not properties_names:
+            return ret
+        if len(properties_names) < 2:
+            return ret + " with property '%s'" % str(properties_names[0])
+        return ret + " with properties '%s'" % "', '" . join(properties_names)
 
     def reset(self):
         self.donottrack = True
