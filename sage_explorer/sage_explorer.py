@@ -1850,7 +1850,7 @@ class ExplorerSettings(HasTraits):
             sage: ES.remove_property('cardinality', instance_of=frozenset)
             sage: ES.properties['cardinality']
             [{'member of': <class 'sage.categories.finite_enumerated_sets.FiniteEnumeratedSets'>}]
-            sage: ES.remove_property('cardinality', instance_of=EnumeratedSets.Finite)
+            sage: ES.remove_property('cardinality', member_of=EnumeratedSets.Finite)
             sage: ES.properties['cardinality']
             []
         """
