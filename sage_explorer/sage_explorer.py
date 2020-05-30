@@ -1300,7 +1300,7 @@ class SageExplorer(VBox):
 
         sage: explore.settings.properties
         ...
-         'cardinality': [{'in': <class 'sage.categories.finite_enumerated_sets.FiniteEnumeratedSets'>}],
+         'cardinality': [{'member of': <class 'sage.categories.finite_enumerated_sets.FiniteEnumeratedSets'>}],
         ...
 
     This adds the property ``number of vertices`` to Sage's graphs::
