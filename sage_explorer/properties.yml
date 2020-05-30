@@ -4,20 +4,20 @@ properties:
 # Methods for categories
 
 - property: an_instance
-  isinstance: type # For category classes, and possibly other categories
+  instance of: type # For category classes, and possibly other categories
   label: A [typical] instance
 
 - property: example
-  isinstance: Category
+  instance of: Category
 
 - property: super_categories
-  isinstance: Category
+  instance of: Category
 
 - property: axioms
-  isinstance: Category
+  instance of: Category
 
 - property: structure
-  isinstance: Category
+  instance of: Category
 
 ##############################################################################
 # Methods for parents
@@ -28,42 +28,42 @@ properties:
   when: has_base
 
 - property: category
-  in: Sets
+  member of: Sets
 
 - property: an_element
-  in: Sets
+  member of: Sets
 
 - property: cardinality
-  in: EnumeratedSets.Finite
+  member of: EnumeratedSets.Finite
 
 - property: addition_table
-  in: sage.categories.additive_semigroups.AdditiveSemigroups
+  member of: sage.categories.additive_semigroups.AdditiveSemigroups
   when: cardinality < 25
 
 - property: multiplication_table
-  in: Semigroups.Finite
+  member of: Semigroups.Finite
   when: cardinality < 25
 
 - property: characteristic
-  in: Fields
+  member of: Fields
 
 - property: polynomial
-  in: Fields.Finite
+  member of: Fields.Finite
 
 - property: genus
-  isinstance: sage.schemes.elliptic_curves.ell_generic.EllipticCurve_generic
+  instance of: sage.schemes.elliptic_curves.ell_generic.EllipticCurve_generic
 
 - property: cremona_label
-  isinstance: sage.schemes.elliptic_curves.ell_generic.EllipticCurve_generic
+  instance of: sage.schemes.elliptic_curves.ell_generic.EllipticCurve_generic
 
 - property: a_invariants
-  isinstance: sage.schemes.elliptic_curves.ell_generic.EllipticCurve_generic
+  instance of: sage.schemes.elliptic_curves.ell_generic.EllipticCurve_generic
 
 - property: b_invariants
-  isinstance: sage.schemes.elliptic_curves.ell_generic.EllipticCurve_generic
+  instance of: sage.schemes.elliptic_curves.ell_generic.EllipticCurve_generic
 
 - property: conductor
-  isinstance: sage.schemes.elliptic_curves.ell_generic.EllipticCurve_generic
+  instance of: sage.schemes.elliptic_curves.ell_generic.EllipticCurve_generic
 
 ##############################################################################
 # Methods for elements
@@ -71,31 +71,31 @@ properties:
 # - property: category of the parent?
 
 - property: parent
-  isinstance: sage.structure.element.Element
+  instance of: sage.structure.element.Element
   label: Element of
 
 - property: conjugate
-  in: Partitions()
+  member of: Partitions()
 
 - property: hook_lengths
-  in: Partitions()
+  member of: Partitions()
 
 - property: evaluation
-  in: Tableaux()
+  member of: Tableaux()
   not when: is_standard
 
 - property: is_standard
-  in: Tableaux()
-  not in: StandardTableaux()
+  member of: Tableaux()
+  not member of: StandardTableaux()
 
 - property: conjugate
-  in: Tableaux()
+  member of: Tableaux()
 
 - property: charge
-  in: Tableaux()
+  member of: Tableaux()
 
 - property: cocharge
-  in: Tableaux()
+  member of: Tableaux()
 
 ##############################################################################
 # Methods for homsets

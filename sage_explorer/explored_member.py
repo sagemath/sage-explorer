@@ -346,28 +346,28 @@ class ExploredMember(object):
         contexts = properties_settings[self.name]
         for context in contexts:
             fullfilled = True
-            if 'isinstance' in context.keys():
-                """Test isinstance"""
-                if not isinstance(self.container, context['isinstance']):
+            if 'instance of' in context.keys():
+                """Test instance of"""
+                if not isinstance(self.container, context['instance of']):
                     fullfilled = False
                     continue
-            if 'not isinstance' in context.keys():
-                """Test not isinstance"""
-                if isinstance(self.container, context['not isinstance']):
+            if 'not instance of' in context.keys():
+                """Test not instance of"""
+                if isinstance(self.container, context['not instance of']):
                     fullfilled = False
                     continue
-            if 'in' in context.keys():
-                """Test in"""
+            if 'member of' in context.keys():
+                """Test member of"""
                 try:
-                    if not self.container in context['in']:
+                    if not self.container in context['member of']:
                         fullfilled = False
                         continue
                 except:
                     fullfilled = False
                     continue # The error is : descriptor 'category' of 'sage.structure.parent.Parent' object needs an argument
-            if 'not in' in context.keys():
-                """Test not in"""
-                if self.container in context['not in']:
+            if 'not member of' in context.keys():
+                """Test not member of"""
+                if self.container in context['not member of']:
                     fullfilled = False
                     continue
             def prepare_when_context(v):
@@ -388,7 +388,7 @@ class ExploredMember(object):
                         break # contexts should not overlap
             if 'not when' in context.keys():
                 """Test not when predicate(s)"""
-                nwhen = prepare_when_context(context['nwhen'])
+                nwhen = prepare_when_context(context['not when'])
                 for predicate in nwhen:
                     if predicate(self.container):
                         fullfilled = False

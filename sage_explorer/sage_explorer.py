@@ -1306,7 +1306,7 @@ class SageExplorer(VBox):
     This adds the property ``number of vertices`` to Sage's graphs::
 
         sage: explore.settings.add_property('num_verts',
-        ....:                               isinstance=Graph,
+        ....:                               instance_of=Graph,
         ....:                               label='number of vertices')
         sage: explore(graphs.PetersenGraph())
         SageExplorer(...)
@@ -1738,9 +1738,12 @@ class ExplorerSettings(HasTraits):
                     continue
                 if key == 'label':
                     new_context[key] = val
-                elif key in ['isinstance', 'not isinstance', 'in', 'not in']:
+                elif key in ['instance of', 'not instance of', 'member of', 'not member of']:
                     new_context[key] = _eval_in_main(val)
                 elif key in ['when', 'not when']:
+                    if callable(val):
+                        new_context[key] = val
+                        continue
                     first_part = val.split()[0]
                     func = None
                     try:
@@ -1763,8 +1766,8 @@ class ExplorerSettings(HasTraits):
                     new_context[key] = build_test(key, val, first_part)
             self.properties[propname].append(new_context)
 
-    def add_property(self, propname, isinstance=None, member_of=None, not_in=None, not_isinstance=None,
-                     not_when=None, when=None, label=None):
+    def add_property(self, propname, instance_of=None, not_instance_of=None, member_of=None, not_member_of=None,
+                     when=None, not_when=None, label=None):
         r"""
         Add/modify a context for `propname` for class `clsname`
         in `properties` dictionary.
@@ -1772,21 +1775,21 @@ class ExplorerSettings(HasTraits):
         INPUT:
 
                 - ``propname`` -- a string
-                - ``isinstance`` -- a class
+                - ``instance_of`` -- a class
+                - ``not_instance_of`` -- a class
                 - ``member_of`` -- an object
-                - ``not_in`` -- an object
-                - ``not_isinstance`` -- a class
-                - ``not_when`` -- a method/function
+                - ``not_member_of`` -- an object
                 - ``when`` -- a method/function
+                - ``not_when`` -- a method/function
                 - ``label`` -- a string
 
         TESTS::
             sage: from sage_explorer.sage_explorer import ExplorerSettings
             sage: ES = ExplorerSettings()
             sage: ES.load_properties()
-            sage: ES.add_property('cardinality', isinstance=frozenset)
+            sage: ES.add_property('cardinality', instance_of=frozenset)
             sage: ES.properties['cardinality']
-            [{'in': <class 'sage.categories.finite_enumerated_sets.FiniteEnumeratedSets'>}, {'isinstance': <class 'frozenset'>}]
+            [{'member of': <class 'sage.categories.finite_enumerated_sets.FiniteEnumeratedSets'>}, {'instance of': <class 'frozenset'>}]
             sage: ES.add_property('cardinality', member_of=Groups().Finite())
             sage: len(ES.properties['cardinality'])
             3
@@ -1804,23 +1807,24 @@ class ExplorerSettings(HasTraits):
         if not propname in properties:
             properties[propname] = []
         context = {}
-        if isinstance:
-            context['isinstance'] = isinstance
+        if instance_of:
+            context['instance of'] = instance_of
+        if not_instance_of:
+            context['not instance of'] = not_instance_of
         if member_of:
-            context['in'] = member_of
-        if not_in:
-            context['not in'] = not_in
-        if not_isinstance:
-            context['not isinstance'] = not_isinstance
+            context['member of'] = member_of
+        if not_member_of:
+            context['not member of'] = not_member_of
+        if when:
+            context['when'] = when
         if not_when:
             context['not when'] = not_when
-        if when:
-            context['when'] = not_when
         if label:
             context['label'] = label
         properties[propname].append(context)
 
-    def remove_property(self, propname, isinstance=None, member_of=None, not_in=None, not_when=None, when=None, label=None):
+    def remove_property(self, propname, instance_of=None, not_instance_of=None, member_of=None, not_member_of=None,
+                        when=None, not_when=None, label=None):
         r"""
         Remove property in context defined by `clsname` and `predicate`
         for `propname` in `properties` dictionary.
@@ -1828,46 +1832,51 @@ class ExplorerSettings(HasTraits):
         INPUT:
 
                 - ``propname`` -- a string
-                - ``isinstance`` -- a class
+                - ``instance_of`` -- a class
+                - ``not_instance_of`` -- a class
                 - ``member_of`` -- an object
-                - ``not_in`` -- an object
-                - ``not_when`` -- a method
-                - ``when`` -- a method
+                - ``not_member_of`` -- an object
+                - ``when`` -- a method/function
+                - ``not_when`` -- a method/function
 
         TESTS::
             sage: from sage_explorer.sage_explorer import ExplorerSettings
             sage: ES = ExplorerSettings()
             sage: ES.load_properties()
-            sage: ES.add_property('cardinality', isinstance=frozenset)
+            sage: ES.add_property('cardinality', instance_of=frozenset)
             sage: ES.properties['cardinality']
-            [{'in': <class 'sage.categories.finite_enumerated_sets.FiniteEnumeratedSets'>}, {'isinstance': <class 'frozenset'>}]
-            sage: ES.remove_property('cardinality', isinstance=EnumeratedSets.Finite)
+            [{'in': <class 'sage.categories.finite_enumerated_sets.FiniteEnumeratedSets'>}, {'instance of': <class 'frozenset'>}]
+            sage: ES.remove_property('cardinality', instance_of=EnumeratedSets.Finite)
             sage: ES.properties['cardinality']
-            [{'isinstance': <class 'frozenset'>}]
+            [{'instance of': <class 'frozenset'>}]
         """
         properties = self.properties
         if not propname in properties:
             return
         for context in properties[propname]:
             found = True
-            if isinstance and ('isinstance' in properties[propname]) \
-               and properties[propname]['isinstance'] != isinstance:
+            if instance_of and ('instance of' in properties[propname]) \
+               and properties[propname]['instance of'] != instance_of:
                 found = False
                 continue
-            if member_of and ('in' in properties[propname]) \
-               and properties[propname]['in'] != member_of:
+            if not_instance_of and ('not instance of' in properties[propname]) \
+               and properties[propname]['not instance of'] != not_instance_of:
                 found = False
                 continue
-            if not_in and ('not_in' in properties[propname]) \
-               and properties[propname]['not_in'] != not_in:
+            if member_of and ('member of' in properties[propname]) \
+               and properties[propname]['member of'] != member_of:
                 found = False
                 continue
-            if not_when and ('not_when' in properties[propname]) \
-               and properties[propname]['not_when'] != not_when:
+            if not_member_of and ('not member of' in properties[propname]) \
+               and properties[propname]['not member of'] != not_member_of:
                 found = False
                 continue
             if when and ('when' in properties[propname]) \
                and properties[propname]['when'] != when:
+                found = False
+                continue
+            if not_when and ('not_when' in properties[propname]) \
+               and properties[propname]['not_when'] != not_when:
                 found = False
                 continue
             if found:
