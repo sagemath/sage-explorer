@@ -1273,24 +1273,24 @@ class SageExplorer(VBox):
         sage: from sage_explorer import explore
 
         sage: explore(SymmetricGroup(3))
-        SageExplorer(...)
+        SageExplorer for Symmetric group of order 3! as a permutation group with properties 'an_element', 'cardinality', 'category', 'multiplication_table'
 
         sage: explore(Partition([3,2,1,1]))
-        SageExplorer(...)
+        SageExplorer for [3, 2, 1, 1] with properties 'conjugate', 'hook_lengths', 'parent'
 
         sage: explore(graphs.PetersenGraph())
-        SageExplorer(...)
+        SageExplorer for Petersen graph
 
     Explore Sage's catalog of graphs::
 
         sage: explore(graphs)
-        SageExplorer(...)
+        SageExplorer for <sage.graphs.graph_generators.GraphGenerators object...
 
     Explore Sage as a whole, starting from Sage's catalog of
     catalogs::
 
         sage: explore()
-        SageExplorer(...)
+        SageExplorer for <module 'sage_explorer._sage_catalog'...
 
     The selection of properties is made based on the semantic of
     ``o``, typically encoded in its category and class. For example, a
@@ -1309,7 +1309,7 @@ class SageExplorer(VBox):
         ....:                               instance_of=Graph,
         ....:                               label='number of vertices')
         sage: explore(graphs.PetersenGraph())
-        SageExplorer(...)
+        SageExplorer for Petersen graph with property 'num_verts'
 
     Users are most welcome to suggest additions to the default
     configuration, e.g. by contacting the authors or posting an issue
@@ -1362,7 +1362,7 @@ class SageExplorer(VBox):
             sage: from sage_explorer import explore
             sage: explore(42)
             SageExplorer for 42 with property 'parent'
-            sage: explore(StandardTableaux(5).random_element())
+            sage: explore(StandardTableau([[1, 3, 4], [2], [5]]))
             SageExplorer for [[1, 3, 4], [2], [5]] with properties 'charge', 'cocharge', 'conjugate', 'parent'
         """
         ret = "SageExplorer for %s" % self.value
@@ -1683,7 +1683,7 @@ class ExplorerSettings(HasTraits):
             sage: type(ES.properties)
             <type 'dict'>
             sage: ES.properties['conjugate']
-            [{'in': Partitions}, {'in': Tableaux}]
+            [{'member of': Partitions}, {'member of': Tableaux}]
         """
         super(HasTraits, self).__init__(*args, **kwargs)
         if not 'config' in kwargs:
@@ -1845,10 +1845,14 @@ class ExplorerSettings(HasTraits):
             sage: ES.load_properties()
             sage: ES.add_property('cardinality', instance_of=frozenset)
             sage: ES.properties['cardinality']
-            [{'in': <class 'sage.categories.finite_enumerated_sets.FiniteEnumeratedSets'>}, {'instance of': <class 'frozenset'>}]
+            [{'member of': <class 'sage.categories.finite_enumerated_sets.FiniteEnumeratedSets'>},
+             {'instance of': <class 'frozenset'>}]
+            sage: ES.remove_property('cardinality', instance_of=frozenset)
+            sage: ES.properties['cardinality']
+            [{'member of': <class 'sage.categories.finite_enumerated_sets.FiniteEnumeratedSets'>}]
             sage: ES.remove_property('cardinality', instance_of=EnumeratedSets.Finite)
             sage: ES.properties['cardinality']
-            [{'instance of': <class 'frozenset'>}]
+            []
         """
         properties = self.properties
         if not propname in properties:

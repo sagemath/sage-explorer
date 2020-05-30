@@ -337,6 +337,7 @@ class ExploredMember(object):
             sage: m = ExploredMember('cardinality', container=ZZ)
             sage: m.compute_property_label({'cardinality': [{'in': Groups().Finite()}]})
             sage: m.prop_label
+            'Cardinality'
         """
         self.prop_label = None
         if self.name not in properties_settings:
