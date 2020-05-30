@@ -1859,30 +1859,36 @@ class ExplorerSettings(HasTraits):
             return
         for context in properties[propname]:
             found = True
-            if instance_of and ('instance of' in properties[propname]) \
-               and properties[propname]['instance of'] != instance_of:
-                found = False
-                continue
-            if not_instance_of and ('not instance of' in properties[propname]) \
-               and properties[propname]['not instance of'] != not_instance_of:
-                found = False
-                continue
-            if member_of and ('member of' in properties[propname]) \
-               and properties[propname]['member of'] != member_of:
-                found = False
-                continue
-            if not_member_of and ('not member of' in properties[propname]) \
-               and properties[propname]['not member of'] != not_member_of:
-                found = False
-                continue
-            if when and ('when' in properties[propname]) \
-               and properties[propname]['when'] != when:
-                found = False
-                continue
-            if not_when and ('not_when' in properties[propname]) \
-               and properties[propname]['not_when'] != not_when:
-                found = False
-                continue
+            if instance_of:
+                if 'instance of' not in context:
+                    found = False
+                elif context['instance of'] != instance_of:
+                    found = False
+            if not_instance_of:
+                if 'not instance of' not in context:
+                    found = False
+                elif context['not instance of'] != not_instance_of:
+                    found = False
+            if member_of:
+               if 'member of' not in context:
+                   found = False
+               elif context['member of'] != member_of:
+                   found = False
+            if not_member_of:
+               if 'not member of' not in context:
+                   found = False
+               elif context['not member of'] != not_member_of:
+                   found = False
+            if when:
+               if 'when' not in context:
+                   found = False
+               elif context['when'] != when:
+                   found = False
+            if not_when:
+               if 'not when' not in context:
+                   found = False
+               elif context['not_when'] != not_when:
+                   found = False
             if found:
                 properties[propname].remove(context)
                 return
