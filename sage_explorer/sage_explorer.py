@@ -1739,7 +1739,6 @@ class ExplorerSettings(HasTraits):
         self.properties = {}
         for context in config['properties']:
             propname = context['property']
-<<<<<<< HEAD
             if propname not in self.properties:
                 self.properties[propname] = []
             new_context = {}
@@ -1778,20 +1777,6 @@ class ExplorerSettings(HasTraits):
 
     def add_property(self, propname, instance_of=None, not_instance_of=None, member_of=None, not_member_of=None,
                      when=None, not_when=None, label=None):
-=======
-            if propname not in properties:
-                properties[propname] = []
-            new_context = {}
-            for key, val in context.items():
-                if key in ['instance_of', 'member_of', 'not_in']:
-                    new_context[key] = _eval_in_main(val)
-                else:
-                    new_context[key] = val
-            properties[propname].append(new_context)
-        self.properties = properties
-
-    def add_property(self, propname, instance_of=None, member_of=None, not_in=None, not_when=None, when=None, label=None):
->>>>>>> c5c5d51... Improve API for Settings.add_property (issue #45)
         r"""
         Add/modify a context for `propname` for class `clsname`
         in `properties` dictionary.
@@ -1800,18 +1785,11 @@ class ExplorerSettings(HasTraits):
 
                 - ``propname`` -- a string
                 - ``instance_of`` -- a class
-<<<<<<< HEAD
                 - ``not_instance_of`` -- a class
                 - ``member_of`` -- an object
                 - ``not_member_of`` -- an object
                 - ``when`` -- a method/function
                 - ``not_when`` -- a method/function
-=======
-                - ``member_of`` -- an object
-                - ``not_in`` -- an object
-                - ``not_when`` -- a method
-                - ``when`` -- a method
->>>>>>> c5c5d51... Improve API for Settings.add_property (issue #45)
                 - ``label`` -- a string
 
         TESTS::
@@ -1820,11 +1798,7 @@ class ExplorerSettings(HasTraits):
             sage: ES.load_properties()
             sage: ES.add_property('cardinality', instance_of=frozenset)
             sage: ES.properties['cardinality']
-<<<<<<< HEAD
             [{'member of': <class 'sage.categories.finite_enumerated_sets.FiniteEnumeratedSets'>}, {'instance of': <class 'frozenset'>}]
-=======
-            [{'member_of': EnumeratedSets.Finite}, {'instance_of': <class 'frozenset'>}]
->>>>>>> c5c5d51... Improve API for Settings.add_property (issue #45)
             sage: ES.add_property('cardinality', member_of=Groups().Finite())
             sage: len(ES.properties['cardinality'])
             3
@@ -1843,7 +1817,6 @@ class ExplorerSettings(HasTraits):
             properties[propname] = []
         context = {}
         if instance_of:
-<<<<<<< HEAD
             context['instance of'] = instance_of
         if not_instance_of:
             context['not instance of'] = not_instance_of
@@ -1855,27 +1828,12 @@ class ExplorerSettings(HasTraits):
             context['when'] = when
         if not_when:
             context['not when'] = not_when
-=======
-            context['instance_of'] = instance_of
-        if member_of:
-            context['member_of'] = member_of
-        if not_in:
-            context['not_in'] = not_in
-        if not_when:
-            context['not_when'] = not_when
-        if when:
-            context['when'] = not_when
->>>>>>> c5c5d51... Improve API for Settings.add_property (issue #45)
         if label:
             context['label'] = label
         properties[propname].append(context)
 
-<<<<<<< HEAD
     def remove_property(self, propname, instance_of=None, not_instance_of=None, member_of=None, not_member_of=None,
                         when=None, not_when=None, label=None):
-=======
-    def remove_property(self, propname, instance_of=None, member_of=None, not_in=None, not_when=None, when=None, label=None):
->>>>>>> c5c5d51... Improve API for Settings.add_property (issue #45)
         r"""
         Remove property in context defined by `clsname` and `predicate`
         for `propname` in `properties` dictionary.
@@ -1884,25 +1842,17 @@ class ExplorerSettings(HasTraits):
 
                 - ``propname`` -- a string
                 - ``instance_of`` -- a class
-<<<<<<< HEAD
                 - ``not_instance_of`` -- a class
                 - ``member_of`` -- an object
                 - ``not_member_of`` -- an object
                 - ``when`` -- a method/function
                 - ``not_when`` -- a method/function
-=======
-                - ``member_of`` -- an object
-                - ``not_in`` -- an object
-                - ``not_when`` -- a method
-                - ``when`` -- a method
->>>>>>> c5c5d51... Improve API for Settings.add_property (issue #45)
 
         TESTS::
             sage: from sage_explorer.sage_explorer import ExplorerSettings
             sage: ES = ExplorerSettings()
             sage: ES.load_properties()
             sage: ES.add_property('cardinality', instance_of=frozenset)
-<<<<<<< HEAD
             sage: ES.properties['cardinality']
             [{'member of': <class 'sage.categories.finite_enumerated_sets.FiniteEnumeratedSets'>},
              {'instance of': <class 'frozenset'>}]
@@ -1912,20 +1862,12 @@ class ExplorerSettings(HasTraits):
             sage: ES.remove_property('cardinality', member_of=EnumeratedSets.Finite)
             sage: ES.properties['cardinality']
             []
-=======
-            sage: ES.properties['cardinality']
-            [{'member_of': EnumeratedSets.Finite}, {'instance_of': <class 'frozenset'>}]
-            sage: ES.remove_property('cardinality', instance_of=EnumeratedSets.Finite)
-            sage: ES.properties['cardinality']
-            [{'instance_of': <class 'frozenset'>}]
->>>>>>> c5c5d51... Improve API for Settings.add_property (issue #45)
         """
         properties = self.properties
         if not propname in properties:
             return
         for context in properties[propname]:
             found = True
-<<<<<<< HEAD
             if instance_of:
                 if 'instance of' not in context:
                     found = False
@@ -1956,28 +1898,6 @@ class ExplorerSettings(HasTraits):
                    found = False
                elif context['not_when'] != not_when:
                    found = False
-=======
-            if instance_of and ('instance_of' in properties[propname]) \
-               and properties[propname]['instance_of'] != instance_of:
-                found = False
-                continue
-            if member_of and ('member_of' in properties[propname]) \
-               and properties[propname]['member_of'] != member_of:
-                found = False
-                continue
-            if not_in and ('not_in' in properties[propname]) \
-               and properties[propname]['not_in'] != not_in:
-                found = False
-                continue
-            if not_when and ('not_when' in properties[propname]) \
-               and properties[propname]['not_when'] != not_when:
-                found = False
-                continue
-            if when and ('when' in properties[propname]) \
-               and properties[propname]['when'] != when:
-                found = False
-                continue
->>>>>>> c5c5d51... Improve API for Settings.add_property (issue #45)
             if found:
                 properties[propname].remove(context)
                 return
