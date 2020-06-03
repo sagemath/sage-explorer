@@ -5,6 +5,8 @@ Defining standard widgets for some Sage classes
 import traitlets
 from ipywidgets import Box, HTML
 from sage.misc.bindable_class import BindableClass
+from ipympl.backend_nbagg import Canvas, FigureManager
+from matplotlib._pylab_helpers import Gcf
 from sage.all import SAGE_TMP, SageObject, plot, plot3d
 import sage.all
 from os.path import join as path_join
@@ -20,6 +22,47 @@ class MetaHasTraitsClasscallMetaclass (traitlets.traitlets.MetaHasTraits, sage.m
 @add_metaclass(MetaHasTraitsClasscallMetaclass)
 class BindableWidgetClass(BindableClass):
     pass
+
+
+def guess_plot(obj, figsize=4):
+    try:
+        return plot(obj, figsize=figsize)
+    except:
+        try:
+            return obj.plot()
+        except:
+            return plot(obj)
+    return None
+
+
+def apply_css(css_line):
+    try:
+        ip = get_ipython()
+        for base in ip.__class__.__mro__:
+            """If we are in a notebook, we will find 'notebook' in those names"""
+            if 'otebook' in base.__name__:
+                ip.display_formatter.format(HTML("<style>%s</style>" % css_line))
+                break
+    except:
+        pass # We are in the test environment
+
+
+class MPLWidget(Canvas, BindableWidgetClass):
+    r"""A widget for plotting interactively. Based on ipympl Canvas."""
+    value = traitlets.Instance(SageObject)
+
+    def __init__(self, obj):
+        plt = guess_plot(obj)
+        fig = plt.matplotlib()
+        fig.set_label(" ")
+        apply_css(".jupyter-matplotlib-figure > .widget-label { height: 0 }")
+        Canvas.__init__(self, fig)
+        self.value = obj
+        manager = FigureManager(self, 1)
+        def closer(event):
+            Gcf.destroy(num)
+        self.mpl_connect('close_event', closer)
+
 
 class PlotWidget(Box, BindableWidgetClass):
     r"""A widget for plotting any plottable object"""

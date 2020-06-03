@@ -1,7 +1,8 @@
 0.5.3
 	* Settings API improved
+	* New MPLWidget for plotting functions -- based on ipympl.Canvas
 	* Explorer interactivity small improvements
-	* Details, bug fixes & version upgrades
+	* Display details, bug fixes & version upgrades
 0.5.2
 	* Exploring catalogs
 	* Simple plot for functions of 1 variable
