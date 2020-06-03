@@ -94,7 +94,12 @@ def _get_visual_widget(obj):
     if hasattr(obj, "_widget_"):
         return obj._widget_()
     if guess_plot(obj):
-        return MPLWidget(obj)
+        try:
+            from sage.plot.graphics import Graphics
+            if isinstance(guess_plot(obj), Graphics):
+                return MPLWidget(obj)
+        except:
+            pass
     if (hasattr(obj, 'number_of_arguments') and obj.number_of_arguments() < 2) \
        or (hasattr(obj, 'plot') and not hasattr(obj, 'number_of_arguments')):
         return PlotWidget(obj)

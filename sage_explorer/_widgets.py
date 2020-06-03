@@ -25,14 +25,52 @@ class BindableWidgetClass(BindableClass):
 
 
 def guess_plot(obj, figsize=4):
+    r"""
+    Find the corresponding graphics object, if there is one.
+
+    TESTS::
+
+        sage: from sage_explorer import guess_plot
+        sage: guess_plot(sin)
+        Graphics object consisting of 1 graphics primitive
+        sage: guess_plot(list(cremona_curves(srange(35)))[0])
+        Graphics object consisting of 1 graphics primitive
+        sage: x, y = var('x y')
+        sage: g(x,y) = x**2 + y**2
+        sage: guess_plot(g)
+        Graphics3d Object
+        sage: type(guess_plot(Partition([4,3])))
+        ...
+        <class 'NoneType'>
+    """
+    plt = None
+    if hasattr(obj, 'number_of_arguments') and obj.number_of_arguments() == 2:
+        if type(figsize) == type(()):
+            if len(figsize) == 2:
+                urange, vrange = figsize
+            elif len(figsize) == 1:
+                urange, vrange = figsize, figsize
+        elif str(figsize).isnumeric():
+            urange = vrange = (-float(figsize)/2, float(figsize)/2)
+        try:
+            plt = plot3d(obj, urange, vrange)
+        except:
+            pass
+        return plt
     try:
-        return plot(obj, figsize=figsize)
+        plt = plot(obj, figsize=figsize)
     except:
         try:
-            return obj.plot()
+            plt = obj.plot()
         except:
-            return plot(obj)
-    return None
+            try:
+                plt = plot(obj)
+            except:
+                pass
+    if plt is not None and plt._objects:
+        return plt
+    else:
+        return None
 
 
 def apply_css(css_line):
@@ -51,13 +89,34 @@ class MPLWidget(Canvas, BindableWidgetClass):
     r"""A widget for plotting interactively. Based on ipympl Canvas."""
     value = traitlets.Instance(SageObject)
 
-    def __init__(self, obj):
+    def __init__(self, obj, name=None):
+        r"""
+
+        TESTS::
+
+            sage: from sage_explorer import MPLWidget
+            sage: w = MPLWidget(sin)
+            sage: w.name
+            'sin'
+            sage: w = MPLWidget(list(cremona_curves(srange(35)))[0])
+            sage: w.name
+            'Elliptic Curve defined by y^2 + y = x^3 - x^2 - 10*x - 20 over Rational Field'
+            sage: x, y = var('x y')
+            sage: g(x,y) = x**2 + y**2
+            sage: w = MPLWidget(g)
+            sage: w.name
+            '(x, y) |--> x^2 + y^2'
+        """
+
         plt = guess_plot(obj)
         fig = plt.matplotlib()
         fig.set_label(" ")
         apply_css(".jupyter-matplotlib-figure > .widget-label { height: 0 }")
         Canvas.__init__(self, fig)
         self.value = obj
+        if not name:
+            name = repr(obj)
+        self.name = name
         manager = FigureManager(self, 1)
         def closer(event):
             Gcf.destroy(num)
