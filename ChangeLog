@@ -1,6 +1,7 @@
+0.5.4
+	* New MPLWidget for plotting functions -- based on ipympl.Canvas
 0.5.3
 	* Settings API improved
-	* New MPLWidget for plotting functions -- based on ipympl.Canvas
 	* Explorer interactivity small improvements
 	* Display details, bug fixes & version upgrades
 0.5.2
