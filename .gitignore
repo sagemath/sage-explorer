@@ -6,5 +6,6 @@ TODO*
 test*.ipynb
 build/
 dist/
+examples/
 Untitled*ipynb
 DEBUG

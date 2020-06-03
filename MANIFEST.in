@@ -13,7 +13,7 @@ prune docs/presentation
 prune docs/video
 
 # Examples
-recursive-include examples *.ipynb *.py
+prune examples
 
 # Tests
 prune tests
