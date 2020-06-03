@@ -32,7 +32,6 @@ with warnings.catch_warnings():
 from .explored_member import ExploredMember, _eval_in_main, get_members, get_properties
 import sage_explorer._sage_catalog as sage_catalog
 from ._sage_catalog import sage_catalogs
-from ._widgets import *
 try:
     from singleton_widgets import ButtonSingleton, ComboboxSingleton, DropdownSingleton, HTMLMathSingleton, TextSingleton, TextareaSingleton, ToggleButtonSingleton
 except:
@@ -93,15 +92,9 @@ def _get_visual_widget(obj):
         return
     if hasattr(obj, "_widget_"):
         return obj._widget_()
-    if guess_plot(obj):
-        try:
-            from sage.plot.graphics import Graphics
-            if isinstance(guess_plot(obj), Graphics):
-                return MPLWidget(obj)
-        except:
-            pass
     if (hasattr(obj, 'number_of_arguments') and obj.number_of_arguments() < 2) \
        or (hasattr(obj, 'plot') and not hasattr(obj, 'number_of_arguments')):
+        from ._widgets import PlotWidget
         return PlotWidget(obj)
 
 def _math_repr(obj, display_mode=None, standalone=False):
