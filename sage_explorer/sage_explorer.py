@@ -1717,6 +1717,8 @@ class ExplorerSettings(HasTraits):
             sage: ES = ExplorerSettings()
             sage: ES.load_properties()
             sage: len(ES.properties['addition_table'])
+            1
+            sage: len(ES.properties['addition_table'][0])
             2
             sage: ES.properties['addition_table'][0]['when'](GF(7))
             True
@@ -1725,7 +1727,7 @@ class ExplorerSettings(HasTraits):
             sage: len(ES.properties['base_ring'])
             1
             sage: ES.properties['base_ring'][0]['when'](CoxeterGroup(["A",2]))
-            True
+            False
             sage: ES.properties['base_ring'][0]['when'](StandardTableaux(3).random_element())
             False
         """
