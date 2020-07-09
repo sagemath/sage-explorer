@@ -1165,6 +1165,11 @@ class ExplorerCodeCell(ExplorerComponent):
             source=self.children[0],
             watched_events=['keyup']
         )
+        try:
+            from sage.misc.misc import get_main_globals
+            self.globals = get_main_globals()
+        except:
+            self.globals = globals()
         def launch_evaluation(event):
             if event['key'] == 'Enter' and (event['shiftKey'] or event['ctrlKey']):
                 self.evaluate()
@@ -1196,7 +1201,7 @@ class ExplorerCodeCell(ExplorerComponent):
             sage: c.new_val
             3
         """
-        g = globals() # the name space used by the usual Jupyter cells
+        g = self.globals
         l = l or {"_": self.value}
         local_names = l.keys()
         code = compile(self.content, '<string>', 'eval')
