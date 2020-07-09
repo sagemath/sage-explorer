@@ -1046,7 +1046,7 @@ class ExplorerOutput(ExplorerComponent):
         self.output.add_class('invisible')
         def output_changed(change):
             change.owner.reset()
-            if change.new:
+            if change.new is not None:
                 switch_visibility(change.owner, True)
             else:
                 switch_visibility(change.owner, False)
