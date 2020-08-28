@@ -17,6 +17,7 @@ prune examples
 
 # Tests
 prune tests
+include tests/test_settings.ipynb
 
 # Patterns to exclude from any directory
 global-exclude *~
