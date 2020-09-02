@@ -14,7 +14,8 @@ from cysignals.alarm import alarm, cancel_alarm
 from cysignals.signals import AlarmInterrupt
 from inspect import isclass, ismodule
 from collections import deque
-from ipywidgets import Box, Button, CallbackDispatcher, Combobox, Dropdown, GridBox, HBox, HTML, HTMLMath, Label, Layout, Text, Textarea, ToggleButton, VBox
+from ipywidgets import Box, Button, CallbackDispatcher, Combobox, Dropdown, GridBox, \
+    HBox, HTML, HTMLMath, Image, Label, Layout, Text, Textarea, ToggleButton, VBox
 from traitlets import Any, Bool, Dict, HasTraits, Instance, Int, Unicode, dlink, link, observe
 try:
     from sage.misc.sphinxify import sphinxify
@@ -32,6 +33,7 @@ with warnings.catch_warnings():
 from .explored_member import ExploredMember, _eval_in_main, get_members, get_properties
 import sage_explorer._sage_catalog as sage_catalog
 from ._sage_catalog import sage_catalogs
+setattr(sage_catalog, 'catalog', sage_catalogs)
 from ._widgets import *
 try:
     from singleton_widgets import ButtonSingleton, ComboboxSingleton, DropdownSingleton, HTMLMathSingleton, TextSingleton, TextareaSingleton, ToggleButtonSingleton
@@ -739,6 +741,46 @@ class ExplorerDescription(ExplorerComponent):
             self.set_help_target(self.help_target) # re-recreate help button handler
         if self._tooltip:
             self.children[1].set_tooltip(self._tooltip)
+
+
+class ExplorerCatalog(ExplorerComponent, GridBox):
+    r"""
+    Display object data as a table.
+
+    TESTS::
+
+        sage: from sage_explorer.sage_explorer import ExplorerCatalog
+        sage: p = ExplorerCatalog(sage_catalog)
+    """
+    def __init__(self, obj, specs=None):
+        super(ExplorerCatalog, self).__init__(
+            obj,
+            layout=Layout(border='1px solid #eee', width='100%', grid_template_columns='auto auto auto')
+        )
+        self.add_class("explorer-table")
+
+    def reset(self):
+        self.explorables = []
+        children = []
+        def compute_doc(catalog_obj):
+            doc = ""
+            if not catalog_obj.__doc__:
+                return ""
+            for l in catalog_obj.__doc__.split('\n'):
+                if not l:
+                    if doc:
+                        break
+                doc += l + " "
+            return doc
+        for x in self.value.catalog:
+            e = ExplorableCell(x, initial_value=self.value)
+            self.explorables.append(e)
+            dlink((e, 'new_val'), (self, 'value')) # Propagate explorable if clicked
+            children.append(e)
+            children.append(Label(compute_doc(x), layout=Layout(border='1px solid #eee')))
+            url_image = "https://upload.wikimedia.org/wikipedia/commons/2/2c/GroupDiagramD6.png"
+            children.append(Box((Image.from_url(url_image),), layout=Layout(width="90px")))
+        self.children = children
 
 
 class ExplorerProperties(ExplorerComponent, GridBox):
