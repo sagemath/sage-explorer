@@ -8,7 +8,7 @@ AUTHORS:
 - Odile Bénassy, Nicolas Thiéry
 
 """
-import re, os, warnings, yaml
+import re, os, warnings, types, yaml
 from abc import abstractmethod
 from cysignals.alarm import alarm, cancel_alarm
 from cysignals.signals import AlarmInterrupt
@@ -1269,20 +1269,19 @@ class ExplorerCodeCell(ExplorerComponent):
             self.new_val = result
 
 
-"""
-DEFAULT_COMPONENTS = [
-    ExplorerTitle,
-    ExplorerDescription,
-    ExplorerProperties,
-    ExplorerVisual,
-    ExplorerHistory,
-    ExplorerMethodSearch,
-    ExplorerArgs,
-    ExplorerRunButton,
-    ExplorerOutput,
-    ExplorerHelp,
-    ExplorerCodeCell
-]"""
+COMPONENTS_NAMES = [
+    'titlebox',
+    'descriptionbox',
+    'propsbox',
+    'visualbox',
+    'histbox',
+    'searchbox',
+    'argsbox',
+    'runbutton',
+    'outputbox',
+    'helpbox',
+    'codebox']
+
 DEFAULT_COMPONENTS = {
     'titlebox': ExplorerTitle,
     'descriptionbox': ExplorerDescription,
@@ -1296,6 +1295,14 @@ DEFAULT_COMPONENTS = {
     'helpbox': ExplorerHelp,
     'codebox': ExplorerCodeCell
     }
+
+CATALOG_COMPONENTS = {
+    'titlebox': ExplorerTitle,
+    'descriptionbox': ExplorerDescription,
+    'propsbox': ExplorerCatalog,
+    'helpbox': ExplorerHelp
+    }
+
 
 class SageExplorer(VBox):
     r"""
@@ -1378,7 +1385,7 @@ class SageExplorer(VBox):
     _display_settings = Dict()
     _properties_settings = Dict()
 
-    def __init__(self, obj=None, components=DEFAULT_COMPONENTS, test_mode=False):
+    def __init__(self, obj=None, components=None, test_mode=False):
         """
         TESTS::
 
@@ -1399,6 +1406,11 @@ class SageExplorer(VBox):
         self._history = ExplorableHistory(obj) #, initial_name=self.initial_name)
         self._history_len = 1 # Needed to activate history propagation
         self._history_index = 0
+        if components is None:
+            if type(obj) == types.ModuleType:
+                components = CATALOG_COMPONENTS
+            else:
+                components = DEFAULT_COMPONENTS
         self.components = components
         if not test_mode:
             self.create_components()
@@ -1420,6 +1432,8 @@ class SageExplorer(VBox):
             SageExplorer for [[1, 3, 4], [2], [5]] with properties 'charge', 'cocharge', 'conjugate', 'parent'
         """
         ret = "SageExplorer for %s" % self.value
+        if not hasattr(self.propsbox, 'properties'):
+            return ret
         properties_names = [p.name for p in self.propsbox.properties]
         if not properties_names:
             return ret
@@ -1429,8 +1443,8 @@ class SageExplorer(VBox):
 
     def reset(self):
         self.donottrack = True
-        for name in self.components:
-            if name not in ['runbutton', 'codebox']:
+        for name in COMPONENTS_NAMES:
+            if name in self.components and name not in ['runbutton', 'codebox']:
                 setattr(getattr(self, name), 'value', self.value)
         self.donottrack = False
 
@@ -1444,7 +1458,10 @@ class SageExplorer(VBox):
             sage: e = SageExplorer(42)
             sage: e.create_components()
         """
-        for name in self.components:
+        for name in COMPONENTS_NAMES:
+            if name not in self.components:
+                setattr(self, name, Label(''))
+                continue
             if name == 'runbutton':
                 setattr(self, name, self.components[name].__call__())
             elif name == 'histbox':
@@ -1582,14 +1599,25 @@ class SageExplorer(VBox):
             sage: e.draw()
             sage: len(e.focuslist)
             10
+            sage: e = SageExplorer()
+            sage: e.create_components(sage_catalog)
+            sage: e.implement_interactivity()
+            sage: e.draw()
+            sage: len(e.focuslist)
+            15
         """
         self.focuslist = [] # Will be used to allocate focus to successive components
         self.focuslist.append(self.descriptionbox.children[1])
         propsvbox = VBox([self.descriptionbox, self.propsbox])
         for ec in self.propsbox.explorables:
             self.focuslist.append(ec)
-        self.focuslist.append(self.visualbox)
         propsvbox.add_class('explorer-flexitem')
+        for n in self.components:
+            c = getattr(self, n)
+            if n in ['visualbox', 'histbox', 'searchbox', 'argsbox', 'runbutton', 'codebox', 'helpbox']:
+                self.focuslist.append(c)
+            elif n == 'outputbox':
+                self.focuslist.append(c.output)
         topflex = HBox(
             (propsvbox, Separator(' '), self.visualbox),
             layout=Layout(margin='10px 0')
@@ -1598,10 +1626,6 @@ class SageExplorer(VBox):
         top = VBox(
             (self.titlebox, topflex)
         )
-        self.focuslist.append(self.histbox)
-        self.focuslist.append(self.searchbox)
-        self.focuslist.append(self.argsbox)
-        self.focuslist.append(self.runbutton)
         middleflex = HBox([
             self.histbox,
             Separator('.'),
@@ -1612,9 +1636,6 @@ class SageExplorer(VBox):
             self.runbutton
         ])
         middleflex.add_class("explorer-flexrow")
-        self.focuslist.append(self.codebox)
-        self.focuslist.append(self.outputbox.output)
-        self.focuslist.append(self.helpbox)
         bottom = VBox([middleflex, self.codebox, self.outputbox, self.helpbox])
         self.children = (top, bottom)
         self.distribute_focus()
