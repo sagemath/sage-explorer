@@ -1626,15 +1626,18 @@ class SageExplorer(VBox):
         top = VBox(
             (self.titlebox, topflex)
         )
-        middleflex = HBox([
-            self.histbox,
-            Separator('.'),
-            self.searchbox,
-            Separator('('),
-            self.argsbox,
-            Separator(')'),
-            self.runbutton
-        ])
+        if 'argsbox' in self.components:
+            middleflex = HBox([
+                self.histbox,
+                Separator('.'),
+                self.searchbox,
+                Separator('('),
+                self.argsbox,
+                Separator(')'),
+                self.runbutton
+            ])
+        else:
+            middleflex = Label('')
         middleflex.add_class("explorer-flexrow")
         bottom = VBox([middleflex, self.codebox, self.outputbox, self.helpbox])
         self.children = (top, bottom)
