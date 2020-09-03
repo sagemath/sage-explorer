@@ -1278,9 +1278,10 @@ COMPONENTS_NAMES = [
     'searchbox',
     'argsbox',
     'runbutton',
+    'tabular',
     'outputbox',
-    'helpbox',
-    'codebox']
+    'codebox',
+    'helpbox']
 
 DEFAULT_COMPONENTS = {
     'titlebox': ExplorerTitle,
@@ -1299,7 +1300,10 @@ DEFAULT_COMPONENTS = {
 CATALOG_COMPONENTS = {
     'titlebox': ExplorerTitle,
     'descriptionbox': ExplorerDescription,
-    'propsbox': ExplorerCatalog,
+    'histbox': ExplorerHistory,
+    'searchbox': ExplorerMethodSearch,
+    'runbutton': ExplorerRunButton,
+    'tabular': ExplorerCatalog,
     'helpbox': ExplorerHelp
     }
 
@@ -1608,9 +1612,12 @@ class SageExplorer(VBox):
         """
         self.focuslist = [] # Will be used to allocate focus to successive components
         self.focuslist.append(self.descriptionbox.children[1])
-        propsvbox = VBox([self.descriptionbox, self.propsbox])
-        for ec in self.propsbox.explorables:
-            self.focuslist.append(ec)
+        if 'propsbox' in self.components:
+            propsvbox = VBox([self.descriptionbox, self.propsbox])
+            for ec in self.propsbox.explorables:
+                self.focuslist.append(ec)
+        else:
+            propsvbox = VBox([self.descriptionbox])
         propsvbox.add_class('explorer-flexitem')
         for n in self.components:
             c = getattr(self, n)
@@ -1637,9 +1644,22 @@ class SageExplorer(VBox):
                 self.runbutton
             ])
         else:
-            middleflex = Label('')
+            if 'tabular' in self.components:
+                self.runbutton.description = "Go!"
+            middleflex = HBox([
+                self.histbox,
+                Separator('.'),
+                self.searchbox,
+                Separator(' '),
+                self.runbutton
+            ])
         middleflex.add_class("explorer-flexrow")
-        bottom = VBox([middleflex, self.codebox, self.outputbox, self.helpbox])
+        if 'tabular' in self.components:
+            for ec in self.tabular.explorables:
+                self.focuslist.append(ec)
+            bottom = VBox([middleflex, self.codebox, self.tabular, self.helpbox])
+        else:
+            bottom = VBox([middleflex, self.codebox, self.outputbox, self.helpbox])
         self.children = (top, bottom)
         self.distribute_focus()
 
