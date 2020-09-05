@@ -405,7 +405,7 @@ class ExploredMember(object):
 
 
 #@lru_cache(maxsize=100)
-def get_members(cls, properties_settings, include_private=False):
+def get_members(cls, properties_settings={}, include_private=False):
     r"""
     Get all members for a class.
 

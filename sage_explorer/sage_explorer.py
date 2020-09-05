@@ -33,7 +33,6 @@ with warnings.catch_warnings():
 from .explored_member import ExploredMember, _eval_in_main, get_members, get_properties
 import sage_explorer._sage_catalog as sage_catalog
 from ._sage_catalog import sage_catalogs
-setattr(sage_catalog, 'catalog', sage_catalogs)
 from ._widgets import *
 try:
     from singleton_widgets import ButtonSingleton, ComboboxSingleton, DropdownSingleton, HTMLMathSingleton, TextSingleton, TextareaSingleton, ToggleButtonSingleton
@@ -752,7 +751,7 @@ class ExplorerCatalog(ExplorerComponent, GridBox):
         sage: from sage_explorer.sage_explorer import ExplorerCatalog
         sage: p = ExplorerCatalog(sage_catalog)
     """
-    def __init__(self, obj, specs=None):
+    def __init__(self, obj):
         super(ExplorerCatalog, self).__init__(
             obj,
             layout=Layout(border='1px solid #eee', width='100%', grid_template_columns='auto auto auto')
@@ -762,6 +761,7 @@ class ExplorerCatalog(ExplorerComponent, GridBox):
     def reset(self):
         self.explorables = []
         children = []
+        """
         def compute_doc(catalog_obj):
             doc = ""
             if not catalog_obj.__doc__:
@@ -772,12 +772,14 @@ class ExplorerCatalog(ExplorerComponent, GridBox):
                         break
                 doc += l + " "
             return doc
-        for x in self.value.catalog:
-            e = ExplorableCell(x, initial_value=self.value)
+        """
+        for member in get_members(self.value):
+            e = ExplorableCell(member.member, initial_value=self.value)
             self.explorables.append(e)
             dlink((e, 'new_val'), (self, 'value')) # Propagate explorable if clicked
             children.append(e)
-            children.append(Label(compute_doc(x), layout=Layout(border='1px solid #eee')))
+            member.compute_doc()
+            children.append(Label(member.doc, layout=Layout(border='1px solid #eee')))
             url_image = "https://upload.wikimedia.org/wikipedia/commons/2/2c/GroupDiagramD6.png"
             children.append(Box((Image.from_url(url_image),), layout=Layout(width="90px")))
         self.children = children
@@ -1493,6 +1495,8 @@ class SageExplorer(VBox):
             self.descriptionbox.set_help_target(self.helpbox)
         if 'propsbox' in self.components:
             dlink((self.propsbox, 'value'), (self, 'value')) # Handle the clicks on property values
+        if 'tabular' in self.components:
+            dlink((self.tabular, 'value'), (self, 'value')) # Handle the clicks on catalog values
         if 'visualbox' in self.components:
             dlink((self.visualbox, 'value'), (self, 'value')) # Handle the visual widget changes
         if 'histbox' in self.components:
@@ -1506,7 +1510,7 @@ class SageExplorer(VBox):
             self.observe(handle_history_selection, names='_history_index')
 
         def compute_selected_member(button=None):
-            if not 'searchbox' in self.components or not 'outputbox' in self.components:
+            if 'searchbox' not in self.components:
                 return
             member_name = self.searchbox.explored.name
             if not member_name:
@@ -1533,10 +1537,11 @@ class SageExplorer(VBox):
                     cancel_alarm()
                 self.outputbox.set_error(e)
                 return
-            self.outputbox.set_output(out)
-            self.searchbox.set_display(member_name) # avoid any trailing '?'
+            if 'outputbox' in self.components:
+                self.outputbox.set_output(out)
             if 'helpbox' in self.components:
                 self.helpbox.reset() # empty help box
+            self.searchbox.set_display(member_name) # avoid any trailing '?'
         def run_button(event):
             if event['key'] == 'Enter':
                 compute_selected_member()
