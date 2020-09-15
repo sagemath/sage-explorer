@@ -160,7 +160,7 @@ class ExploredMember(object):
         self.member = getattr(container, self.name)
         self.doc = self.member.__doc__
 
-    def compute_doc(self, container=None):
+    def compute_doc(self, container=None, fmt='long'):
         r"""
         Get method or attribute documentation, given the name.
 
@@ -173,9 +173,25 @@ class ExploredMember(object):
             sage: m.compute_doc()
             sage: m.doc[:100]
             '\n        Return the conjugate partition of the partition ``self``. This\n        is also called the a'
+            sage: m.compute_doc(fmt='short')
+            sage: m.doc
+            'Return the conjugate partition of the partition ``self``. This'
         """
         if hasattr(self, 'member'):
-            self.doc = self.member.__doc__
+            if fmt=='short':
+                self.doc = ""
+                if not self.member.__doc__:
+                    return
+                for l in self.member.__doc__.split('\n'):
+                    sl = l.strip()
+                    if sl:
+                        self.doc = sl
+                        break
+                    else:
+                        if self.doc:
+                            break
+            else:
+                self.doc = self.member.__doc__
         else:
             self.compute_member(container)
 
