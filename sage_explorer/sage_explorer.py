@@ -16,7 +16,8 @@ from inspect import isclass, ismodule
 from collections import deque
 from ipywidgets import Box, Button, CallbackDispatcher, Combobox, Dropdown, GridBox, \
     HBox, HTML, HTMLMath, Image, Label, Layout, Text, Textarea, ToggleButton, VBox
-from traitlets import Any, Bool, Dict, HasTraits, Instance, Int, Unicode, dlink, link, observe
+from traitlets import Any, Bool, Dict, HasTraits, Instance, Int, List, Unicode, dlink, link, observe
+from ipyvuetify import VuetifyTemplate
 try:
     from sage.misc.sphinxify import sphinxify
     assert sphinxify is not None
@@ -742,7 +743,7 @@ class ExplorerDescription(ExplorerComponent):
             self.children[1].set_tooltip(self._tooltip)
 
 
-class ExplorerCatalog(ExplorerComponent, GridBox):
+class ExplorerCatalog(ExplorerComponent, VuetifyTemplate):
     r"""
     Display object data as a table.
 
@@ -751,11 +752,29 @@ class ExplorerCatalog(ExplorerComponent, GridBox):
         sage: from sage_explorer.sage_explorer import ExplorerCatalog
         sage: p = ExplorerCatalog(sage_catalog)
     """
+    headers = List()
+    items = List()
+    template = Unicode('''
+    <template>
+      <v-data-table
+        :headers="headers"
+        :items="items"
+      >
+      <template #item.name="{item}">
+        <mywidget />
+      </template>
+      </v-data-table>
+    </template>
+    ''').tag(sync=True)
+
     def __init__(self, obj):
-        super(ExplorerCatalog, self).__init__(
-            obj,
-            layout=Layout(border='1px solid #eee', width='100%', grid_template_columns='auto auto auto')
-        )
+        ExplorerComponent.__init__(self, obj, layout=Layout()) #border='1px solid #eee', width='100%', grid_template_columns='auto auto auto')
+        VuetifyTemplate.__init__(self, components={'mywidget':HTML})
+        self.headers = [{'text':'Name', 'value':'name'}, {'text':'Doc', 'value':'doc'}]
+        members = get_members(obj, CONFIG_PROPERTIES)
+        for m in members:
+            m.compute_doc(fmt='short')
+        self.items = [{'name':m.name, 'doc':m.doc} for m in members]
         self.add_class("explorer-table")
 
     def reset(self):
