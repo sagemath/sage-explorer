@@ -17,7 +17,7 @@ from collections import deque
 from ipywidgets import Box, Button, CallbackDispatcher, Combobox, Dropdown, GridBox, \
     HBox, HTML, HTMLMath, Image, Label, Layout, Text, Textarea, ToggleButton, VBox
 from traitlets import Any, Bool, Dict, HasTraits, Instance, Int, List, Unicode, dlink, link, observe
-from ipyvuetify import VuetifyTemplate
+from ipyvuetify import DataTable, VuetifyTemplate
 try:
     from sage.misc.sphinxify import sphinxify
     assert sphinxify is not None
@@ -743,7 +743,40 @@ class ExplorerDescription(ExplorerComponent):
             self.children[1].set_tooltip(self._tooltip)
 
 
-class ExplorerCatalog(ExplorerComponent, VuetifyTemplate):
+class ExplorerCatalog(ExplorerComponent):
+    def __init__(self, obj):
+        self.donottrack = True
+        super(ExplorerCatalog, self).__init__(
+            obj,
+            children=(
+                VuetifyTabular(obj),
+                global_css_code),
+            layout=Layout()
+        )
+        self.donottrack = False
+        self.add_class("explorer-table")
+
+    def reset(self):
+        self.children[0].compute()
+        self.explorables = []
+
+
+class VuetifyTabular(DataTable):
+    value = Any()
+
+    def __init__(self, obj):
+        self.value = obj
+        super(VuetifyTabular, self).__init__()
+        self.headers = [{'text':'Name', 'value':'name'}, {'text':'Doc', 'value':'doc'}]
+
+    def compute(self):
+        members = get_members(self.value, CONFIG_PROPERTIES)
+        for m in members:
+            m.compute_doc(fmt='short')
+        self.items = [{'name':m.name, 'doc':m.doc} for m in members]
+
+
+class VuetifyTabular2(VuetifyTemplate):
     r"""
     Display object data as a table.
 
@@ -752,6 +785,7 @@ class ExplorerCatalog(ExplorerComponent, VuetifyTemplate):
         sage: from sage_explorer.sage_explorer import ExplorerCatalog
         sage: p = ExplorerCatalog(sage_catalog)
     """
+    value = Any()
     headers = List()
     items = List()
     template = Unicode('''
@@ -768,7 +802,8 @@ class ExplorerCatalog(ExplorerComponent, VuetifyTemplate):
     ''').tag(sync=True)
 
     def __init__(self, obj):
-        ExplorerComponent.__init__(self, obj, layout=Layout()) #border='1px solid #eee', width='100%', grid_template_columns='auto auto auto')
+        self.value = obj
+        #ExplorerComponent.__init__(self, obj, layout=Layout()) #border='1px solid #eee', width='100%', grid_template_columns='auto auto auto')
         VuetifyTemplate.__init__(self, components={'mywidget':HTML})
         self.headers = [{'text':'Name', 'value':'name'}, {'text':'Doc', 'value':'doc'}]
         members = get_members(obj, CONFIG_PROPERTIES)
@@ -776,6 +811,7 @@ class ExplorerCatalog(ExplorerComponent, VuetifyTemplate):
             m.compute_doc(fmt='short')
         self.items = [{'name':m.name, 'doc':m.doc} for m in members]
         self.add_class("explorer-table")
+        #self.reset()
 
     def reset(self):
         self.explorables = []
