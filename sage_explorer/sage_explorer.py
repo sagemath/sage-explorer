@@ -749,7 +749,7 @@ class ExplorerCatalog(ExplorerComponent):
         super(ExplorerCatalog, self).__init__(
             obj,
             children=(
-                VuetifyTabular(obj),
+                VuetifyTabular2(obj),
                 global_css_code),
             layout=Layout()
         )
@@ -757,8 +757,12 @@ class ExplorerCatalog(ExplorerComponent):
         self.add_class("explorer-table")
 
     def reset(self):
-        self.children[0].compute()
+        #self.children[0].compute()
         self.explorables = []
+        for member in get_members(self.value):
+            e = ExplorableCell(member.member, initial_value=self.value)
+            self.explorables.append(e)
+            dlink((e, 'new_val'), (self, 'value')) # Propagate explorable if clicked
 
 
 class VuetifyTabular(DataTable):
@@ -786,8 +790,8 @@ class VuetifyTabular2(VuetifyTemplate):
         sage: p = ExplorerCatalog(sage_catalog)
     """
     value = Any()
-    headers = List()
-    items = List()
+    headers = List().tag(sync=True)
+    items = List().tag(sync=True)
     template = Unicode('''
     <template>
       <v-data-table
@@ -803,41 +807,26 @@ class VuetifyTabular2(VuetifyTemplate):
 
     def __init__(self, obj):
         self.value = obj
-        #ExplorerComponent.__init__(self, obj, layout=Layout()) #border='1px solid #eee', width='100%', grid_template_columns='auto auto auto')
-        VuetifyTemplate.__init__(self, components={'mywidget':HTML})
+        super(VuetifyTabular2, self).__init__(components={'mywidget':HTML})
         self.headers = [{'text':'Name', 'value':'name'}, {'text':'Doc', 'value':'doc'}]
-        members = get_members(obj, CONFIG_PROPERTIES)
-        for m in members:
-            m.compute_doc(fmt='short')
-        self.items = [{'name':m.name, 'doc':m.doc} for m in members]
+        self.compute()
         self.add_class("explorer-table")
-        #self.reset()
 
-    def reset(self):
+    def compute(self):
         self.explorables = []
         children = []
-        """
-        def compute_doc(catalog_obj):
-            doc = ""
-            if not catalog_obj.__doc__:
-                return ""
-            for l in catalog_obj.__doc__.split('\n'):
-                if not l:
-                    if doc:
-                        break
-                doc += l + " "
-            return doc
-        """
-        for member in get_members(self.value):
-            e = ExplorableCell(member.member, initial_value=self.value)
+        members = get_members(self.value, CONFIG_PROPERTIES)
+        for m in members:
+            m.compute_doc(fmt='short')
+            e = ExplorableCell(m.member, initial_value=self.value)
             self.explorables.append(e)
             dlink((e, 'new_val'), (self, 'value')) # Propagate explorable if clicked
             children.append(e)
-            member.compute_doc()
-            children.append(Label(member.doc, layout=Layout(border='1px solid #eee')))
+            children.append(Label(m.doc, layout=Layout(border='1px solid #eee')))
             url_image = "https://upload.wikimedia.org/wikipedia/commons/2/2c/GroupDiagramD6.png"
             children.append(Box((Image.from_url(url_image),), layout=Layout(width="90px")))
-        self.children = children
+        self.items = [{'name':m.name, 'doc':m.doc} for m in members]
+        #self.children = children
 
 
 class ExplorerProperties(ExplorerComponent, GridBox):
