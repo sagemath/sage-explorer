@@ -15,7 +15,7 @@ from cysignals.signals import AlarmInterrupt
 from inspect import isclass, ismodule
 from collections import deque
 from ipywidgets import Box, Button, CallbackDispatcher, Combobox, Dropdown, GridBox, \
-    HBox, HTML, HTMLMath, Image, Label, Layout, Text, Textarea, ToggleButton, VBox
+    HBox, HTML, HTMLMath, Image, Label, Layout, Text, Textarea, ToggleButton, ValueWidget, VBox
 from traitlets import Any, Bool, Dict, HasTraits, Instance, Int, List, Unicode, dlink, link, observe
 from ipyvuetify import DataTable, VuetifyTemplate
 try:
@@ -563,7 +563,7 @@ class ExplorableCell(Box):
                 ev.disallow_focus()
 
 
-class ExplorerComponent(Box):
+class ExplorerComponent(ValueWidget, Box):
     r"""
     Common methods to all components.
 
@@ -573,7 +573,6 @@ class ExplorerComponent(Box):
         sage: c = ExplorerComponent("Initial value")
         sage: c.value = 42
     """
-    value = Any()
     _tooltip = Unicode('')
     _tooltip_visibility = Bool(True)
 
@@ -588,8 +587,7 @@ class ExplorerComponent(Box):
             sage: c.value = 42
         """
         self.donottrack = True
-        self.value = obj
-        super(ExplorerComponent, self).__init__(**kws)
+        super(ExplorerComponent, self).__init__(value = obj, **kws)
         self.reset()
         self.donottrack = False
 
