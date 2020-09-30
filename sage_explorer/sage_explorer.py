@@ -50,7 +50,7 @@ css_lines.append(".explorer-title DIV {color: seashell; padding-bottom: 2px}") #
 css_lines.append(".explorer-table {border-collapse: collapse}")
 css_lines.append(".explorer-flexrow {padding:0; display:flex; flex-flow:row wrap; width:99%}")
 css_lines.append(".explorer-flexitem {flex-grow:1}")
-css_lines.append(".explorable-value {background-color: #eee; border-radius: 4px; padding: 4px}\n.explorable-value:hover {cursor: pointer}")
+css_lines.append(".explorable {background-color: #eee; border-radius: 4px; padding: 4px}\n.explorable:hover {cursor: pointer}")
 global_css_code = HTML("<style>%s</style>" % '\n'.join(css_lines))
 
 TIMEOUT = 0.5 # in seconds
@@ -156,7 +156,7 @@ def _math_repr(obj, display_mode=None, standalone=False):
         except:
             pass
         else:
-            if standalone: # for ExplorableValue
+            if standalone: # for Explorable
                 return "<pre>{}</pre>" . format(obj._unicode_art_())
             else: # for widget labels: back to plain representation
                 pass
@@ -424,14 +424,14 @@ class ExplorableHistory(deque):
             self.popleft()
 
 
-class ExplorableValue(HTMLMathSingleton):
+class Explorable(HTMLMathSingleton):
     r"""
     A repr string with a link to a Sage object.
 
     TESTS::
 
-        sage: from sage_explorer.sage_explorer import ExplorableValue
-        sage: v = ExplorableValue(42)
+        sage: from sage_explorer.sage_explorer import Explorable
+        sage: v = Explorable(42)
         sage: v.new_val
         sage: e = {'type': 'click'}
         sage: v.click_event._dom_handlers.callbacks[0](e)
@@ -449,8 +449,8 @@ class ExplorableValue(HTMLMathSingleton):
             self.explorable = explorable
         if initial_value is not None:
             self.new_val = initial_value
-        super(ExplorableValue, self).__init__(layout=Layout(margin='1px'))
-        self.add_class('explorable-value')
+        super(Explorable, self).__init__(layout=Layout(margin='1px'))
+        self.add_class('explorable')
         self._tooltip = "Click to explore this value"
         self.reset(display)
         self.click_event = Event(
@@ -523,7 +523,7 @@ class ExplorableCell(Box):
             elif type(self.explorable) == type(()):
                 children.append(Separator('('))
             else: # Here, make both the set and its elements explorable
-                ev = ExplorableValue(
+                ev = Explorable(
                     self.explorable,
                     display='{',
                     initial_value=self.new_val
@@ -531,7 +531,7 @@ class ExplorableCell(Box):
                 dlink((ev, 'new_val'), (self, 'new_val'))
                 children.append(ev)
             for e in self.explorable:
-                ev = ExplorableValue(e, initial_value=self.new_val)
+                ev = Explorable(e, initial_value=self.new_val)
                 dlink((ev, 'new_val'), (self, 'new_val')) # Propagate click
                 self.explorables.append(ev)
                 children.append(ev)
@@ -544,7 +544,7 @@ class ExplorableCell(Box):
             else:
                 children.append(Separator('}'))
         elif self.explorable is not None: # treated as a single value
-            ev = ExplorableValue(self.explorable, initial_value=self.new_val)
+            ev = Explorable(self.explorable, initial_value=self.new_val)
             self.explorables.append(ev)
             dlink((ev, 'new_val'), (self, 'new_val')) # Propagate click
             children.append(ev)
