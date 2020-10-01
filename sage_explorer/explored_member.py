@@ -18,7 +18,7 @@ from inspect import getargspec, getmro, isclass, isabstract
 #from functools import lru_cache
 try: # Are we in a Sage environment?
     import sage.all
-    from sage.misc.sageinspect import sage_getargspec as getargspec
+    from sage.misc.sageinspect import sage_getargspec as getargspec, sage_getdoc
     from sage.misc.sage_eval import sage_eval as eval
 except:
     pass
@@ -158,7 +158,6 @@ class ExploredMember(object):
             return
         self.container = container
         self.member = getattr(container, self.name)
-        self.doc = self.member.__doc__
 
     def compute_doc(self, container=None, fmt='long'):
         r"""
@@ -177,23 +176,23 @@ class ExploredMember(object):
             sage: m.doc
             'Return the conjugate partition of the partition ``self``. This'
         """
-        if hasattr(self, 'member'):
-            if fmt=='short':
-                self.doc = ""
-                if not self.member.__doc__:
-                    return
-                for l in self.member.__doc__.split('\n'):
-                    sl = l.strip()
-                    if sl:
-                        self.doc = sl
-                        break
-                    else:
-                        if self.doc:
-                            break
-            else:
-                self.doc = self.member.__doc__
-        else:
+        if not hasattr(self, 'member'):
             self.compute_member(container)
+        self.doc = ""
+        member_doc = sage_getdoc(self.member)
+        if not member_doc:
+            return
+        if fmt == 'long':
+            self.doc = member_doc
+            return
+        for l in member_doc.split('\n'):
+            sl = l.strip()
+            if sl:
+                self.doc = sl
+                break
+            else:
+                if self.doc:
+                    break
 
     def compute_member_type(self, container=None):
         r"""
