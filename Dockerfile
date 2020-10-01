@@ -8,7 +8,7 @@ RUN apt-get update && apt-get -qq install -y curl tar \
 USER sage
 ENV HOME /home/sage
 RUN sage -pip install jupyterlab==1.2.11
-RUN sage -pip install --upgrade ipywidgets sage_combinat_widgets pyyaml ipyevents ipympl
+RUN sage -pip install --upgrade ipywidgets sage_combinat_widgets pyyaml ipyevents ipympl ipyvuetify
 RUN sage -jupyter labextension install --no-build @jupyter-widgets/jupyterlab-manager \
  && sage -jupyter lab build \
  && sage -jupyter lab clean
