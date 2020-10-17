@@ -17,7 +17,7 @@ from collections import deque
 from ipywidgets import Box, Button, CallbackDispatcher, Combobox, Dropdown, GridBox, \
     HBox, HTML, HTMLMath, Image, Label, Layout, Text, Textarea, ToggleButton, ValueWidget, VBox
 from traitlets import Any, Bool, Dict, HasTraits, Instance, Int, List, Unicode, dlink, link, observe
-from ipyvuetify import DataTable, VuetifyTemplate
+import ipyvuetify as v
 try:
     from sage.misc.sphinxify import sphinxify
     assert sphinxify is not None
@@ -785,7 +785,7 @@ class ExplorerCatalog2(ExplorerComponent):
             dlink((e, 'new_val'), (self, 'value')) # Propagate explorable if clicked
 
 
-class VuetifyTabular(DataTable):
+class VuetifyTabular(v.DataTable):
     value = Any()
 
     def __init__(self, obj):
@@ -802,7 +802,7 @@ class VuetifyTabular(DataTable):
         self.items = [{'name':m.name, 'doc':m.doc} for m in members]
 
 
-class VuetifyTabular2(VuetifyTemplate):
+class VuetifyTabular2(v.VuetifyTemplate):
     r"""
     Display object data as a table.
 
@@ -850,6 +850,32 @@ class VuetifyTabular2(VuetifyTemplate):
             url_image = "https://upload.wikimedia.org/wikipedia/commons/2/2c/GroupDiagramD6.png"
             children.append(Box((Image.from_url(url_image),), layout=Layout(width="90px")))
         #self.children = children"""
+
+
+class VuetifyTabular3(v.List):
+    value = Any()
+
+    def __init__(self, obj):
+        self.value = obj
+        super(VuetifyTabular3, self).__init__()
+        #self.headers = [{'text':'Name', 'value':'name'}, {'text':'Doc', 'value':'doc'}]
+        self.compute()
+
+    def compute(self):
+        members = get_members(self.value, CONFIG_PROPERTIES)
+        items = []
+        def on_click(widget, event, data):
+            self.value = getattr(self.value, widget.children[0].children[0])
+            self.compute()
+        for m in members:
+            m.compute_doc(fmt='short')
+            item = v.ListItem(children=[
+                v.ListItemTitle(children=[
+                    m.name
+                ])])
+            item.on_event('click', on_click)
+            items.append(item)
+        self.children = items
 
 
 class ExplorerProperties(ExplorerComponent, GridBox):
