@@ -747,20 +747,21 @@ class ExplorerCatalog(ExplorerComponent):
         super(ExplorerCatalog, self).__init__(
             obj,
             children=(
-                VuetifyTabular(obj),
+                VuetifyTabular3(obj),
                 global_css_code),
             layout=Layout()
         )
+        dlink((self.children[0], 'explorable'), (self, 'value'))
         self.donottrack = False
         self.add_class("explorer-table")
 
     def reset(self):
         self.children[0].compute()
-        self.explorables = []
-        for member in get_members(self.value):
-            e = ExplorableCell(member.member, initial_value=self.value)
-            self.explorables.append(e)
-            dlink((e, 'new_val'), (self, 'value')) # Propagate explorable if clicked
+        #self.explorables = []
+        #for member in get_members(self.value):
+        #    e = ExplorableCell(member.member, initial_value=self.value)
+        #    self.explorables.append(e)
+        #    dlink((e, 'new_val'), (self, 'value')) # Propagate explorable if clicked
 
 
 class ExplorerCatalog2(ExplorerComponent):
@@ -1760,8 +1761,8 @@ class SageExplorer(VBox):
             ])
         middleflex.add_class("explorer-flexrow")
         if 'tabular' in self.components:
-            for ec in self.tabular.explorables:
-                self.focuslist.append(ec)
+            #for ec in self.tabular.children:
+            #    self.focuslist.append(ec)
             bottom = VBox([middleflex, self.codebox, self.tabular, self.helpbox])
         else:
             bottom = VBox([middleflex, self.codebox, self.outputbox, self.helpbox])
