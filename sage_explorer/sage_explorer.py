@@ -876,6 +876,10 @@ class VuetifyTabular3(v.List):
                 v.ListItemTitle(children=[
                     m.doc
                 ]),
+                v.Img(src="https://upload.wikimedia.org/wikipedia/commons/2/2c/GroupDiagramD6.png",
+                      height=120,
+                      width=120
+                ),
             ])
             item.on_event('click', on_click)
             items.append(item)
