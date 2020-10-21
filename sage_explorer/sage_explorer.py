@@ -853,19 +853,18 @@ class VuetifyTabular2(v.VuetifyTemplate):
 
 
 class VuetifyTabular3(v.List):
-    value = Any()
+    explorable = Any()
 
     def __init__(self, obj):
-        self.value = obj
+        self.explorable = obj
         super(VuetifyTabular3, self).__init__()
-        #self.headers = [{'text':'Name', 'value':'name'}, {'text':'Doc', 'value':'doc'}]
         self.compute()
 
     def compute(self):
-        members = get_members(self.value, CONFIG_PROPERTIES)
+        members = get_members(self.explorable, CONFIG_PROPERTIES)
         items = []
         def on_click(widget, event, data):
-            self.value = getattr(self.value, widget.children[0].children[0])
+            self.explorable = getattr(self.explorable, widget.children[0].children[0])
             self.compute()
         for m in members:
             m.compute_doc(fmt='short')
