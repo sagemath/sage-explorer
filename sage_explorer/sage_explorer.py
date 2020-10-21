@@ -872,7 +872,11 @@ class VuetifyTabular3(v.List):
             item = v.ListItem(children=[
                 v.ListItemTitle(children=[
                     m.name
-                ])])
+                ]),
+                v.ListItemTitle(children=[
+                    m.doc
+                ]),
+            ])
             item.on_event('click', on_click)
             items.append(item)
         self.children = items
