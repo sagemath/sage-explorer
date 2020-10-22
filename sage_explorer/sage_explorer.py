@@ -747,7 +747,7 @@ class ExplorerCatalog(ExplorerComponent):
         super(ExplorerCatalog, self).__init__(
             obj,
             children=(
-                VuetifyTabular3(obj),
+                VuetifyTabular(obj),
                 global_css_code),
             layout=Layout()
         )
@@ -757,109 +757,14 @@ class ExplorerCatalog(ExplorerComponent):
 
     def reset(self):
         self.children[0].compute()
-        #self.explorables = []
-        #for member in get_members(self.value):
-        #    e = ExplorableCell(member.member, initial_value=self.value)
-        #    self.explorables.append(e)
-        #    dlink((e, 'new_val'), (self, 'value')) # Propagate explorable if clicked
 
 
-class ExplorerCatalog2(ExplorerComponent):
-    def __init__(self, obj):
-        self.donottrack = True
-        super(ExplorerCatalog2, self).__init__(
-            obj,
-            children=(
-                VuetifyTabular2(obj),
-                global_css_code),
-            layout=Layout()
-        )
-        self.donottrack = False
-        self.add_class("explorer-table")
-
-    def reset(self):
-        self.children[0].compute()
-        self.explorables = []
-        for member in get_members(self.value):
-            e = ExplorableCell(member.member, initial_value=self.value)
-            self.explorables.append(e)
-            dlink((e, 'new_val'), (self, 'value')) # Propagate explorable if clicked
-
-
-class VuetifyTabular(v.DataTable):
-    value = Any()
-
-    def __init__(self, obj):
-        self.value = obj
-        super(VuetifyTabular, self).__init__()
-        self.headers = [{'text':'Name', 'value':'name'}, {'text':'Doc', 'value':'doc'}]
-        #self.compute()
-        self.add_class("explorer-table")
-
-    def compute(self):
-        members = get_members(self.value, CONFIG_PROPERTIES)
-        for m in members:
-            m.compute_doc(fmt='short')
-        self.items = [{'name':m.name, 'doc':m.doc} for m in members]
-
-
-class VuetifyTabular2(v.VuetifyTemplate):
-    r"""
-    Display object data as a table.
-
-    TESTS::
-
-        sage: from sage_explorer.sage_explorer import ExplorerCatalog
-        sage: p = ExplorerCatalog(sage_catalog)
-    """
-    value = Any().tag(sync=True)
-    headers = List().tag(sync=True)
-    items = List().tag(sync=True)
-    template = Unicode('''
-    <template>
-      <v-data-table
-        :headers="headers"
-        :items="items"
-      >
-      <template #item.name="{item}">
-        <mywidget />
-      </template>
-      </v-data-table>
-    </template>
-    ''').tag(sync=True)
-
-    def __init__(self, obj):
-        self.value = obj
-        super(VuetifyTabular2, self).__init__(components={'mywidget':HTML})
-        self.headers = [{'text':'Name', 'value':'name'}, {'text':'Doc', 'value':'doc'}]
-        self.compute()
-        self.add_class("explorer-table")
-
-    def compute(self):
-        members = get_members(self.value, CONFIG_PROPERTIES)
-        for m in members:
-            m.compute_doc(fmt='short')
-            self.items.append({'name':m.name, 'doc':m.doc})
-        """
-        self.explorables = []
-        children = []
-            e = ExplorableCell(m.member, initial_value=self.value)
-            self.explorables.append(e)
-            dlink((e, 'new_val'), (self, 'value')) # Propagate explorable if clicked
-            children.append(e)
-            children.append(Label(m.doc, layout=Layout(border='1px solid #eee')))
-            url_image = "https://upload.wikimedia.org/wikipedia/commons/2/2c/GroupDiagramD6.png"
-            children.append(Box((Image.from_url(url_image),), layout=Layout(width="90px")))
-        #self.children = children"""
-
-
-class VuetifyTabular3(v.List):
+class VuetifyTabular(v.List):
     explorable = Any()
 
     def __init__(self, obj):
         self.explorable = obj
-        super(VuetifyTabular3, self).__init__()
-        self.compute()
+        super(VuetifyTabular, self).__init__()
 
     def compute(self):
         members = get_members(self.explorable, CONFIG_PROPERTIES)
