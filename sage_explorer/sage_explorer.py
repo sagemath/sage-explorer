@@ -751,7 +751,6 @@ class ExplorerCatalog(ExplorerComponent):
                 global_css_code),
             layout=Layout()
         )
-        dlink((self.children[0], 'explorable'), (self, 'value'))
         self.donottrack = False
         self.add_class("explorer-table")
 
@@ -1502,6 +1501,7 @@ class SageExplorer(VBox):
         if 'propsbox' in self.components:
             dlink((self.propsbox, 'value'), (self, 'value')) # Handle the clicks on property values
         if 'tabular' in self.components:
+            dlink((self.tabular.children[0], 'explorable'), (self.tabular, 'value'))
             dlink((self.tabular, 'value'), (self, 'value')) # Handle the clicks on catalog values
         if 'visualbox' in self.components:
             dlink((self.visualbox, 'value'), (self, 'value')) # Handle the visual widget changes
